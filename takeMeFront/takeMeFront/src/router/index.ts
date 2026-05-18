@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import {createRouter, createWebHistory} from 'vue-router'
 
 const routes = [
   // 登录页（根路径直接跳登录）
@@ -11,10 +11,10 @@ const routes = [
     path: '/admin',
     component: () => import('@/layout/admin/Layout.vue'),
     children: [
-      { path: '', component: () => import('@/views/admin/Index.vue') },
-      { path: 'order', component: () => import('@/views/admin/Order.vue') },
-      { path: 'user', component: () => import('@/views/admin/User.vue') },
-      { path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue') }
+      {path: '', component: () => import('@/views/admin/Index.vue')},
+      {path: 'order', component: () => import('@/views/admin/Order.vue')},
+      {path: 'user', component: () => import('@/views/admin/User.vue')},
+      {path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue')}
     ]
   },
   // 志愿者路由
@@ -22,9 +22,9 @@ const routes = [
     path: '/volunteer',
     component: () => import('@/layout/volunteer/Layout.vue'),
     children: [
-      { path: '', component: () => import('@/views/volunteer/Index.vue') },
-      { path: 'order', component: () => import('@/views/volunteer/Order.vue') },
-      { path: 'profile', component: () => import('@/views/volunteer/Profile.vue') }
+      {path: '', component: () => import('@/views/volunteer/Index.vue')},
+      {path: 'order', component: () => import('@/views/volunteer/Order.vue')},
+      {path: 'profile', component: () => import('@/views/volunteer/Profile.vue')}
     ]
   },
   // 老人路由
@@ -32,8 +32,8 @@ const routes = [
     path: '/user',
     component: () => import('@/layout/user/Layout.vue'),
     children: [
-      { path: '', component: () => import('@/views/user/Index.vue') },
-      { path: 'create', component: () => import('@/views/user/CreateOrder.vue') }
+      {path: '', component: () => import('@/views/user/Index.vue')},
+      {path: 'create', component: () => import('@/views/user/CreateOrder.vue')}
     ]
   },
 
@@ -43,19 +43,19 @@ const routes = [
     component: () => import('@/views/user/InfoEdit.vue')
   },
   {
-  path: '/user/setting',
-  name: 'UserSetting',
-  component: () => import('@/views/user/Setting.vue')
-},
+    path: '/user/setting',
+    name: 'UserSetting',
+    component: () => import('@/views/user/Setting.vue')
+  },
 
-{
-  path: '/user/index',
-  name: 'UserIndex',
-  component: () => import('@/views/user/Index.vue')
-},
+  {
+    path: '/user/index',
+    name: 'UserIndex',
+    component: () => import('@/views/user/Index.vue')
+  },
 
   // 根路径强制跳登录页
-  { path: '/', redirect: '/login' }
+  {path: '/', redirect: '/login'}
 ]
 
 const router = createRouter({

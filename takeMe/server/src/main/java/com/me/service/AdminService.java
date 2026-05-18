@@ -11,4 +11,3 @@ public interface AdminService extends IService<Admin> {
 
     Admin getById(Long id);
 }
-}
