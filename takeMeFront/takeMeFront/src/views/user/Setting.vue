@@ -1,87 +1,108 @@
 <template>
   <div class="setting-container">
-    <div class="title">设置</div>
+    <div class="setting-card">
+      <h2 class="card-title">账号设置</h2>
 
-    <div class="btn-list">
-      <el-button type="primary" size="large" @click="goEdit" class="big-btn">
-        修改老人信息
-      </el-button>
+      <div class="button-group">
+        <el-button
+          class="action-btn primary-btn"
+          @click="goFontSize"
+        >
+          字体大小调节
+        </el-button>
 
-      <el-button type="danger" size="large" @click="logout" class="big-btn">
-        退出登录
-      </el-button>
-
-      <el-button size="large" @click="goHome" class="big-btn">
-        返回首页
-      </el-button>
+        <el-button
+          class="action-btn danger-btn"
+          @click="handleLogout"
+        >
+          退出登录
+        </el-button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ElMessageBox, ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// 修改信息
-const goEdit = () => {
-  router.push('/user/info/edit').catch(err => {
-    console.error('跳转编辑页失败', err)
-    ElMessage.error('跳转失败')
-  })
+const goFontSize = () => {
+  ElMessage.info('字体调节功能开发中')
 }
 
-// 退出登录
-const logout = async () => {
-  try {
-    await ElMessageBox.confirm('确定退出当前账号？', '提示', {
-      type: 'warning'
-    })
-    userStore.logout()
-    ElMessage.success('已退出登录')
-    router.push('/login')
-  } catch (e) {
-    console.error('退出失败', e)
-  }
-}
-
-// 返回首页
-const goHome = () => {
-  router.push('/user/index').catch(err => {
-    console.error('返回首页失败', err)
-    ElMessage.error('返回失败')
-  })
+const handleLogout = () => {
+  userStore.logout()
+  ElMessage.success('已退出登录')
+  router.push('/login')
 }
 </script>
 
 <style scoped>
 .setting-container {
-  min-height: 100vh;
-  background: #f7f8fa;
-  padding: 40px 24px;
-  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
 }
-.title {
-  font-size: 32px;
-  font-weight: bold;
+
+.setting-card {
+  width: 100%;
+  max-width: 500px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 50px 40px;
+  box-shadow: 0 4px 16px rgba(0, 184, 153, 0.08);
   text-align: center;
-  margin-bottom: 60px;
-  color: #333;
 }
-.btn-list {
+
+.card-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #006d5c;
+  margin: 0 0 45px 0;
+}
+
+.button-group {
   display: flex;
   flex-direction: column;
-  gap: 30px;
-  max-width: 400px;
-  margin: 0 auto;
+  gap: 28px;
+  /* ✅ 关键：去掉 align-items: center，让按钮自然拉伸 */
+  align-items: center;
 }
-.big-btn {
-  width: 100%;
-  height: 60px;
-  font-size: 22px;
-  border-radius: 12px;
+
+/* ✅ 强制固定宽度，完全覆盖 Element Plus 默认样式 */
+.action-btn {
+  width: 320px !important;
+  height: 58px !important;
+  font-size: 20px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  color: white !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.primary-btn {
+  background: #00b899 !important;
+}
+.primary-btn:hover {
+  background: #00a085 !important;
+}
+
+.danger-btn {
+  background: #f56c6c !important;
+}
+.danger-btn:hover {
+  background: #e64d4d !important;
 }
 </style>

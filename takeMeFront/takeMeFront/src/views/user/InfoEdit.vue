@@ -66,7 +66,7 @@
           保存修改
         </el-button>
         <el-button size="large" @click="back">
-          返回首页
+          返回
         </el-button>
       </el-form-item>
     </el-form>
@@ -83,8 +83,9 @@ import { Plus } from '@element-plus/icons-vue'
 const userStore = useUserStore()
 const router = useRouter()
 const formRef = ref(null)
+
+// 表单数据
 const form = ref({
-  id: '',
   username: '',
   account: '',
   password: '',
@@ -96,40 +97,48 @@ const form = ref({
   avatar: ''
 })
 
-onMounted(() => {
-  form.value = {
-    id: userStore.userId || '',
-    username: userStore.userName || '老人',
-    account: userStore.account || '',
-    password: '',
-    phone: userStore.phone || '',
-    age: userStore.age || null,
-    gender: userStore.gender || 0,
-    address: userStore.address || '',
-    walkingRange: userStore.walkingRange || '',
-    avatar: userStore.avatar || ''
+// 页面加载时获取最新用户信息并填充表单
+onMounted(async () => {
+  try {
+    await userStore.getUserInfo()
+    // 从store同步数据到表单
+    form.value = {
+      username: userStore.username,
+      account: userStore.account,
+      password: '', // 密码不回显
+      phone: userStore.phone,
+      age: userStore.age,
+      gender: userStore.gender,
+      address: userStore.address,
+      walkingRange: userStore.walkingRange,
+      avatar: userStore.avatar
+    }
+  } catch (e) {
+    ElMessage.error('加载用户信息失败')
   }
 })
 
-const handleAvatarSuccess = (res) => {
+// 头像上传成功回调
+const handleAvatarSuccess = (res: any) => {
   form.value.avatar = res.url
   ElMessage.success('头像上传成功')
 }
 
+// 提交修改
 const submitForm = async () => {
   try {
     await userStore.updateUserInfo(form.value)
     ElMessage.success('修改成功')
-    // 👉 重点：改为正确的首页路径 /user/index
-    await router.push('/user/index')
+    // 修改成功后返回个人信息展示页
+    await router.push('/user/info')
   } catch (e) {
     ElMessage.error('修改失败，请重试')
   }
 }
 
+// 返回个人信息页
 const back = () => {
-  // 👉 重点：改为正确的首页路径 /user/index
-  router.push('/user/index').catch(err => {
+  router.push('/user/info').catch(err => {
     console.error('返回失败', err)
     ElMessage.error('返回失败')
   })
@@ -142,6 +151,7 @@ const back = () => {
   margin: 40px auto;
   padding: 0 20px;
 }
+
 .page-title {
   font-size: 32px;
   font-weight: bold;
@@ -149,31 +159,61 @@ const back = () => {
   margin-bottom: 40px;
   color: #333;
 }
+
 .info-form {
   background: #fff;
   border-radius: 16px;
   padding: 40px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
+
 .input-large {
   font-size: 18px !important;
   padding: 10px 16px !important;
 }
+
 .btn-group {
   text-align: center;
   margin-top: 30px;
 }
+
 .avatar {
   width: 120px;
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
 }
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 120px;
+  height: 120px;
+  text-align: center;
+  line-height: 120px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.avatar-uploader-icon:hover {
+  border-color: #409eff;
+}
+
+/* 适配老人的大字体样式 */
 :deep(.el-form-item__label) {
   font-size: 18px;
   font-weight: 500;
 }
+
 :deep(.el-radio__label) {
   font-size: 18px;
+}
+
+:deep(.el-input-number__decrease),
+:deep(.el-input-number__increase) {
+  font-size: 18px;
+  width: 40px;
 }
 </style>

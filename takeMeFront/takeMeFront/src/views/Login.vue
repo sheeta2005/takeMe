@@ -97,8 +97,7 @@ const handleMouseMove = (e: MouseEvent) => {
   bgY.value = y
 }
 
-
-// 登录函数
+//测试使用的登陆函数
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
     ElMessage.warning('请输入账号和密码')
@@ -106,31 +105,61 @@ const handleLogin = async () => {
   }
 
   try {
-    // 调用统一登录接口，传递 用户名+密码+角色数字
-    const res = await login(loginForm.value)
+    // ========================
+    // 👇 这里直接模拟登录成功
+    // ========================
+    ElMessage.success('登录成功（模拟模式）')
 
-    // 从后端获取 token
-    const token = res.data.token
+    // 手动存 token + 角色
+    userStore.setUserInfo(
+      'this-is-a-fake-token-123456',
+      loginForm.value.username,
+      loginForm.value.role
+    )
 
-    // 保存到全局状态 + localStorage
-    userStore.setUserInfo(token, loginForm.value.username, loginForm.value.role)
-
-    ElMessage.success('登录成功')
-
-    // 根据角色数字跳不同页面
-    if (loginForm.value.role === 0) {
-      router.push('/admin')
-    } else if (loginForm.value.role === 1) {
-      router.push('/volunteer')
-    } else {
-      router.push('/user')
-    }
+    // 跳转
+    if (loginForm.value.role === 0) router.push('/admin')
+    else if (loginForm.value.role === 1) router.push('/volunteer')
+    else router.push('/user')
 
   } catch (err) {
-    ElMessage.error('登录失败，请检查账号密码')
-    console.error(err)
+    ElMessage.error('登录失败')
   }
 }
+
+// 正式使用的登录函数
+// const handleLogin = async () => {
+//   if (!loginForm.value.username || !loginForm.value.password) {
+//     ElMessage.warning('请输入账号和密码')
+//     return
+//   }
+//
+//   try {
+//     // 调用统一登录接口，传递 用户名+密码+角色数字
+//     const res = await login(loginForm.value)
+//
+//     // 从后端获取 token
+//     const token = res.data.token
+//
+//     // 保存到全局状态 + localStorage
+//     userStore.setUserInfo(token, loginForm.value.username, loginForm.value.role)
+//
+//     ElMessage.success('登录成功')
+//
+//     // 根据角色数字跳不同页面
+//     if (loginForm.value.role === 0) {
+//       router.push('/admin')
+//     } else if (loginForm.value.role === 1) {
+//       router.push('/volunteer')
+//     } else {
+//       router.push('/user')
+//     }
+//
+//   } catch (err) {
+//     ElMessage.error('登录失败，请检查账号密码')
+//     console.error(err)
+//   }
+// }
 </script>
 
 <style scoped>

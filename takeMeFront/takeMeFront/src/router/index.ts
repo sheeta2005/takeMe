@@ -34,28 +34,28 @@ const routes = [
     meta: { role: 2 },
     children: [
       { path: '', component: () => import('@/views/user/Index.vue') },
-      { path: 'create', component: () => import('@/views/user/CreateOrder.vue') }
+      { path: 'order', component: () => import('@/views/user/Order.vue') },
+      {path: 'order/detail', component: () => import('@/views/user/OrderDetail.vue')},
+      { path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue') },
+      { path: 'setting', component: () => import('@/views/user/Setting.vue') },
+      { path: 'create', component: () => import('@/views/user/CreateOrder.vue') },
+      { path: '', component: () => import('@/views/user/Index.vue') },
+      // 新增：个人信息展示页
+      { path: 'info', component: () => import('@/views/user/Info.vue') },
+      // 保留：个人信息修改页
+      { path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue') },
+
+      // 四个服务页面 ✅
+      { path: 'meal', component: () => import('@/views/user/OrderMeal.vue') },
+      { path: 'clean', component: () => import('@/views/user/OrderClean.vue') },
+      { path: 'medical', component: () => import('@/views/user/OrderMedical.vue') },
+      { path: 'shop', component: () => import('@/views/user/OrderShop.vue') },
     ]
   },
   {
-    path: '/user/info/edit',
-    name: 'InfoEdit',
-    component: () => import('@/views/user/InfoEdit.vue'),
-    meta: { role: 2 }
-  },
-  {
-    path: '/user/setting',
-    name: 'UserSetting',
-    component: () => import('@/views/user/Setting.vue'),
-    meta: { role: 2 }
-  },
-  {
-    path: '/user/index',
-    name: 'UserIndex',
-    component: () => import('@/views/user/Index.vue'),
-    meta: { role: 2 }
-  },
-  { path: '/', redirect: '/login' }
+    path: '/:pathMatch(.*)*',
+    redirect: '/login'
+  }
 ]
 
 const router = createRouter({
@@ -63,14 +63,11 @@ const router = createRouter({
   routes
 })
 
-// ==============================
-// ✅ 修复后：不会自动跳页面
-// ==============================
+// -------------- 路由守卫 --------------
 router.beforeEach((to, _, next) => {
   const userStore = useUserStore()
   const token = userStore.token
 
-  // 未登录 → 只允许去登录页
   if (!token) {
     if (to.path === '/login') {
       next()
@@ -80,8 +77,14 @@ router.beforeEach((to, _, next) => {
     return
   }
 
-  // 已登录，允许去任何页面（权限交给角色判断）
-  // 不自动跳！不自动跳！不自动跳！
+  if (token && to.path === '/login') {
+    const role = userStore.role
+    if (role === 0) next('/admin')
+    else if (role === 1) next('/volunteer')
+    else next('/user')
+    return
+  }
+
   if (to.meta.role !== undefined && to.meta.role !== userStore.role) {
     alert('无权限访问')
     next(false)
