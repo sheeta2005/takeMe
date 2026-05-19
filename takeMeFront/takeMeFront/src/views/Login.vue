@@ -37,7 +37,6 @@
           </el-form-item>
 
           <el-form-item label="身份">
-            <!-- 角色改成数字 0 1 2 -->
             <el-select
               v-model="loginForm.role"
               placeholder="请选择登录身份"
@@ -69,23 +68,22 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { login } from '@/api/user'       // 引入统一登录接口
-import { useUserStore } from '@/store/user' // 引入用户状态
+import { login } from '@/api/user'
+import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// 登录表单（角色改为数字类型）
 const loginForm = ref<{
   username: string;
   password: string;
-  role: 0 | 1 | 2; // 这里必须和 api/user.ts 里的类型一致
+  role: 0 | 1 | 2;
 }>({
   username: '',
   password: '',
-  role: 2 // 默认普通用户
+  role: 2
 })
-// 背景视差
+
 const bgX = ref(0)
 const bgY = ref(0)
 const speed = 15
@@ -97,7 +95,7 @@ const handleMouseMove = (e: MouseEvent) => {
   bgY.value = y
 }
 
-//测试使用的登陆函数
+// ✅ 修复后的模拟登录
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
     ElMessage.warning('请输入账号和密码')
@@ -105,19 +103,16 @@ const handleLogin = async () => {
   }
 
   try {
-    // ========================
-    // 👇 这里直接模拟登录成功
-    // ========================
     ElMessage.success('登录成功（模拟模式）')
 
-    // 手动存 token + 角色
+    // ✅ 这里参数顺序完全正确
     userStore.setUserInfo(
       'this-is-a-fake-token-123456',
+      '1',
       loginForm.value.username,
       loginForm.value.role
     )
 
-    // 跳转
     if (loginForm.value.role === 0) router.push('/admin')
     else if (loginForm.value.role === 1) router.push('/volunteer')
     else router.push('/user')
@@ -127,26 +122,20 @@ const handleLogin = async () => {
   }
 }
 
-// 正式使用的登录函数
+// 正式登录
 // const handleLogin = async () => {
 //   if (!loginForm.value.username || !loginForm.value.password) {
 //     ElMessage.warning('请输入账号和密码')
 //     return
 //   }
-//
+
 //   try {
-//     // 调用统一登录接口，传递 用户名+密码+角色数字
 //     const res = await login(loginForm.value)
-//
-//     // 从后端获取 token
 //     const token = res.data.token
-//
-//     // 保存到全局状态 + localStorage
 //     userStore.setUserInfo(token, loginForm.value.username, loginForm.value.role)
-//
+
 //     ElMessage.success('登录成功')
-//
-//     // 根据角色数字跳不同页面
+
 //     if (loginForm.value.role === 0) {
 //       router.push('/admin')
 //     } else if (loginForm.value.role === 1) {
@@ -154,7 +143,6 @@ const handleLogin = async () => {
 //     } else {
 //       router.push('/user')
 //     }
-//
 //   } catch (err) {
 //     ElMessage.error('登录失败，请检查账号密码')
 //     console.error(err)
@@ -163,7 +151,6 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-
 .login-wrapper {
   width: 100vw;
   height: 100vh;

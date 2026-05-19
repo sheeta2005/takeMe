@@ -50,7 +50,7 @@
 
     <!-- 返回按钮：去掉箭头图标，文字完全居中 -->
     <el-button
-      type="danger"
+      type="success"
       size="large"
       class="back-btn"
       @click="$router.back()"

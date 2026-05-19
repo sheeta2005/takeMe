@@ -1,16 +1,17 @@
 <template>
   <el-container class="layout-container">
-    <!-- 顶部导航栏 -->
     <el-header class="layout-header">
       <div class="header-left">takeMe 老人服务平台</div>
       <div class="header-right">
-        <span>您好，{{ userName }} 老人</span>
+        <div class="user-box">
+          <img class="user-avatar" :src="userStore.avatar" alt="头像" />
+          <span>您好，{{ userName }} 老人</span>
+        </div>
       </div>
     </el-header>
 
     <el-container>
-      <!-- 左侧导航栏 -->
-      <el-aside width="220px" class="layout-aside">
+      <el-aside width="240px" class="layout-aside">
         <el-menu
           :default-active="activeMenu"
           class="aside-menu"
@@ -21,39 +22,36 @@
             <span>首页</span>
           </el-menu-item>
 
-          <!-- 助餐服务 -->
           <el-menu-item index="/user/meal">
             <el-icon><Dish /></el-icon>
             <span>助餐服务</span>
           </el-menu-item>
 
-          <!-- 助洁服务 -->
           <el-menu-item index="/user/clean">
             <el-icon><Brush /></el-icon>
             <span>助洁服务</span>
           </el-menu-item>
 
-          <!-- 助医服务 -->
           <el-menu-item index="/user/medical">
             <el-icon><FirstAidKit /></el-icon>
             <span>助医服务</span>
           </el-menu-item>
 
-          <!-- 代购服务 -->
           <el-menu-item index="/user/shop">
             <el-icon><ShoppingCart /></el-icon>
             <span>代购服务</span>
           </el-menu-item>
 
-
           <el-menu-item index="/user/order">
             <el-icon><Tickets /></el-icon>
             <span>我的订单</span>
           </el-menu-item>
-          <el-menu-item index="/user/info/edit">
+
+          <el-menu-item index="/user/info">
             <el-icon><User /></el-icon>
             <span>个人信息</span>
           </el-menu-item>
+
           <el-menu-item index="/user/setting">
             <el-icon><Setting /></el-icon>
             <span>账号设置</span>
@@ -61,7 +59,6 @@
         </el-menu>
       </el-aside>
 
-      <!-- 主内容区：路由出口 -->
       <el-main class="layout-main">
         <router-view />
       </el-main>
@@ -70,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import {
@@ -82,11 +79,14 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-// 当前激活的菜单，和路由地址绑定
 const activeMenu = computed(() => route.path)
 const userName = ref(userStore.username || '用户')
 
-// 菜单点击，直接跳转到对应路由
+onMounted(() => {
+  userStore.getUserInfo()
+  userName.value = userStore.username
+})
+
 const handleMenuSelect = (path: string) => {
   router.push(path)
 }
@@ -97,52 +97,74 @@ const handleMenuSelect = (path: string) => {
   height: 100vh;
 }
 
-/* 顶部栏（深青绿色，和左侧区分） */
 .layout-header {
-  background-color: #00b899;
+  background: linear-gradient(90deg, #00a88d 0%, #00c4a0 100%);
   color: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
-  font-size: 20px;
-  font-weight: 500;
-}
-.header-right {
-  font-size: 18px;
+  padding: 22px 32px;
+  font-size: 26px;
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(0, 184, 153, 0.25);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-/* 左侧导航栏（白色背景） */
+.header-right {
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.user-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 .layout-aside {
   background-color: #ffffff;
   border-right: 1px solid #e5e7eb;
 }
+
 .aside-menu {
   border-right: none;
   height: 100%;
-  padding-top: 12px;
-}
-:deep(.el-menu-item) {
-  height: 60px;
-  line-height: 60px;
-  font-size: 18px;
-  margin: 4px 12px;
-  border-radius: 12px;
-}
-/* 激活状态：浅青绿色，和顶部深绿色区分 */
-:deep(.el-menu-item.is-active) {
-  background-color: #e6f7f3;
-  color: #00b899;
-  font-weight: bold;
-}
-:deep(.el-menu-item:hover) {
-  background-color: #f2faf8;
+  padding-top: 20px;
 }
 
-/* 主内容区 */
+:deep(.el-menu-item) {
+  height: 64px;
+  line-height: 64px;
+  font-size: 19px;
+  margin: 6px 16px;
+  border-radius: 14px;
+  transition: all 0.25s ease;
+}
+
+:deep(.el-menu-item.is-active) {
+  background: linear-gradient(90deg, #e6f7f3 0%, #f0fffc 100%);
+  color: #008c74;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 184, 153, 0.1);
+}
+
+:deep(.el-menu-item:hover) {
+  background-color: #f5fcfb;
+  transform: translateX(2px);
+}
+
 .layout-main {
   background-color: #f8faf9;
-  padding: 24px;
+  padding: 32px;
   overflow-y: auto;
 }
 </style>

@@ -35,17 +35,11 @@ const routes = [
     children: [
       { path: '', component: () => import('@/views/user/Index.vue') },
       { path: 'order', component: () => import('@/views/user/Order.vue') },
-      {path: 'order/detail', component: () => import('@/views/user/OrderDetail.vue')},
+      { path: 'order/detail', component: () => import('@/views/user/OrderDetail.vue') },
+      { path: 'info', component: () => import('@/views/user/Info.vue') },
       { path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue') },
       { path: 'setting', component: () => import('@/views/user/Setting.vue') },
       { path: 'create', component: () => import('@/views/user/CreateOrder.vue') },
-      { path: '', component: () => import('@/views/user/Index.vue') },
-      // 新增：个人信息展示页
-      { path: 'info', component: () => import('@/views/user/Info.vue') },
-      // 保留：个人信息修改页
-      { path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue') },
-
-      // 四个服务页面 ✅
       { path: 'meal', component: () => import('@/views/user/OrderMeal.vue') },
       { path: 'clean', component: () => import('@/views/user/OrderClean.vue') },
       { path: 'medical', component: () => import('@/views/user/OrderMedical.vue') },
@@ -62,12 +56,14 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
-
-// -------------- 路由守卫 --------------
+// -------------- 路由守卫 稳定版 --------------
 router.beforeEach((to, _, next) => {
   const userStore = useUserStore()
   const token = userStore.token
 
+  // 1. 未登录状态：
+  //    - 访问登录页：放行
+  //    - 访问其他页：强制跳登录页
   if (!token) {
     if (to.path === '/login') {
       next()
@@ -77,20 +73,26 @@ router.beforeEach((to, _, next) => {
     return
   }
 
-  if (token && to.path === '/login') {
-    const role = userStore.role
-    if (role === 0) next('/admin')
-    else if (role === 1) next('/volunteer')
-    else next('/user')
+  // 2. 已登录，但还想访问登录页：自动跳对应角色的主页
+  if (to.path === '/login') {
+    if (userStore.role === 0) {
+      next('/admin')
+    } else if (userStore.role === 1) {
+      next('/volunteer')
+    } else {
+      next('/user')
+    }
     return
   }
 
+  // 3. 已登录，访问其他页：判断角色权限
   if (to.meta.role !== undefined && to.meta.role !== userStore.role) {
     alert('无权限访问')
     next(false)
     return
   }
 
+  // 4. 都没问题，放行
   next()
 })
 

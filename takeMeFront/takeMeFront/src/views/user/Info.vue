@@ -31,12 +31,14 @@
           <span class="value">{{ userInfo.gender === 0 ? '男' : '女' }}</span>
         </div>
         <div class="info-item">
-          <span class="label">家庭住址：</span>
-          <span class="value">{{ userInfo.address || '未填写' }}</span>
+          <span class="label">默认住址：</span>
+          <span class="value">{{ userInfo.addresses?.[0] || '未填写' }}</span>
         </div>
         <div class="info-item">
-          <span class="label">行走范围：</span>
-          <span class="value">{{ userInfo.walkingRange || '未填写' }}</span>
+          <span class="label">紧急联系人：</span>
+          <span class="value">
+            {{ userInfo.emergencyName || '未填写' }} / {{ userInfo.emergencyPhone || '未填写' }}
+          </span>
         </div>
       </div>
 
@@ -83,6 +85,7 @@ onMounted(() => {
   loadUserInfo()
 })
 </script>
+
 <style scoped>
 .info-page {
   max-width: 700px;

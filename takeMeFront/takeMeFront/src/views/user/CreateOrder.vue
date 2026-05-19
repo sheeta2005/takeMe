@@ -10,6 +10,26 @@
         <div class="service-price">¥{{ serviceInfo.price }}</div>
       </div>
 
+      <!-- ====================== -->
+      <!-- 🔥 新增：服务地址（所有服务都显示） -->
+      <!-- ====================== -->
+      <div class="form-section">
+        <div class="label">服务地址 *</div>
+        <el-select
+          v-model="serviceAddress"
+          placeholder="请选择服务地址"
+          size="large"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="(addr, index) in addressList"
+            :key="index"
+            :label="addr"
+            :value="addr"
+          />
+        </el-select>
+      </div>
+
       <!-- 助餐：要求送达时间（最小半小时后） -->
       <div class="form-section" v-if="serviceInfo.type === '助餐'">
         <div class="label">要求送达时间 *</div>
@@ -63,16 +83,9 @@
         ></el-date-picker>
       </div>
 
-      <!-- 代购：购买地址 + 期望送达时间 -->
+      <!-- 代购：期望送达时间（已删除购买地址） -->
       <div class="form-section" v-if="serviceInfo.type === '代购'">
-        <div class="label">购买地址 *</div>
-        <el-input
-          v-model="shopAddress"
-          placeholder="请输入需要购买商品的地址"
-          size="large"
-        ></el-input>
-
-        <div class="label" style="margin-top: 20px;">期望送达时间 *</div>
+        <div class="label">期望送达时间 *</div>
         <el-date-picker
           v-model="deliveryTime"
           type="datetime"
@@ -115,8 +128,12 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
+// 🔥 引入用户store
+import { useUserStore } from '@/store/user'
+
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 // 服务基础信息
 const serviceInfo = ref({
@@ -138,8 +155,11 @@ const serviceTime = ref('')
 // 助医 字段
 const hospital = ref('')
 
-// 代购 字段
-const shopAddress = ref('')
+// ======================
+// 🔥 新增：地址相关
+// ======================
+const serviceAddress = ref('') // 当前选中地址
+const addressList = ref<string[]>([]) // 地址下拉列表
 
 // 禁用今天之前的日期
 const disabledDate = (time: Date) => {
@@ -173,8 +193,36 @@ const loadServiceInfo = () => {
   }
 }
 
+// ======================
+// 🔥 新增：加载用户地址
+// ======================
+const loadUserAddress = async () => {
+  // 从store获取用户信息
+  await userStore.getUserInfo()
+
+  // 默认地址 = store里的用户地址
+  const defaultAddr = userStore.address || '暂未设置地址'
+
+  // 设置下拉列表（可自行扩展更多）
+  addressList.value = [
+    defaultAddr,
+    '西安市雁塔区科技二路 66 号',
+    '西安市高新区绿地中心 A 座 1202'
+  ]
+
+  // 默认选中默认地址
+  serviceAddress.value = defaultAddr
+}
+
 // 提交订单
 const submitOrder = async () => {
+  // ======================
+  // 🔥 校验地址
+  // ======================
+  if (!serviceAddress.value) {
+    return ElMessage.error('请选择服务地址')
+  }
+
   // 基础校验
   if (serviceInfo.type === '助餐' && !deliveryTime.value) {
     return ElMessage.error('请选择送达时间')
@@ -186,9 +234,8 @@ const submitOrder = async () => {
     if (!hospital.value) return ElMessage.error('请输入就诊医院')
     if (!serviceTime.value) return ElMessage.error('请选择就诊时间')
   }
-  if (serviceInfo.type === '代购') {
-    if (!shopAddress.value) return ElMessage.error('请输入购买地址')
-    if (!deliveryTime.value) return ElMessage.error('请选择期望送达时间')
+  if (serviceInfo.type === '代购' && !deliveryTime.value) {
+    return ElMessage.error('请选择期望送达时间')
   }
 
   // 组装订单数据
@@ -197,7 +244,7 @@ const submitOrder = async () => {
     serviceName: serviceInfo.value.name,
     price: serviceInfo.value.price,
     remark: remark.value,
-    // 动态添加特殊字段
+    serviceAddress: serviceAddress.value, // 🔥 提交时带上地址
     ...(serviceInfo.type === '助餐' && { deliveryTime: deliveryTime.value }),
     ...(serviceInfo.type === '助洁' && { serviceTime: serviceTime.value }),
     ...(serviceInfo.type === '助医' && {
@@ -205,22 +252,18 @@ const submitOrder = async () => {
       serviceTime: serviceTime.value
     }),
     ...(serviceInfo.type === '代购' && {
-      shopAddress: shopAddress.value,
       deliveryTime: deliveryTime.value
     })
   }
 
-  // 这里替换为你的真实接口请求
-  // const res = await axios.post('/api/order/create', orderData)
-
-  // 模拟提交成功
-  ElMessage.success('下单成功！')
-  // 跳转到我的订单
+  // 模拟提交
+  ElMessage.success('下单成功！\n服务地址：' + serviceAddress.value)
   router.push('/user/order')
 }
 
 onMounted(() => {
   loadServiceInfo()
+  loadUserAddress() // 🔥 加载地址
 })
 </script>
 

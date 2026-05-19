@@ -26,6 +26,7 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
+import { logout } from '@/api/user' // 👈 加上这个
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -34,10 +35,22 @@ const goFontSize = () => {
   ElMessage.info('字体调节功能开发中')
 }
 
-const handleLogout = () => {
+// ✅ 修复：异步 + 调用后端退出接口 + 确保跳转一定执行
+const handleLogout = async () => {
+  //模拟阶段停止调用
+  // try {
+  //   await logout() // 调用后端退出
+  // } catch (e) {
+  //   console.log('退出接口异常，继续本地退出')
+  // }
+
+  // 清空状态
   userStore.logout()
-  ElMessage.success('已退出登录')
-  router.push('/login')
+
+  ElMessage.success('已安全退出登录')
+
+  // ✅ 强制跳转，确保一定回到登录页
+  await router.replace('/login')
 }
 </script>
 
@@ -73,11 +86,9 @@ const handleLogout = () => {
   display: flex;
   flex-direction: column;
   gap: 28px;
-  /* ✅ 关键：去掉 align-items: center，让按钮自然拉伸 */
   align-items: center;
 }
 
-/* ✅ 强制固定宽度，完全覆盖 Element Plus 默认样式 */
 .action-btn {
   width: 320px !important;
   height: 58px !important;

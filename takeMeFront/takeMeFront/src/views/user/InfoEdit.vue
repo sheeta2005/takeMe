@@ -1,11 +1,11 @@
 <template>
   <div class="info-edit-container">
-    <div class="page-title">修改老人信息</div>
+    <div class="page-title">修改信息</div>
 
     <el-form
       ref="formRef"
       :model="form"
-      label-width="100px"
+      label-width="120px"
       class="info-form"
     >
       <el-form-item label="姓名" prop="username">
@@ -41,12 +41,35 @@
         </el-radio-group>
       </el-form-item>
 
-      <el-form-item label="家庭住址" prop="address">
-        <el-input v-model="form.address" type="textarea" :rows="3" class="input-large" />
+      <!-- 常用地址列表（最多3个） -->
+      <el-form-item label="常用地址" prop="addresses">
+        <div class="address-list">
+          <div v-for="(addr, index) in form.addresses" :key="index" class="address-item">
+            <el-input
+              v-model="form.addresses[index]"
+              :placeholder="`地址${index + 1}`"
+              class="input-large"
+            />
+            <el-button
+              v-if="form.addresses.length > 1"
+              type="danger"
+              @click="removeAddress(index)"
+            >删除</el-button>
+          </div>
+          <el-button
+            v-if="form.addresses.length < 3"
+            type="primary"
+            @click="addAddress"
+          >添加地址</el-button>
+        </div>
       </el-form-item>
 
-      <el-form-item label="行走范围" prop="walkingRange">
-        <el-input v-model="form.walkingRange" placeholder="例如：500米" class="input-large" />
+      <!-- 紧急联系人 -->
+      <el-form-item label="紧急联系人" prop="emergencyName">
+        <el-input v-model="form.emergencyName" placeholder="紧急联系人姓名" class="input-large" />
+      </el-form-item>
+      <el-form-item label="紧急联系人电话" prop="emergencyPhone">
+        <el-input v-model="form.emergencyPhone" placeholder="紧急联系人手机号" class="input-large" />
       </el-form-item>
 
       <el-form-item label="头像">
@@ -92,16 +115,26 @@ const form = ref({
   phone: '',
   age: null,
   gender: 0,
-  address: '',
-  walkingRange: '',
+  addresses: [] as string[], // 常用地址列表
+  emergencyName: '',
+  emergencyPhone: '',
   avatar: ''
 })
+
+// 添加/删除地址
+const addAddress = () => {
+  if (form.value.addresses.length < 3) {
+    form.value.addresses.push('')
+  }
+}
+const removeAddress = (index: number) => {
+  form.value.addresses.splice(index, 1)
+}
 
 // 页面加载时获取最新用户信息并填充表单
 onMounted(async () => {
   try {
     await userStore.getUserInfo()
-    // 从store同步数据到表单
     form.value = {
       username: userStore.username,
       account: userStore.account,
@@ -109,8 +142,9 @@ onMounted(async () => {
       phone: userStore.phone,
       age: userStore.age,
       gender: userStore.gender,
-      address: userStore.address,
-      walkingRange: userStore.walkingRange,
+      addresses: userStore.addresses || [''], // 默认至少一个地址
+      emergencyName: userStore.emergencyName || '',
+      emergencyPhone: userStore.emergencyPhone || '',
       avatar: userStore.avatar
     }
   } catch (e) {
@@ -129,7 +163,6 @@ const submitForm = async () => {
   try {
     await userStore.updateUserInfo(form.value)
     ElMessage.success('修改成功')
-    // 修改成功后返回个人信息展示页
     await router.push('/user/info')
   } catch (e) {
     ElMessage.error('修改失败，请重试')
@@ -199,6 +232,17 @@ const back = () => {
 
 .avatar-uploader-icon:hover {
   border-color: #409eff;
+}
+
+.address-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.address-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 /* 适配老人的大字体样式 */

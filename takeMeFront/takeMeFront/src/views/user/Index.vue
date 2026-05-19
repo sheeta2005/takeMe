@@ -29,12 +29,10 @@ import { useUserStore } from '@/store/user'
 const userStore = useUserStore()
 const userName = ref('')
 
-// 从 userStore 获取用户名，没有就用默认值
 onMounted(() => {
   userName.value = userStore.username || '尊敬的用户'
 })
 
-// 公告数据
 const newsList = ref([
   { title: '助餐服务每日10点前下单，当日配送', date: '2025-01-01' },
   { title: '助洁服务支持预约上门时间', date: '2025-01-02' },
@@ -51,14 +49,20 @@ const newsList = ref([
 }
 
 .greeting-card {
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f7fffd 100%);
   border-radius: 20px;
   padding: 32px;
   display: flex;
   align-items: center;
   gap: 24px;
-  box-shadow: 0 4px 20px rgba(0, 184, 153, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 184, 153, 0.12);
   margin-bottom: 30px;
+  border: 1px solid rgba(0, 184, 153, 0.1);
+  transition: all 0.3s ease;
+}
+.greeting-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 184, 153, 0.15);
 }
 
 .greeting-icon {
@@ -69,26 +73,29 @@ const newsList = ref([
   font-size: 28px;
   color: #006d5c;
   margin: 0 0 8px 0;
+  font-weight: 700;
 }
 
 .greeting-text p {
   font-size: 18px;
-  color: #666;
+  color: #555;
   margin: 0;
+  line-height: 1.6;
 }
 
 .news-card {
   background: #ffffff;
   border-radius: 20px;
   padding: 32px;
-  box-shadow: 0 4px 20px rgba(0, 184, 153, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 184, 153, 0.08);
+  border: 1px solid rgba(0, 184, 153, 0.07);
 }
 
 .card-title {
   font-size: 24px;
   color: #006d5c;
   margin: 0 0 24px 0;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .news-list {
@@ -101,21 +108,23 @@ const newsList = ref([
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #fafcfb;
+  transition: all 0.2s ease;
 }
-
-.news-item:last-child {
-  border-bottom: none;
+.news-item:hover {
+  background: #f2faf8;
 }
 
 .news-title {
   font-size: 18px;
-  color: #333;
+  color: #222;
+  font-weight: 500;
 }
 
 .news-date {
   font-size: 15px;
-  color: #999;
+  color: #888;
 }
 </style>
