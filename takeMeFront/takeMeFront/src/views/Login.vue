@@ -37,14 +37,15 @@
           </el-form-item>
 
           <el-form-item label="身份">
+            <!-- 角色改成数字 0 1 2 -->
             <el-select
               v-model="loginForm.role"
               placeholder="请选择登录身份"
               size="large"
             >
-              <el-option label="管理员" value="admin" />
-              <el-option label="志愿者" value="volunteer" />
-              <el-option label="普通用户" value="user" />
+              <el-option label="管理员" :value="0" />
+              <el-option label="志愿者" :value="1" />
+              <el-option label="普通用户" :value="2" />
             </el-select>
           </el-form-item>
 
@@ -67,22 +68,28 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { login } from '@/api/user'       // 引入统一登录接口
+import { useUserStore } from '@/store/user' // 引入用户状态
 
+const router = useRouter()
+const userStore = useUserStore()
 
-const loginForm = ref({
+// 登录表单（角色改为数字类型）
+const loginForm = ref<{
+  username: string;
+  password: string;
+  role: 0 | 1 | 2; // 这里必须和 api/user.ts 里的类型一致
+}>({
   username: '',
   password: '',
-  role: 'user'
+  role: 2 // 默认普通用户
 })
-
-
-// 背景偏移量
+// 背景视差
 const bgX = ref(0)
 const bgY = ref(0)
-// 视差灵敏度 数值越小动的越快
 const speed = 15
 
-// 鼠标移动监听
 const handleMouseMove = (e: MouseEvent) => {
   const x = (window.innerWidth / 2 - e.clientX) / speed
   const y = (window.innerHeight / 2 - e.clientY) / speed
@@ -90,16 +97,44 @@ const handleMouseMove = (e: MouseEvent) => {
   bgY.value = y
 }
 
-const handleLogin = () => {
+
+// 登录函数
+const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
     ElMessage.warning('请输入账号和密码')
     return
   }
-  ElMessage.success('登录请求已发送！')
+
+  try {
+    // 调用统一登录接口，传递 用户名+密码+角色数字
+    const res = await login(loginForm.value)
+
+    // 从后端获取 token
+    const token = res.data.token
+
+    // 保存到全局状态 + localStorage
+    userStore.setUserInfo(token, loginForm.value.username, loginForm.value.role)
+
+    ElMessage.success('登录成功')
+
+    // 根据角色数字跳不同页面
+    if (loginForm.value.role === 0) {
+      router.push('/admin')
+    } else if (loginForm.value.role === 1) {
+      router.push('/volunteer')
+    } else {
+      router.push('/user')
+    }
+
+  } catch (err) {
+    ElMessage.error('登录失败，请检查账号密码')
+    console.error(err)
+  }
 }
 </script>
 
 <style scoped>
+
 .login-wrapper {
   width: 100vw;
   height: 100vh;
@@ -110,7 +145,6 @@ const handleLogin = () => {
   align-items: center;
 }
 
-/* 老人微笑背景图层 放大实现微动留白 */
 .bg-img {
   position: absolute;
   top: -50px;
@@ -118,14 +152,12 @@ const handleLogin = () => {
   right: -50px;
   bottom: -50px;
   z-index: 1;
-  /* 改成你自己的图片文件名 */
   background: url('@/assets/oldman.jpg') no-repeat center center;
   background-size: cover;
   transition: transform 0.1s ease-out;
   filter: brightness(0.65);
 }
 
-/* 登录卡片置顶 */
 .login-box {
   width: 460px;
   z-index: 9;
@@ -162,7 +194,6 @@ const handleLogin = () => {
   margin-top: 10px;
 }
 
-/* 青绿主题按钮 */
 :deep(.login-btn) {
   width: 100%;
   height: 46px;

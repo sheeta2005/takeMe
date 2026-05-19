@@ -1,35 +1,25 @@
 import { defineStore } from 'pinia'
 
-interface UserState {
-  token: string
-  role: string
-  userName: string
-  userId: number
-}
-
 export const useUserStore = defineStore('user', {
-  state: (): UserState => ({
+  state: () => ({
     token: localStorage.getItem('token') || '',
-    role: localStorage.getItem('role') || '',
-    userName: '',
-    userId: 0
+    username: '',
+    role: 2 // 默认普通用户 0管理员 1志愿者 2普通
   }),
   actions: {
-    setToken(token: string, role: string, userName: string = '', userId: number = 0) {
+    // 登录存入信息
+    setUserInfo(token: string, username: string, role: number) {
       this.token = token
+      this.username = username
       this.role = role
-      this.userName = userName
-      this.userId = userId
       localStorage.setItem('token', token)
-      localStorage.setItem('role', role)
     },
+    // 退出登录清空
     logout() {
       this.token = ''
-      this.role = ''
-      this.userName = ''
-      this.userId = 0
+      this.username = ''
+      this.role = 2
       localStorage.removeItem('token')
-      localStorage.removeItem('role')
     }
   }
 })

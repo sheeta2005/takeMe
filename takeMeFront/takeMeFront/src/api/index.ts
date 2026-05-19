@@ -37,33 +37,6 @@ export function createOrder(data: any) {
   })
 }
 
-// ====================== 登录 ======================
-// 管理员登录
-export function adminLogin(data: { username: string; password: string }) {
-  return request({
-    url: '/api/admin/login',
-    method: 'post',
-    data,
-  })
-}
-
-// 志愿者登录
-export function volunteerLogin(data: { username: string; password: string }) {
-  return request({
-    url: '/api/volunteer/login',
-    method: 'post',
-    data,
-  })
-}
-
-// 用户（老人）登录
-export function userLogin(data: { username: string; password: string }) {
-  return request({
-    url: '/api/user/login',
-    method: 'post',
-    data,
-  })
-}
 
 // ====================== 管理员 - 志愿者管理 ======================
 export function getVolunteerPage(page: number, pageSize: number) {
