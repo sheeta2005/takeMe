@@ -47,8 +47,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { getMyOrderList, getOrderDetail, cancelOrder } from '@/api/order'
 
 const router = useRouter()
+
 // 订单状态与标签颜色映射
 const getTagType = (status: string) => {
   if (status === '待接单') return 'warning'
@@ -60,55 +62,44 @@ const getTagType = (status: string) => {
 // 筛选状态
 const filterStatus = ref('')
 
-// 模拟订单数据（后续替换为接口请求）
+// 订单列表
 const orderList = ref<any[]>([])
 
-// 筛选后的订单列表
+// 筛选后的订单
 const filteredOrderList = computed(() => {
   if (!filterStatus.value) return orderList.value
   return orderList.value.filter(item => item.status === filterStatus.value)
 })
 
-// 查订单方法（后续可替换为真实接口）
+// ==============================================
+// 🔥 目前使用：模拟订单数据
+// ==============================================
 const fetchOrders = async () => {
-  // 这里后续替换为你的真实接口请求
-  // const res = await axios.get('/api/order/list')
-  // orderList.value = res.data
-
-  // 模拟数据
   orderList.value = [
-    {
-      id: 'ORD20260520001',
-      serviceType: '助餐服务-营养套餐A',
-      status: '待接单',
-      createTime: '2026-05-20 10:30:00',
-      price: 15
-    },
-    {
-      id: 'ORD20260519001',
-      serviceType: '助洁服务-日常保洁',
-      status: '服务中',
-      createTime: '2026-05-19 14:00:00',
-      price: 30
-    },
-    {
-      id: 'ORD20260518001',
-      serviceType: '代购服务-生活用品代购',
-      status: '已完成',
-      createTime: '2026-05-18 09:15:00',
-      price: 10
-    }
+    { id: 'ORD20260520001', serviceType: '助餐服务-营养套餐A', status: '待接单', createTime: '2026-05-20 10:30:00', price: 15 },
+    { id: 'ORD20260519001', serviceType: '助洁服务-日常保洁', status: '服务中', createTime: '2026-05-19 14:00:00', price: 30 },
+    { id: 'ORD20260518001', serviceType: '代购服务-生活用品代购', status: '已完成', createTime: '2026-05-18 09:15:00', price: 10 }
   ]
 }
 
-// 查看订单详情，跳转到详情页
+// ==============================================
+// ✅ 真实API版（已写好，以后解开注释直接用）
+// 需要导入：import { getMyOrderList } from '@/api/order'
+// ==============================================
+/*
+const fetchOrders = async () => {
+  try {
+    const res = await getMyOrderList()
+    orderList.value = res.data
+  } catch (err) {
+    ElMessage.error('获取订单失败')
+  }
+}
+*/
+
+// 查看详情
 const viewDetail = (order: any) => {
-  router.push({
-    path: '/user/order/detail',
-    query: {
-      id: order.id
-    }
-  })
+  router.push({ path: '/user/order/detail', query: { id: order.id } })
 }
 
 onMounted(() => {
@@ -122,72 +113,43 @@ onMounted(() => {
   margin: 0 auto;
   padding: 20px 0;
 }
-
 .page-title {
   font-size: 28px;
   font-weight: bold;
   color: #333;
   margin-bottom: 24px;
 }
-
 .filter-bar {
   margin-bottom: 24px;
 }
-
 .order-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-
 .order-card {
   background: #fff;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 184, 153, 0.08);
 }
-
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
-
-.order-id {
-  font-size: 18px;
-  color: #666;
-}
-
+.order-id { font-size: 18px; color: #666; }
 .order-body {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
-
-.service-type {
-  font-size: 20px;
-  font-weight: 600;
-  color: #006d5c;
-}
-
-.create-time {
-  font-size: 16px;
-  color: #999;
-  margin-top: 8px;
-}
-
-.order-price {
-  font-size: 22px;
-  color: #f56c6c;
-  font-weight: bold;
-}
-
-.order-footer {
-  text-align: right;
-}
-
+.service-type { font-size: 20px; font-weight: 600; color: #006d5c; }
+.create-time { font-size: 16px; color: #999; margin-top: 8px; }
+.order-price { font-size: 22px; color: #f56c6c; font-weight: bold; }
+.order-footer { text-align: right; }
 .empty-tip {
   text-align: center;
   font-size: 20px;

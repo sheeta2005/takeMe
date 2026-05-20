@@ -26,7 +26,7 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
-import { logout } from '@/api/user' // 👈 加上这个
+import { logout } from '@/api/user'
 
 const router = useRouter()
 const userStore = useUserStore()

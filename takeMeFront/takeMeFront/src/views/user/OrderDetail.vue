@@ -42,13 +42,13 @@
           type="danger"
           size="large"
           v-if="order.status === '待接单'"
+          @click="handleCancelOrder"
         >
           取消订单
         </el-button>
       </div>
     </div>
 
-    <!-- 返回按钮：去掉箭头图标，文字完全居中 -->
     <el-button
       type="success"
       size="large"
@@ -64,7 +64,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-
+import { getMyOrderList, getOrderDetail, cancelOrder } from '@/api/order'
 const route = useRoute()
 
 const getTagType = (status: string) => {
@@ -74,45 +74,57 @@ const getTagType = (status: string) => {
   return 'info'
 }
 
+// 模拟数据
 const mockOrderData: any = {
-  ORD20260520001: {
-    id: 'ORD20260520001',
-    serviceType: '助餐服务-营养套餐A',
-    status: '待接单',
-    createTime: '2026-05-20 10:30:00',
-    price: 15,
-    remark: '不要香菜，少盐'
-  },
-  ORD20260519001: {
-    id: 'ORD20260519001',
-    serviceType: '助洁服务-日常保洁',
-    status: '服务中',
-    createTime: '2026-05-19 14:00:00',
-    startTime: '2026-05-19 14:10:00',
-    price: 30,
-    remark: ''
-  },
-  ORD20260518001: {
-    id: 'ORD20260518001',
-    serviceType: '代购服务-生活用品代购',
-    status: '已完成',
-    createTime: '2026-05-18 09:15:00',
-    startTime: '2026-05-18 09:30:00',
-    endTime: '2026-05-18 10:10:00',
-    price: 10,
-    remark: '请帮忙买一瓶酱油和纸巾'
-  }
+  ORD20260520001: { id: 'ORD20260520001', serviceType: '助餐服务-营养套餐A', status: '待接单', createTime: '2026-05-20 10:30:00', price: 15, remark: '不要香菜，少盐' },
+  ORD20260519001: { id: 'ORD20260519001', serviceType: '助洁服务-日常保洁', status: '服务中', createTime: '2026-05-19 14:00:00', startTime: '2026-05-19 14:10:00', price: 30 },
+  ORD20260518001: { id: 'ORD20260518001', serviceType: '代购服务-生活用品代购', status: '已完成', createTime: '2026-05-18 09:15:00', startTime: '2026-05-18 09:30:00', endTime: '2026-05-18 10:10:00', price: 10, remark: '请帮忙买一瓶酱油和纸巾' }
 }
 
 const orderId = computed(() => route.query.id as string)
 const order = ref<any>(null)
 
+// ==============================================
+// 🔥 目前使用：模拟加载详情
+// ==============================================
 const loadOrderDetail = () => {
   if (orderId.value && mockOrderData[orderId.value]) {
     order.value = mockOrderData[orderId.value]
   } else {
     ElMessage.error('订单不存在')
   }
+}
+
+// ==============================================
+// ✅ 真实API版（已写好，以后解开注释直接用）
+// 需要导入：import { getOrderDetail, cancelOrder } from '@/api/order'
+// ==============================================
+/*
+const loadOrderDetail = async () => {
+  try {
+    const res = await getOrderDetail(orderId.value)
+    order.value = res.data
+  } catch (err) {
+    ElMessage.error('获取订单详情失败')
+  }
+}
+
+// 取消订单
+const handleCancelOrder = async () => {
+  try {
+    await cancelOrder(orderId.value)
+    ElMessage.success('取消成功')
+    order.value.status = '已取消'
+  } catch (err) {
+    ElMessage.error('取消失败')
+  }
+}
+*/
+
+// 模拟取消订单（仅演示）
+const handleCancelOrder = () => {
+  ElMessage.success('取消订单成功')
+  order.value.status = '已取消'
 }
 
 onMounted(() => {
@@ -127,7 +139,6 @@ onMounted(() => {
   padding: 20px 0 100px 0;
   position: relative;
 }
-
 .page-title {
   font-size: 28px;
   font-weight: bold;
@@ -135,14 +146,12 @@ onMounted(() => {
   margin: 0 0 30px 0;
   text-align: center;
 }
-
 .detail-card {
   background: #fff;
   border-radius: 16px;
   padding: 30px;
   box-shadow: 0 4px 12px rgba(0, 184, 153, 0.08);
 }
-
 .status-bar {
   display: flex;
   justify-content: space-between;
@@ -151,46 +160,18 @@ onMounted(() => {
   padding-bottom: 20px;
   border-bottom: 1px solid #eee;
 }
-
-.order-id {
-  font-size: 18px;
-  color: #666;
-}
-
+.order-id { font-size: 18px; color: #666; }
 .info-section {
   display: flex;
   flex-direction: column;
   gap: 20px;
   margin-bottom: 30px;
 }
-
-.info-item {
-  display: flex;
-  align-items: center;
-}
-
-.label {
-  font-size: 18px;
-  color: #666;
-  width: 120px;
-}
-
-.value {
-  font-size: 18px;
-  color: #333;
-}
-
-.price {
-  font-size: 20px;
-  color: #f56c6c;
-  font-weight: bold;
-}
-
-.action-section {
-  text-align: center;
-}
-
-/* 返回按钮：文字完全居中 */
+.info-item { display: flex; align-items: center; }
+.label { font-size: 18px; color: #666; width: 120px; }
+.value { font-size: 18px; color: #333; }
+.price { font-size: 20px; color: #f56c6c; font-weight: bold; }
+.action-section { text-align: center; }
 .back-btn {
   position: absolute;
   bottom: 20px;
