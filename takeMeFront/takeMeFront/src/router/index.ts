@@ -24,8 +24,14 @@ const routes = [
     meta: { role: 1 },
     children: [
       { path: '', component: () => import('@/views/volunteer/Index.vue') },
-      { path: 'order', component: () => import('@/views/volunteer/Order.vue') },
-      { path: 'profile', component: () => import('@/views/volunteer/Profile.vue') }
+      { path: 'todo', component: () => import('@/views/volunteer/Todo.vue') },
+      { path: 'message', component: () => import('@/views/volunteer/Message.vue') },
+      { path: 'record', component: () => import('@/views/volunteer/Record.vue') },
+      { path: 'points', component: () => import('@/views/volunteer/Points.vue') },
+      { path: 'leave', component: () => import('@/views/volunteer/Leave.vue') },
+      { path: 'study', component: () => import('@/views/volunteer/Study.vue') },
+      { path: 'info', component: () => import('@/views/volunteer/Info.vue') },
+      { path: 'setting', component: () => import('@/views/volunteer/Setting.vue') }
     ]
   },
   {
@@ -56,14 +62,18 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
-// -------------- 路由守卫 稳定版 --------------
+
+// -------------- 路由守卫 修复版 --------------
+// 提前获取store实例，避免在守卫里调用useStore
+let userStore: ReturnType<typeof useUserStore>
 router.beforeEach((to, _, next) => {
-  const userStore = useUserStore()
+  // 第一次进入守卫时初始化store
+  if (!userStore) {
+    userStore = useUserStore()
+  }
   const token = userStore.token
 
   // 1. 未登录状态：
-  //    - 访问登录页：放行
-  //    - 访问其他页：强制跳登录页
   if (!token) {
     if (to.path === '/login') {
       next()
@@ -73,7 +83,7 @@ router.beforeEach((to, _, next) => {
     return
   }
 
-  // 2. 已登录，但还想访问登录页：自动跳对应角色的主页
+  // 2. 已登录，访问登录页：跳对应角色主页
   if (to.path === '/login') {
     if (userStore.role === 0) {
       next('/admin')
@@ -85,14 +95,14 @@ router.beforeEach((to, _, next) => {
     return
   }
 
-  // 3. 已登录，访问其他页：判断角色权限
+  // 3. 角色权限校验
   if (to.meta.role !== undefined && to.meta.role !== userStore.role) {
     alert('无权限访问')
     next(false)
     return
   }
 
-  // 4. 都没问题，放行
+  // 4. 放行
   next()
 })
 
