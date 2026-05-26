@@ -9,13 +9,20 @@ const routes = [
   },
   {
     path: '/admin',
-    component: () => import('@/layout/admin/Layout.vue'),
-    meta: {role: 0},
+    component: () => import('@/layout/admin/Layout.vue'), // 你的 Layout 文件
+    redirect: '/admin/index',
     children: [
-      {path: '', component: () => import('@/views/admin/Index.vue')},
+      {path: 'index', component: () => import('@/views/admin/Index.vue')},
       {path: 'order', component: () => import('@/views/admin/Order.vue')},
+      {path: 'order/detail', component: () => import('@/views/admin/OrderDetail.vue')},
+      {path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue')},
+      {path: 'volunteer/detail', component: () => import('@/views/admin/VolunteerDetail.vue')},
       {path: 'user', component: () => import('@/views/admin/User.vue')},
-      {path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue')}
+      {path: 'user/detail', component: () => import('@/views/admin/UserDetail.vue')},
+      {path: 'approval', component: () => import('@/views/admin/Approval.vue')},
+      {path: 'sendMsg', component: () => import('@/views/admin/SendMsg.vue')},
+      {path: 'inbox', component: () => import('@/views/admin/Inbox.vue')},
+      {path: '/admin/setting', component: () => import('@/views/admin/Setting.vue')}
     ]
   },
   {
@@ -81,17 +88,13 @@ const router = createRouter({
   routes
 })
 
-// -------------- 路由守卫 修复版 --------------
-// 提前获取store实例，避免在守卫里调用useStore
 let userStore: ReturnType<typeof useUserStore>
 router.beforeEach((to, _, next) => {
-  // 第一次进入守卫时初始化store
   if (!userStore) {
     userStore = useUserStore()
   }
   const token = userStore.token
 
-  // 1. 未登录状态：
   if (!token) {
     if (to.path === '/login') {
       next()
@@ -101,7 +104,6 @@ router.beforeEach((to, _, next) => {
     return
   }
 
-  // 2. 已登录，访问登录页：跳对应角色主页
   if (to.path === '/login') {
     if (userStore.role === 0) {
       next('/admin')
@@ -113,14 +115,12 @@ router.beforeEach((to, _, next) => {
     return
   }
 
-  // 3. 角色权限校验
   if (to.meta.role !== undefined && to.meta.role !== userStore.role) {
     alert('无权限访问')
     next(false)
     return
   }
 
-  // 4. 放行
   next()
 })
 
