@@ -1,0 +1,11 @@
+// src/types/message.ts
+export interface MessageInfo {
+  id: number               // 消息ID
+  type: 'system' | 'task' | 'remind' // 消息类型：系统通知/任务通知/提醒通知
+  title: string            // 标题
+  content: string          // 内容
+  createTime: string       // 时间
+  isRead: boolean          // 是否已读
+  relatedId?: string       // 关联ID（比如订单ID，点击跳转用）
+  relatedUrl?: string      // 关联路由（可选，比如 '/volunteer/order/xxx'）
+}

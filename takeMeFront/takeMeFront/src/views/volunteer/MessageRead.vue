@@ -1,25 +1,17 @@
 <template>
-  <div class="message-container">
-    <h2 class="page-title">消息中心</h2>
-
-    <!-- 已读消息入口 -->
-    <div class="read-box" @click="$router.push('/volunteer/message/read')">
-      <span class="box-text">已读消息箱</span>
-      <span class="box-arrow">→</span>
+  <div class="read-message-container">
+    <div class="header">
+      <el-button type="text" @click="back">← 返回</el-button>
+      <h2 class="page-title">已读消息</h2>
     </div>
 
-    <!-- 未读消息列表 -->
-    <div class="unread-list">
-      <div
-        class="message-item"
-        v-for="msg in unreadMessages"
-        :key="msg.id"
-        @click="goToDetail(msg.id)"
-      >
+    <div class="read-list">
+      <!-- ✅ 点击跳转到消息详情页 -->
+      <div class="message-item" v-for="msg in readMessages" :key="msg.id" @click="goToDetail(msg.id)">
         <div class="msg-icon">
           <span v-if="msg.type === 'system'">📢</span>
           <span v-else-if="msg.type === 'task'">📩</span>
-          <span>⏰</span>
+          <span v-else>⏰</span>
         </div>
         <div class="msg-content">
           <div class="msg-title">{{ msg.title }}</div>
@@ -28,8 +20,8 @@
         </div>
       </div>
 
-      <div class="empty-tip" v-if="unreadMessages.length === 0">
-        暂无未读消息
+      <div class="empty-tip" v-if="readMessages.length === 0">
+        暂无已读消息
       </div>
     </div>
   </div>
@@ -43,11 +35,17 @@ import type { MessageInfo } from '@/types/message'
 const router = useRouter()
 const messageList = ref<MessageInfo[]>([])
 
-const unreadMessages = computed(() => messageList.value.filter(msg => !msg.isRead))
+// 过滤已读消息
+const readMessages = computed(() => messageList.value.filter(msg => msg.isRead))
 
-// ✅ 只跳转到消息详情页
+// ✅ 统一跳转到消息详情页
 const goToDetail = (id: number) => {
   router.push(`/volunteer/message/detail/${id}`)
+}
+
+// 返回
+const back = () => {
+  router.go(-1)
 }
 
 const fetchMessageList = async () => {
@@ -58,7 +56,7 @@ const fetchMessageList = async () => {
       title: '新任务通知',
       content: '您有一个新的助餐服务任务，订单号：ORD20260520001，请及时处理',
       createTime: '2026-05-20 10:30',
-      isRead: false,
+      isRead: true,
       relatedId: 'ORD20260520001',
       relatedUrl: '/volunteer/order/ORD20260520001'
     },
@@ -66,7 +64,7 @@ const fetchMessageList = async () => {
       id: 2,
       type: 'system',
       title: '系统通知',
-      content: '平台已更新服务流程',
+      content: '平台已更新助医服务流程，请查看学习规范',
       createTime: '2026-05-19 14:00',
       isRead: true
     }
@@ -79,30 +77,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.message-container {
+.read-message-container {
   max-width: 700px;
   margin: 0 auto;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 .page-title {
   font-size: 28px;
   font-weight: bold;
   color: #333;
-  margin-bottom: 24px;
+  margin: 0;
 }
-.read-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px 24px;
-  box-shadow: 0 4px 12px rgba(0, 184, 153, 0.08);
-  margin-bottom: 24px;
-  cursor: pointer;
-}
-.box-text { font-size: 16px; color: #666; }
-.box-arrow { font-size: 18px; color: #999; }
-.unread-list {
+.read-list {
   background: #fff;
   border-radius: 16px;
   padding: 24px;
@@ -115,11 +106,17 @@ onMounted(() => {
   border-bottom: 1px solid #eee;
   cursor: pointer;
 }
-.message-item:hover { background: #f9f9f9; }
+.message-item:hover {
+  background-color: #f9f9f9;
+}
 .message-item:last-child { border-bottom: none; }
 .msg-icon { font-size: 32px; }
-.msg-title { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
-.msg-text { font-size: 16px; color: #666; margin-bottom: 6px; }
-.msg-time { font-size: 14px; color: #999; }
-.empty-tip { text-align: center; color: #999; padding: 40px 0; }
+.msg-content .msg-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 6px; }
+.msg-content .msg-text { font-size: 16px; color: #666; margin-bottom: 6px; }
+.msg-content .msg-time { font-size: 14px; color: #999; }
+.empty-tip {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+}
 </style>

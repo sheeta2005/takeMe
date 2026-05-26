@@ -31,10 +31,22 @@ const routes = [
         component: () => import('@/views/volunteer/OrderDetail.vue')
       },
       {path: 'message', component: () => import('@/views/volunteer/Message.vue')},
+      {
+        path: 'message/read',
+        component: () => import('@/views/volunteer/MessageRead.vue')
+      },
+      {
+        path: 'message/detail/:id',
+        component: () => import('@/views/volunteer/MessageDetail.vue')
+      },
       {path: 'record', component: () => import('@/views/volunteer/Record.vue')},
       {path: 'points', component: () => import('@/views/volunteer/Points.vue')},
       {path: 'leave', component: () => import('@/views/volunteer/Leave.vue')},
       {path: 'study', component: () => import('@/views/volunteer/Study.vue')},
+      {
+        path: 'study/detail/:id',
+        component: () => import('@/views/volunteer/StudyDetail.vue')
+      },
       {path: 'info', component: () => import('@/views/volunteer/Info.vue')},
       {path: 'info/edit', component: () => import('@/views/volunteer/InfoEdit.vue')},
       {path: 'setting', component: () => import('@/views/volunteer/Setting.vue')}
