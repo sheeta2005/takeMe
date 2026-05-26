@@ -1,5 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { useUserStore } from '@/store/user'
+import {createRouter, createWebHistory} from 'vue-router'
+import {useUserStore} from '@/stores/user'
 
 const routes = [
   {
@@ -10,46 +10,52 @@ const routes = [
   {
     path: '/admin',
     component: () => import('@/layout/admin/Layout.vue'),
-    meta: { role: 0 },
+    meta: {role: 0},
     children: [
-      { path: '', component: () => import('@/views/admin/Index.vue') },
-      { path: 'order', component: () => import('@/views/admin/Order.vue') },
-      { path: 'user', component: () => import('@/views/admin/User.vue') },
-      { path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue') }
+      {path: '', component: () => import('@/views/admin/Index.vue')},
+      {path: 'order', component: () => import('@/views/admin/Order.vue')},
+      {path: 'user', component: () => import('@/views/admin/User.vue')},
+      {path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue')}
     ]
   },
   {
     path: '/volunteer',
     component: () => import('@/layout/volunteer/Layout.vue'),
-    meta: { role: 1 },
+    meta: {role: 1},
     children: [
-      { path: '', component: () => import('@/views/volunteer/Index.vue') },
-      { path: 'todo', component: () => import('@/views/volunteer/Todo.vue') },
-      { path: 'message', component: () => import('@/views/volunteer/Message.vue') },
-      { path: 'record', component: () => import('@/views/volunteer/Record.vue') },
-      { path: 'points', component: () => import('@/views/volunteer/Points.vue') },
-      { path: 'leave', component: () => import('@/views/volunteer/Leave.vue') },
-      { path: 'study', component: () => import('@/views/volunteer/Study.vue') },
-      { path: 'info', component: () => import('@/views/volunteer/Info.vue') },
-      { path: 'setting', component: () => import('@/views/volunteer/Setting.vue') }
+      {path: '', component: () => import('@/views/volunteer/Index.vue')},
+      {path: 'todo', component: () => import('@/views/volunteer/Todo.vue')},
+      {
+        path: 'order/:id',
+        name: 'OrderDetail',
+        component: () => import('@/views/volunteer/OrderDetail.vue')
+      },
+      {path: 'message', component: () => import('@/views/volunteer/Message.vue')},
+      {path: 'record', component: () => import('@/views/volunteer/Record.vue')},
+      {path: 'points', component: () => import('@/views/volunteer/Points.vue')},
+      {path: 'leave', component: () => import('@/views/volunteer/Leave.vue')},
+      {path: 'study', component: () => import('@/views/volunteer/Study.vue')},
+      {path: 'info', component: () => import('@/views/volunteer/Info.vue')},
+      {path: 'info/edit', component: () => import('@/views/volunteer/InfoEdit.vue')},
+      {path: 'setting', component: () => import('@/views/volunteer/Setting.vue')}
     ]
   },
   {
     path: '/user',
     component: () => import('@/layout/user/Layout.vue'),
-    meta: { role: 2 },
+    meta: {role: 2},
     children: [
-      { path: '', component: () => import('@/views/user/Index.vue') },
-      { path: 'order', component: () => import('@/views/user/Order.vue') },
-      { path: 'order/detail', component: () => import('@/views/user/OrderDetail.vue') },
-      { path: 'info', component: () => import('@/views/user/Info.vue') },
-      { path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue') },
-      { path: 'setting', component: () => import('@/views/user/Setting.vue') },
-      { path: 'create', component: () => import('@/views/user/CreateOrder.vue') },
-      { path: 'meal', component: () => import('@/views/user/OrderMeal.vue') },
-      { path: 'clean', component: () => import('@/views/user/OrderClean.vue') },
-      { path: 'medical', component: () => import('@/views/user/OrderMedical.vue') },
-      { path: 'shop', component: () => import('@/views/user/OrderShop.vue') },
+      {path: '', component: () => import('@/views/user/Index.vue')},
+      {path: 'order', component: () => import('@/views/user/Order.vue')},
+      {path: 'order/detail', component: () => import('@/views/user/OrderDetail.vue')},
+      {path: 'info', component: () => import('@/views/user/Info.vue')},
+      {path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue')},
+      {path: 'setting', component: () => import('@/views/user/Setting.vue')},
+      {path: 'create', component: () => import('@/views/user/CreateOrder.vue')},
+      {path: 'meal', component: () => import('@/views/user/OrderMeal.vue')},
+      {path: 'clean', component: () => import('@/views/user/OrderClean.vue')},
+      {path: 'medical', component: () => import('@/views/user/OrderMedical.vue')},
+      {path: 'shop', component: () => import('@/views/user/OrderShop.vue')},
     ]
   },
   {

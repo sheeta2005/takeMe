@@ -1,22 +1,26 @@
-interface UserInfo {
-// 基础信息（和志愿者一致）
+interface VolunteerInfo {
+// 基础
 realName: string
 username: string
 phone: string
 password?: string
 avatar: string
 
-// 健康/身份相关（老人特有）
+// 服务
+serviceDays: string
+serviceType: '代购' | '洁净' | '送餐' | '陪医'
+status: string
+
+// 扩展
 gender: '男' | '女'
 age: number
 address: string
-
-// 紧急联系（老人更重要）
 emergencyName: string
 emergencyPhone: string
 
-// 系统字段（和志愿者对齐）
-userId?: number
+// 系统（可选）
+volunteerId?: number
+totalServiceHours?: number
 createTime?: string
 lastLoginTime?: string
 }

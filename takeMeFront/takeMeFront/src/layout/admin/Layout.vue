@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import { House, Document, User, UserFilled } from '@element-plus/icons-vue'
-import { useUserStore } from '@/store/user'
+import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
 
 const userStore = useUserStore()

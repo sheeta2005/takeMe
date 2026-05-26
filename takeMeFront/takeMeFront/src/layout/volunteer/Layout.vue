@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from '@/store/user'
+import { useUserStore } from '@/stores/user'
 import {
   House, User, Setting, Clock, Calendar,
   ChatDotRound, Coin, Reading, List

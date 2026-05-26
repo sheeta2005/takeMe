@@ -90,7 +90,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useUserStore } from '@/store/user'
+import { useUserStore } from '@/stores/user'
 import { createOrder } from '@/api/order'
 
 const route = useRoute()
