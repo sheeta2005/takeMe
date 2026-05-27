@@ -121,6 +121,9 @@ export const volunteerDelete = (id: number) => {
   })
 }
 
+
+
+
 // ========================= 用户（老人）管理 =========================
 // 分页查询用户列表
 export const getElderPage = (page: number, pageSize: number) => {
@@ -265,9 +268,11 @@ export const getFeedbackPage = (page: number, pageSize: number) => {
   })
 }
 
-// 发送消息
+// 发送消息（补全版，支持批量/指定发送、消息类型）
 export const sendMessage = (data: {
-  userId: number
+  receiverType: 'all_volunteer' | 'all_elder' | 'spec_volunteer' | 'spec_elder'
+  receiverIds?: number[] // 批量发送时传空，指定发送时传ID列表
+  type: 0 | 1 | 2 // 0=系统 1=任务 2=提醒
   title: string
   content: string
 }) => {
