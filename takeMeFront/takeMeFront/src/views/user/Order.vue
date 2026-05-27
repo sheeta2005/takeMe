@@ -32,6 +32,15 @@
           <div class="order-price">¥{{ order.price }}</div>
         </div>
         <div class="order-footer">
+          <!-- ✅ 新增：一键联系志愿者（仅已接单/服务中显示） -->
+          <el-button
+            v-if="[1, 2].includes(order.status) && order.volunteerPhone"
+            type="success"
+            size="large"
+            @click="callVolunteer(order.volunteerPhone)"
+          >
+            联系志愿者
+          </el-button>
           <el-button type="primary" size="large" @click="viewDetail(order)">
             查看详情
           </el-button>
@@ -81,7 +90,7 @@ const getStatusText = (status: number) => statusMap[status] || '未知状态'
 // 筛选状态
 const filterStatus = ref('')
 
-// 订单列表
+// 订单列表（新增volunteerPhone字段）
 const orderList = ref<any[]>([])
 
 // 筛选后的订单
@@ -90,14 +99,21 @@ const filteredOrderList = computed(() => {
   return orderList.value.filter(item => item.status === filterStatus.value)
 })
 
-// 模拟数据
+// 模拟数据（新增volunteerPhone字段）
 const fetchOrders = async () => {
   orderList.value = [
-    { id: 'ORD20260520001', serviceType: '助餐服务-营养套餐A', status: 0, createTime: '2026-05-20 10:30:00', price: 15 },
-    { id: 'ORD20260519001', serviceType: '助洁服务-日常保洁', status: 2, createTime: '2026-05-19 14:00:00', price: 30 },
-    { id: 'ORD20260518001', serviceType: '代购服务-生活用品代购', status: 3, createTime: '2026-05-18 09:15:00', price: 10 },
-    { id: 'ORD20260517001', serviceType: '助医服务-陪同就诊', status: 4, createTime: '2026-05-17 08:00:00', price: 25 }
+    { id: 'ORD20260520001', serviceType: '助餐服务-营养套餐A', status: 0, createTime: '2026-05-20 10:30:00', price: 15, volunteerPhone: '' },
+    { id: 'ORD20260519001', serviceType: '助洁服务-日常保洁', status: 2, createTime: '2026-05-19 14:00:00', price: 30, volunteerPhone: '13800138000' },
+    { id: 'ORD20260518001', serviceType: '代购服务-生活用品代购', status: 3, createTime: '2026-05-18 09:15:00', price: 10, volunteerPhone: '13900139000' },
+    { id: 'ORD20260517001', serviceType: '助医服务-陪同就诊', status: 4, createTime: '2026-05-17 08:00:00', price: 25, volunteerPhone: '13700137000' }
   ]
+}
+
+// ✅ 一键拨打志愿者电话
+const callVolunteer = (phone: string) => {
+  // 移动端会直接跳转拨号，PC端会提示复制号码
+  window.location.href = `tel:${phone}`
+  ElMessage.success('正在拨打志愿者电话...')
 }
 
 // 查看详情
@@ -152,7 +168,12 @@ onMounted(() => {
 .service-type { font-size: 24px; font-weight: 600; color: #006d5c; }
 .create-time { font-size: 18px; color: #999; margin-top: 12px; }
 .order-price { font-size: 26px; color: #f56c6c; font-weight: bold; }
-.order-footer { text-align: right; }
+.order-footer {
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
 .empty-tip {
   text-align: center;
   font-size: 24px;

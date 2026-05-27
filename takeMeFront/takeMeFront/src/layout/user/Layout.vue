@@ -51,6 +51,12 @@
             <span>代购服务</span>
           </el-menu-item>
 
+          <!-- ✅ 新增：陪伴服务 -->
+          <el-menu-item index="/user/companion">
+            <el-icon><Service /></el-icon>
+            <span>陪伴服务</span>
+          </el-menu-item>
+
           <el-menu-item index="/user/order">
             <el-icon><Tickets /></el-icon>
             <span>我的订单</span>
@@ -92,7 +98,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
   House, Tickets, User, Setting, Bell,
-  Dish, Brush, FirstAidKit, ShoppingCart
+  Dish, Brush, FirstAidKit, ShoppingCart,
+  Service // ✅ 新增陪伴服务图标
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
