@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="header-row">
-      <h2 class="page-title">收信箱</h2>
+      <h2 class="page-title">消息中心</h2>
     </div>
 
     <!-- 筛选栏 -->

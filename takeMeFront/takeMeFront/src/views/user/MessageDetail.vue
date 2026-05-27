@@ -7,7 +7,7 @@
     <div class="detail-card">
       <div class="detail-header">
         <div class="detail-title">{{ message.title }}</div>
-        <el-tag :type="getTypeTagType(message.type)" size="small">
+        <el-tag :type="getTypeTagType(message.type)" size="large">
           {{ getTypeText(message.type) }}
         </el-tag>
       </div>
@@ -15,15 +15,16 @@
       <div class="detail-content">
         <p class="content-text">{{ message.content }}</p>
 
-        <!-- 关联订单号（可跳转） -->
+        <!-- 关联订单跳转（修复版） -->
         <div v-if="message.relatedId" class="related-order">
-          <span>关联订单号：</span>
+          <span>关联订单：</span>
           <el-button
             type="primary"
             link
+            size="large"
             @click="goToOrder(message.relatedUrl)"
           >
-            {{ message.relatedId }}
+            查看订单 {{ message.relatedId }}
           </el-button>
         </div>
       </div>
@@ -34,10 +35,11 @@
     </div>
 
     <div class="action-buttons">
-      <el-button @click="$router.back()">返回列表</el-button>
+      <el-button size="large" @click="$router.back()">返回列表</el-button>
       <el-button
         v-if="!message.isRead"
         type="primary"
+        size="large"
         @click="confirmMarkRead"
       >
         标记为已读
@@ -50,7 +52,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-// import { getVolunteerMessageDetail } from '@/api/volunteer'
+// import { getUserMessageDetail } from '@/api/user'
 import type { message } from '@/types/message'
 
 const route = useRoute()
@@ -67,23 +69,23 @@ onMounted(() => {
 // 获取消息详情（接口已注释）
 const fetchMessageDetail = async (id: number) => {
   try {
-    // --- 接口调用已注释，对接后端直接取消注释即可 ---
+    // --- 后端接口调用（已注释） ---
     /*
-    const res = await getVolunteerMessageDetail(id)
+    const res = await getUserMessageDetail(id)
     message.value = res.data
     */
 
     // --- 模拟数据 ---
     message.value = {
       id: id,
-      userId: 3001,
+      userId: 2001,
       type: 1,
-      title: '新任务通知',
-      content: '您有一个新的助餐服务任务，订单号：ORD20260520001，请及时处理。服务时间为2026-05-21 09:00，请提前准备。',
-      createTime: '2026-05-20 10:30:00',
+      title: '服务提醒：助餐服务',
+      content: '您的助餐服务订单ORD20260520001将于明天09:00送达，服务内容为营养套餐A。请您保持电话畅通，准备接收。',
+      createTime: '2026-05-19 10:30:00',
       isRead: false,
       relatedId: 'ORD20260520001',
-      relatedUrl: '/volunteer/order/ORD20260520001'
+      relatedUrl: `/user/order/detail/ORD20260520001`
     }
   } catch (err) {
     console.error('获取消息详情失败', err)
@@ -91,7 +93,7 @@ const fetchMessageDetail = async (id: number) => {
   }
 }
 
-// 跳转到关联订单
+// 修复：跳转到关联订单
 const goToOrder = (url?: string) => {
   if (url) {
     router.push(url)
@@ -100,24 +102,24 @@ const goToOrder = (url?: string) => {
   }
 }
 
-// 标记为已读
+// 标记已读
 const confirmMarkRead = () => {
   message.value.isRead = true
   ElMessage.success('已标记为已读')
 }
 
 // 类型映射
-const getTypeText = (type: number | string) => {
-  const map: Record<string, string> = {
+const getTypeText = (type: number) => {
+  const map: Record<number, string> = {
     0: '系统通知',
-    1: '任务通知',
+    1: '服务通知',
     2: '温馨提醒'
   }
   return map[type] || '未知'
 }
 
-const getTypeTagType = (type: number | string) => {
-  const map: Record<string, string> = {
+const getTypeTagType = (type: number) => {
+  const map: Record<number, string> = {
     0: 'primary',
     1: 'warning',
     2: 'success'
@@ -139,7 +141,7 @@ const getTypeTagType = (type: number | string) => {
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: bold;
   color: #222;
   margin: 0;
@@ -147,9 +149,9 @@ const getTypeTagType = (type: number | string) => {
 
 .detail-card {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 184, 153, 0.1);
+  padding: 40px;
   margin-bottom: 24px;
 }
 
@@ -159,11 +161,11 @@ const getTypeTagType = (type: number | string) => {
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 2px solid #eee;
 }
 
 .detail-title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   color: #333;
 }
@@ -173,29 +175,35 @@ const getTypeTagType = (type: number | string) => {
 }
 
 .content-text {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.8;
   color: #333;
   margin-bottom: 16px;
 }
 
 .related-order {
-  font-size: 14px;
+  font-size: 18px;
   color: #666;
 }
 
 .detail-footer {
   padding-top: 16px;
-  border-top: 1px solid #eee;
+  border-top: 2px solid #eee;
 }
 
 .create-time {
-  font-size: 14px;
+  font-size: 16px;
   color: #999;
 }
 
 .action-buttons {
   display: flex;
-  gap: 12px;
+  gap: 20px;
+  justify-content: center;
+}
+
+:deep(.el-button) {
+  font-size: 18px;
+  padding: 12px 32px;
 }
 </style>

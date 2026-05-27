@@ -11,7 +11,7 @@
         <el-select v-model="filterType" placeholder="请选择类型" @change="fetchMsgs">
           <el-option label="全部" value="" />
           <el-option label="系统通知" :value="0" />
-          <el-option label="任务通知" :value="1" />
+          <el-option label="服务通知" :value="1" />
           <el-option label="温馨提醒" :value="2" />
         </el-select>
       </div>
@@ -23,20 +23,6 @@
           <el-option label="未读" :value="false" />
           <el-option label="已读" :value="true" />
         </el-select>
-      </div>
-
-      <div class="filter-item">
-        <label class="filter-label">时间范围</label>
-        <el-date-picker
-          v-model="filterDateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          format="YYYY-MM-DD"
-          value-format="YYYY-MM-DD"
-          @change="fetchMsgs"
-        />
       </div>
 
       <el-button type="primary" @click="fetchMsgs">查询</el-button>
@@ -80,18 +66,17 @@
         </el-list-item>
       </el-list>
 
-      <!-- 空状态 -->
       <el-empty v-if="msgList.length === 0" description="暂无消息" />
     </div>
 
     <!-- 分页 -->
     <div class="pagination-wrapper">
       <el-pagination
-        v-model:current-page="currentPage"
+        v-model:currentPage="currentPage"
         v-model:page-size="pageSize"
         :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next, jumper"
+        :page-sizes="[10, 20]"
+        layout="total, sizes, prev, pager, next"
         @change="fetchMsgs"
       />
     </div>
@@ -103,7 +88,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Bell } from '@element-plus/icons-vue'
-// import { getVolunteerMessages } from '@/api/volunteer'
+// import { getUserMessages } from '@/api/user'
 import type { message } from '@/types/message'
 
 const router = useRouter()
@@ -111,7 +96,6 @@ const router = useRouter()
 // 筛选
 const filterType = ref('')
 const filterStatus = ref('')
-const filterDateRange = ref<string[]>([])
 
 // 分页
 const currentPage = ref(1)
@@ -125,29 +109,57 @@ onMounted(() => {
   fetchMsgs()
 })
 
-// 获取消息列表（接口已注释，后端会优先返回未读消息）
+// 获取消息列表（接口已注释，后端优先返回未读消息）
 const fetchMsgs = async () => {
   try {
-    // --- 接口调用已注释，对接后端直接取消注释即可 ---
+    // --- 后端接口调用（已注释） ---
     /*
     const params = {
       page: currentPage.value,
       pageSize: pageSize.value,
       type: filterType.value || undefined,
-      isRead: filterStatus.value === '' ? undefined : filterStatus.value,
-      startDate: filterDateRange.value?.[0] || undefined,
-      endDate: filterDateRange.value?.[1] || undefined
+      isRead: filterStatus.value === '' ? undefined : filterStatus.value
     }
-    const res = await getVolunteerMessages(params)
+    const res = await getUserMessages(params)
     msgList.value = res.data.list
     total.value = res.data.total
     */
 
-    // --- 模拟数据（优先展示未读消息） ---
-    msgList.value = generateMockData()
-    total.value = 5
+    // --- 模拟数据 ---
+    msgList.value = [
+      {
+        id: 1,
+        userId: 2001,
+        type: 1,
+        title: '服务提醒：助餐服务',
+        content: '您的助餐服务订单ORD20260520001将于明天09:00送达，请您准备接收。',
+        createTime: '2026-05-19 10:30:00',
+        isRead: false,
+        relatedId: 'ORD20260520001',
+        relatedUrl: '/user/order/detail/ORD20260520001'
+      },
+      {
+        id: 2,
+        userId: 2001,
+        type: 0,
+        title: '平台通知：服务更新',
+        content: '平台已更新助洁服务流程，现在可以预约周末服务了，欢迎体验。',
+        createTime: '2026-05-18 14:00:00',
+        isRead: true
+      },
+      {
+        id: 3,
+        userId: 2001,
+        type: 2,
+        title: '温馨提醒：天气变化',
+        content: '未来三天有降雨，您的服务可能会调整时间，请留意订单通知。',
+        createTime: '2026-05-17 11:00:00',
+        isRead: false
+      }
+    ]
+    total.value = 3
   } catch (err) {
-    console.error('获取消息列表失败', err)
+    console.error('获取消息失败', err)
     ElMessage.error('获取消息列表失败')
   }
 }
@@ -156,100 +168,38 @@ const fetchMsgs = async () => {
 const resetFilter = () => {
   filterType.value = ''
   filterStatus.value = ''
-  filterDateRange.value = []
   currentPage.value = 1
   fetchMsgs()
 }
 
-// 跳转到消息详情页
+// 跳转到消息详情
 const goToDetail = (msg: message) => {
-  router.push(`/volunteer/message/detail/${msg.id}`)
+  router.push(`/user/message/detail/${msg.id}`)
 }
 
-// 快速标记已读
+// 标记已读
 const handleMarkRead = (msg: message) => {
   ElMessage.success('已标记为已读')
   msg.isRead = true
 }
 
-// 类型/状态映射
-const getTypeText = (type: number | string) => {
-  const map: Record<string, string> = {
+// 类型映射
+const getTypeText = (type: number) => {
+  const map: Record<number, string> = {
     0: '系统通知',
-    1: '任务通知',
+    1: '服务通知',
     2: '温馨提醒'
   }
   return map[type] || '未知'
 }
 
-const getTypeTagType = (type: number | string) => {
-  const map: Record<string, string> = {
+const getTypeTagType = (type: number) => {
+  const map: Record<number, string> = {
     0: 'primary',
     1: 'warning',
     2: 'success'
   }
   return map[type] || ''
-}
-
-// 生成模拟数据（包含关联订单）
-const generateMockData = (): message[] => {
-  return [
-    {
-      id: 1,
-      userId: 3001,
-      type: 1,
-      title: '新任务通知',
-      content: '您有一个新的助餐服务任务，订单号：ORD20260520001，请及时处理',
-      createTime: '2026-05-20 10:30:00',
-      isRead: false,
-      relatedId: 'ORD20260520001',
-      relatedUrl: '/volunteer/order/ORD20260520001'
-    },
-    {
-      id: 2,
-      userId: 3001,
-      type: 0,
-      title: '系统通知',
-      content: '平台已更新服务流程',
-      createTime: '2026-05-19 14:00:00',
-      isRead: true,
-      relatedId: '',
-      relatedUrl: ''
-    },
-    {
-      id: 3,
-      userId: 3001,
-      type: 2,
-      title: '温馨提醒：天气变化',
-      content: '未来三天将有降雨，请志愿者和老人注意出行安全，避免在恶劣天气外出。',
-      createTime: '2026-05-18 11:00:00',
-      isRead: false,
-      relatedId: '',
-      relatedUrl: ''
-    },
-    {
-      id: 4,
-      userId: 3001,
-      type: 1,
-      title: '任务提醒：助洁服务',
-      content: '您有一个新的助洁服务任务，服务对象为李爷爷，服务时间为2026-05-26 09:00。',
-      createTime: '2026-05-17 08:15:00',
-      isRead: true,
-      relatedId: 'ORD20260517001',
-      relatedUrl: '/volunteer/order/ORD20260517001'
-    },
-    {
-      id: 5,
-      userId: 3001,
-      type: 0,
-      title: '平台更新通知',
-      content: '平台将于2026-06-01进行系统维护，维护期间部分服务可能暂时无法使用，请提前做好准备。',
-      createTime: '2026-05-16 10:30:00',
-      isRead: false,
-      relatedId: '',
-      relatedUrl: ''
-    }
-  ]
 }
 </script>
 
@@ -260,9 +210,6 @@ const generateMockData = (): message[] => {
 }
 
 .header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 24px;
 }
 
@@ -281,7 +228,7 @@ const generateMockData = (): message[] => {
   background: #fff;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 184, 153, 0.06);
   margin-bottom: 20px;
 }
 
@@ -300,7 +247,7 @@ const generateMockData = (): message[] => {
 .list-card {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 184, 153, 0.06);
   padding: 20px;
   margin-bottom: 20px;
 }
@@ -389,6 +336,6 @@ const generateMockData = (): message[] => {
   background: #fff;
   padding: 16px 20px;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 184, 153, 0.06);
 }
 </style>

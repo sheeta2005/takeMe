@@ -42,9 +42,9 @@
             <el-icon><ChatDotRound /></el-icon>
             <span>发送消息</span>
           </el-menu-item>
-          <el-menu-item index="/admin/inbox">
+          <el-menu-item index="/admin/message">
             <el-icon><Message /></el-icon>
-            <span>收信箱</span>
+            <span>消息中心</span>
           </el-menu-item>
 
           <el-menu-item index="/admin/setting" class="setting-menu-item">

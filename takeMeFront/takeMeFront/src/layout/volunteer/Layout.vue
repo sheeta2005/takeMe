@@ -27,10 +27,7 @@
             <span>我的待办</span>
           </el-menu-item>
 
-          <el-menu-item index="/volunteer/message">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>消息中心</span>
-          </el-menu-item>
+
 
           <el-menu-item index="/volunteer/record">
             <el-icon><Clock /></el-icon>
@@ -55,6 +52,11 @@
           <el-menu-item index="/volunteer/info">
             <el-icon><User /></el-icon>
             <span>个人信息</span>
+          </el-menu-item>
+
+          <el-menu-item index="/volunteer/message">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>消息中心</span>
           </el-menu-item>
 
           <el-menu-item index="/volunteer/setting">

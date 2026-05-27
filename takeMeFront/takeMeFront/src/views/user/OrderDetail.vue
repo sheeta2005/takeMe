@@ -1,186 +1,324 @@
 <template>
-  <div class="detail-page">
-    <h2 class="page-title">订单详情</h2>
+  <div class="page-container">
+    <div class="header-row">
+      <h2 class="page-title">订单详情</h2>
+    </div>
 
-    <div class="detail-card" v-if="order">
-      <div class="status-bar">
-        <span class="order-id">订单号：{{ order.id }}</span>
-        <el-tag :type="getTagType(order.status)" size="large">
-          {{ order.status }}
-        </el-tag>
-      </div>
-
-      <div class="info-section">
+    <div class="detail-card">
+      <!-- 订单信息 -->
+      <div class="detail-section">
+        <div class="section-title">订单信息</div>
+        <div class="info-item">
+          <span class="label">订单号：</span>
+          <span class="value">{{ orderInfo.orderNo }}</span>
+        </div>
         <div class="info-item">
           <span class="label">服务类型：</span>
-          <span class="value">{{ order.serviceType }}</span>
+          <span class="value">{{ orderInfo.serviceType }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">服务状态：</span>
+          <el-tag :type="getStatusTagType(orderInfo.status)" size="large">
+            {{ getStatusText(orderInfo.status) }}
+          </el-tag>
         </div>
         <div class="info-item">
           <span class="label">下单时间：</span>
-          <span class="value">{{ order.createTime }}</span>
-        </div>
-        <div class="info-item" v-if="order.status === '服务中'">
-          <span class="label">开始时间：</span>
-          <span class="value">{{ order.startTime }}</span>
-        </div>
-        <div class="info-item" v-if="order.status === '已完成'">
-          <span class="label">结束时间：</span>
-          <span class="value">{{ order.endTime }}</span>
+          <span class="value">{{ orderInfo.createTime }}</span>
         </div>
         <div class="info-item">
-          <span class="label">服务价格：</span>
-          <span class="price">¥{{ order.price }}</span>
+          <span class="label">服务时间：</span>
+          <span class="value">{{ orderInfo.serviceTime }}</span>
         </div>
         <div class="info-item">
-          <span class="label">备注信息：</span>
-          <span class="value">{{ order.remark || '无' }}</span>
+          <span class="label">服务地址：</span>
+          <span class="value">{{ orderInfo.address }}</span>
         </div>
       </div>
 
+      <!-- 志愿者信息 -->
+      <div class="detail-section">
+        <div class="section-title">服务志愿者</div>
+        <div class="volunteer-info">
+          <span class="volunteer-name">{{ orderInfo.volunteerName || '待接单' }}</span>
+          <span class="volunteer-phone">{{ orderInfo.volunteerPhone || '-' }}</span>
+        </div>
+      </div>
+
+      <!-- 订单备注 -->
+      <div class="detail-section">
+        <div class="section-title">订单备注</div>
+        <p class="remark-text">{{ orderInfo.remark || '无' }}</p>
+      </div>
+
+      <!-- 操作按钮区域（根据状态显示） -->
       <div class="action-section">
+        <!-- 0待接单 / 1已接单 可以取消 + 修改 -->
         <el-button
+          v-if="[0, 1].includes(orderInfo.status)"
           type="danger"
           size="large"
-          v-if="order.status === '待接单'"
           @click="handleCancelOrder"
+          :loading="cancelLoading"
         >
           取消订单
+        </el-button>
+
+        <el-button
+          v-if="[0, 1].includes(orderInfo.status)"
+          type="primary"
+          size="large"
+          @click="openEditModal"
+        >
+          修改订单
+        </el-button>
+
+        <!-- 3待确认 → 确认完成 -->
+        <el-button
+          v-if="orderInfo.status === 3"
+          type="primary"
+          size="large"
+          @click="confirmCompleted"
+          :loading="confirmLoading"
+        >
+          确认服务已完成
+        </el-button>
+
+        <!-- 4已完成 → 评价 -->
+        <el-button
+          v-if="orderInfo.status === 4 && !orderInfo.hasReviewed"
+          type="primary"
+          size="large"
+          @click="goToReview"
+        >
+          评价服务
         </el-button>
       </div>
     </div>
 
-    <el-button
-      type="success"
-      size="large"
-      class="back-btn"
-      @click="$router.back()"
+    <div class="action-buttons">
+      <el-button size="large" @click="$router.back()">返回订单列表</el-button>
+    </div>
+
+    <!-- 修改订单弹窗 -->
+    <el-dialog
+      v-model="editVisible"
+      title="修改订单信息"
+      width="600px"
+      @close="cancelEdit"
     >
-      返回
-    </el-button>
+      <el-form :model="editForm" label-width="100px" size="large">
+        <el-form-item label="服务时间">
+          <el-input v-model="editForm.serviceTime" placeholder="请输入服务时间" />
+        </el-form-item>
+        <el-form-item label="服务地址">
+          <el-input v-model="editForm.address" type="textarea" :rows="2" placeholder="请输入地址" />
+        </el-form-item>
+        <el-form-item label="订单备注">
+          <el-input v-model="editForm.remark" type="textarea" :rows="2" placeholder="请输入备注" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="cancelEdit">取消</el-button>
+        <el-button type="primary" @click="saveEdit" :loading="editLoading">保存修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { getMyOrderList, getOrderDetail, cancelOrder } from '@/api/order'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
 const route = useRoute()
+const router = useRouter()
+const orderNo = route.params.orderNo as string
 
-const getTagType = (status: string) => {
-  if (status === '待接单') return 'warning'
-  if (status === '服务中') return 'primary'
-  if (status === '已完成') return 'success'
-  return 'info'
+// 订单信息
+const orderInfo = ref({
+  orderNo: '',
+  serviceType: '',
+  status: 0,
+  createTime: '',
+  serviceTime: '',
+  address: '',
+  volunteerName: '',
+  volunteerPhone: '',
+  remark: '',
+  hasReviewed: false
+})
+
+// 加载状态
+const cancelLoading = ref(false)
+const confirmLoading = ref(false)
+const editLoading = ref(false)
+
+// 编辑弹窗
+const editVisible = ref(false)
+const editForm = ref({
+  serviceTime: '',
+  address: '',
+  remark: ''
+})
+
+// 状态映射
+const statusMap = {
+  0: '待接单',
+  1: '已接单',
+  2: '服务中',
+  3: '待确认',
+  4: '已完成',
+  5: '已取消'
+}
+const getStatusText = (status: number) => statusMap[status] || '未知状态'
+const getStatusTagType = (status: number) => {
+  const map = { 0: 'warning',1: 'primary',2: 'primary',3: 'info',4: 'success',5: 'danger' }
+  return map[status] || 'info'
 }
 
-// 模拟数据
-const mockOrderData: any = {
-  ORD20260520001: { id: 'ORD20260520001', serviceType: '助餐服务-营养套餐A', status: '待接单', createTime: '2026-05-20 10:30:00', price: 15, remark: '不要香菜，少盐' },
-  ORD20260519001: { id: 'ORD20260519001', serviceType: '助洁服务-日常保洁', status: '服务中', createTime: '2026-05-19 14:00:00', startTime: '2026-05-19 14:10:00', price: 30 },
-  ORD20260518001: { id: 'ORD20260518001', serviceType: '代购服务-生活用品代购', status: '已完成', createTime: '2026-05-18 09:15:00', startTime: '2026-05-18 09:30:00', endTime: '2026-05-18 10:10:00', price: 10, remark: '请帮忙买一瓶酱油和纸巾' }
-}
-
-const orderId = computed(() => route.query.id as string)
-const order = ref<any>(null)
-
-// ==============================================
-// 🔥 目前使用：模拟加载详情
-// ==============================================
-const loadOrderDetail = () => {
-  if (orderId.value && mockOrderData[orderId.value]) {
-    order.value = mockOrderData[orderId.value]
-  } else {
-    ElMessage.error('订单不存在')
-  }
-}
-
-// ==============================================
-// ✅ 真实API版（已写好，以后解开注释直接用）
-// 需要导入：import { getOrderDetail, cancelOrder } from '@/api/order'
-// ==============================================
-/*
-const loadOrderDetail = async () => {
+// 获取订单详情
+const fetchOrderDetail = async () => {
   try {
-    const res = await getOrderDetail(orderId.value)
-    order.value = res.data
+    // 模拟数据
+    orderInfo.value = {
+      orderNo: 'ORD20260518001',
+      serviceType: '代购服务-生活用品代购',
+      status: 0,       // 可测试 0/1/2/3/4
+      createTime: '2026-05-18 08:00:00',
+      serviceTime: '2026-05-19 09:00:00',
+      address: '幸福小区3号楼2单元101室',
+      volunteerName: '李志愿者',
+      volunteerPhone: '138****5678',
+      remark: '请帮忙购买米、油、盐',
+      hasReviewed: false
+    }
   } catch (err) {
-    ElMessage.error('获取订单详情失败')
+    ElMessage.error('获取订单失败')
   }
 }
 
 // 取消订单
 const handleCancelOrder = async () => {
+  await ElMessageBox.confirm('确定要取消该订单吗？', '提示', {
+    confirmButtonText: '确定取消',
+    cancelButtonText: '返回',
+    type: 'warning'
+  }).catch(() => {
+    ElMessage.info('已取消')
+    return false
+  })
+
+  cancelLoading.value = true
   try {
-    await cancelOrder(orderId.value)
-    ElMessage.success('取消成功')
-    order.value.status = '已取消'
+    // await cancelOrderApi(orderNo)
+    await new Promise(r => setTimeout(r, 800))
+    orderInfo.value.status = 5
+    ElMessage.success('订单已取消')
   } catch (err) {
     ElMessage.error('取消失败')
+  } finally {
+    cancelLoading.value = false
   }
 }
-*/
 
-// 模拟取消订单（仅演示）
-const handleCancelOrder = () => {
-  ElMessage.success('取消订单成功')
-  order.value.status = '已取消'
+// 打开修改弹窗
+const openEditModal = () => {
+  editForm.value = {
+    serviceTime: orderInfo.value.serviceTime,
+    address: orderInfo.value.address,
+    remark: orderInfo.value.remark
+  }
+  editVisible.value = true
+}
+const cancelEdit = () => {
+  editVisible.value = false
+}
+
+// 保存修改
+const saveEdit = async () => {
+  editLoading.value = true
+  try {
+    // await updateOrderApi(orderNo, editForm.value)
+    await new Promise(r => setTimeout(r, 800))
+    orderInfo.value.serviceTime = editForm.value.serviceTime
+    orderInfo.value.address = editForm.value.address
+    orderInfo.value.remark = editForm.value.remark
+    editVisible.value = false
+    ElMessage.success('修改成功')
+  } catch (err) {
+    ElMessage.error('修改失败')
+  } finally {
+    editLoading.value = false
+  }
+}
+
+// 确认服务完成
+const confirmCompleted = async () => {
+  confirmLoading.value = true
+  try {
+    await new Promise(r => setTimeout(r, 800))
+    orderInfo.value.status = 4
+    ElMessage.success('已确认完成，可评价')
+  } catch (err) {
+    ElMessage.error('操作失败')
+  } finally {
+    confirmLoading.value = false
+  }
+}
+
+// 去评价
+const goToReview = () => {
+  router.push(`/user/order/review/${orderNo}`)
 }
 
 onMounted(() => {
-  loadOrderDetail()
+  fetchOrderDetail()
 })
 </script>
 
 <style scoped>
-.detail-page {
-  max-width: 700px;
+.page-container {
+  width: 100%;
+  padding: 10px 0;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 20px 0 100px 0;
-  position: relative;
 }
-.page-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #333;
-  margin: 0 0 30px 0;
-  text-align: center;
-}
+.header-row { margin-bottom: 24px; }
+.page-title { font-size: 32px; font-weight: bold; color: #222; margin: 0; }
 .detail-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 4px 12px rgba(0, 184, 153, 0.08);
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 184, 153, 0.1);
+  padding: 40px; margin-bottom: 24px;
 }
-.status-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
+.detail-section {
+  margin-bottom: 32px; padding-bottom: 32px;
+  border-bottom: 2px solid #eee;
 }
-.order-id { font-size: 18px; color: #666; }
-.info-section {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 30px;
-}
-.info-item { display: flex; align-items: center; }
-.label { font-size: 18px; color: #666; width: 120px; }
+.detail-section:last-child { border: none; }
+.section-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+.info-item { display: flex; margin-bottom: 16px; }
+.label { width: 120px; font-size: 18px; color: #666; }
 .value { font-size: 18px; color: #333; }
-.price { font-size: 20px; color: #f56c6c; font-weight: bold; }
-.action-section { text-align: center; }
-.back-btn {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 20px !important;
-  padding: 14px 40px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+.volunteer-info { display: flex; gap: 24px; align-items: center; }
+.volunteer-name { font-size: 20px; font-weight: 500; }
+.volunteer-phone { font-size: 18px; color: #666; }
+.remark-text { font-size: 18px; line-height: 1.6; }
+
+.action-section {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+:deep(.el-button) {
+  font-size: 18px !important;
+  padding: 12px 32px !important;
 }
 </style>

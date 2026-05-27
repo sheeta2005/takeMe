@@ -21,7 +21,7 @@ const routes = [
       {path: 'user/detail', component: () => import('@/views/admin/UserDetail.vue')},
       {path: 'approval', component: () => import('@/views/admin/Approval.vue')},
       {path: 'sendMsg', component: () => import('@/views/admin/SendMsg.vue')},
-      {path: 'inbox', component: () => import('@/views/admin/Inbox.vue')},
+      {path: 'message', component: () => import('@/views/admin/Message.vue')},
       {path: '/admin/setting', component: () => import('@/views/admin/Setting.vue')}
     ]
   },
@@ -38,10 +38,10 @@ const routes = [
         component: () => import('@/views/volunteer/OrderDetail.vue')
       },
       {path: 'message', component: () => import('@/views/volunteer/Message.vue')},
-      {
-        path: 'message/read',
-        component: () => import('@/views/volunteer/MessageRead.vue')
-      },
+      // {
+      //   path: 'message/read',
+      //   component: () => import('@/views/volunteer/MessageRead.vue')
+      // },
       {
         path: 'message/detail/:id',
         component: () => import('@/views/volunteer/MessageDetail.vue')
@@ -66,7 +66,8 @@ const routes = [
     children: [
       {path: '', component: () => import('@/views/user/Index.vue')},
       {path: 'order', component: () => import('@/views/user/Order.vue')},
-      {path: 'order/detail', component: () => import('@/views/user/OrderDetail.vue')},
+      {path: '/user/order/detail/:orderNo', component: () => import('@/views/user/OrderDetail.vue')},
+      {path: '/user/order/review/:orderNo', component: () => import('@/views/user/OrderReview.vue')},
       {path: 'info', component: () => import('@/views/user/Info.vue')},
       {path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue')},
       {path: 'setting', component: () => import('@/views/user/Setting.vue')},
@@ -75,6 +76,8 @@ const routes = [
       {path: 'clean', component: () => import('@/views/user/OrderClean.vue')},
       {path: 'medical', component: () => import('@/views/user/OrderMedical.vue')},
       {path: 'shop', component: () => import('@/views/user/OrderShop.vue')},
+      {path: '/user/message', component: () => import('@/views/user/Message.vue')},
+      {path: '/user/message/detail/:id', component: () => import('@/views/user/MessageDetail.vue')},
     ]
   },
   {
