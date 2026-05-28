@@ -1,7 +1,8 @@
-// 地址对象
-export  interface Address {
-  id: number
-  address: string
-  isDefault: boolean // 是否为默认地址
+/**
+ * 地址信息
+ */
+export interface Address {
+  id: number                           // 主键ID
+  address: string                      // 地址详情
+  isDefault: boolean                   // 是否默认地址
 }
-

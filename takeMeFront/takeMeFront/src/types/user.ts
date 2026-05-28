@@ -1,25 +1,22 @@
 /**
- * 老人用户信息
+ * 老人用户实体
  */
-export interface user {
-  // 基础
-  realName: string
-  username: string
-  phone: string
-  password?: string
-  avatar: string
+export interface User {
+  id: number                   // 主键ID（统一命名）
+  realName: string             // 真实姓名
+  username: string             // 登录账号
+  phone: string                // 手机号
+  password?: string            // 密码
+  avatar: string               // 头像
 
-  // 信息
-  gender: '男' | '女'
-  age: number
-  address: string
+  gender: '男' | '女'          // 性别
+  age: number                  // 年龄
+  address: string              // 居住地址
 
-  // 紧急联系人
-  emergencyName: string
-  emergencyPhone: string
+  emergencyName: string        // 紧急联系人姓名
+  emergencyPhone: string       // 紧急联系人电话
 
-  // 系统
-  userId?: number
-  createTime?: string
-  lastLoginTime?: string
+  status: 0 | 1                // 0=禁用 1=正常（后端必须要）
+  createTime: string           // 创建时间
+  lastLoginTime?: string       // 最后登录时间
 }
