@@ -1,8 +1,8 @@
 /**
- * 请假信息 Leave
+ * 请假信息 VolunteerLeave
  */
 
-export interface Leave {
+export interface VolunteerLeave {
   id: number                           // 主键ID
   volunteerId: number                  // 关联志愿者ID
   type: 0 | 1                          // 0=事假 1=病假
