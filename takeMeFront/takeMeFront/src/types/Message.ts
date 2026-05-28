@@ -1,5 +1,5 @@
 /**
- * 系统消息实体
+ * 系统消息实体  message
  */
 export interface Message {
   id: number

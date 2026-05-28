@@ -89,7 +89,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { volunteer } from '@/types/volunteer'
+import type { volunteer } from '@/types/Volunteer.ts'
 
 const route = useRoute()
 const volunteerDetail = ref<volunteer>({

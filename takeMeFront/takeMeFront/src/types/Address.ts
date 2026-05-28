@@ -1,5 +1,5 @@
 /**
- * 地址信息
+ * 地址信息  address
  */
 export interface Address {
   id: number                           // 主键ID

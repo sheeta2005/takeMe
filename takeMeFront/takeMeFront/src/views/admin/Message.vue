@@ -144,7 +144,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Bell } from '@element-plus/icons-vue'
 import { getInboxPage } from '@/api/admin'
-import type { message } from '@/types/message'
+import type { message } from '@/types/Message.ts'
 
 // 筛选
 const filterType = ref('')

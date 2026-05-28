@@ -181,7 +181,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { UserFilled } from '@element-plus/icons-vue'
 import { getVolunteerPage, volunteerAdd, volunteerUpdate, volunteerDelete } from '@/api/admin'
-import type { volunteer } from '@/types/volunteer'
+import type { volunteer } from '@/types/Volunteer.ts'
 
 const router = useRouter()
 

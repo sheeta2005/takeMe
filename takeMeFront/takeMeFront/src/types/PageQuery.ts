@@ -1,7 +1,7 @@
 /**
  * 分页请求参数
  */
-export interface pageQuery {
+export interface PageQuery {
   pageNum: number      // 第几页
   pageSize: number     // 每页几条
 }

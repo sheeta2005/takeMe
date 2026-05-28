@@ -104,7 +104,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Bell } from '@element-plus/icons-vue'
 // import { getVolunteerMessages } from '@/api/volunteer'
-import type { message } from '@/types/message'
+import type { message } from '@/types/Message.ts'
 
 const router = useRouter()
 

@@ -9,7 +9,7 @@ export interface User {
   password?: string            // 密码
   avatar: string               // 头像
 
-  gender: '男' | '女'          // 性别
+  gender: number        // 性别 0 :男， 1 ：女
   age: number                  // 年龄
   address: string              // 居住地址
 

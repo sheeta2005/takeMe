@@ -1,7 +1,7 @@
 /**
  * 服务评价实体
  */
-export interface review {
+export interface Review {
   id: number
   orderId: number
   userId: number

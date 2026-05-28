@@ -66,7 +66,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getUserDetail } from '@/api/admin'
-import type { user } from '@/types/user'
+import type { user } from '@/types/User.ts'
 
 const route = useRoute()
 const userDetail = ref<user>({

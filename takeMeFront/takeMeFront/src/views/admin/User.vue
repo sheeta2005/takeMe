@@ -130,7 +130,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { UserFilled } from '@element-plus/icons-vue'
 import { getElderPage, userAdd, userUpdate, userDelete } from '@/api/admin'
-import type { user } from '@/types/user'
+import type { user } from '@/types/User.ts'
 
 const router = useRouter()
 

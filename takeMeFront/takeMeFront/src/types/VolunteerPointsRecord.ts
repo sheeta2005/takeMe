@@ -1,7 +1,7 @@
 /**
  * 志愿者积分/薪酬记录
  */
-export interface volunteerPointsRecord {
+export interface VolunteerPointsRecord {
   id: number
   volunteerId: number
   orderId: number
