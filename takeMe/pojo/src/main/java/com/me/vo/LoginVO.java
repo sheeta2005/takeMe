@@ -8,8 +8,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginVO {
-    private Long id;
-    private String username;
-    private int role; // 1.admin 2.user 3.volunteer
+    // 登录凭证token
     private String token;
+    // 用户ID（普通用户登录时返回）
+    private Long userId;
+    // 志愿者ID（志愿者登录时返回）
+    private Long volunteerId;
+    // 管理员ID（管理员登录时返回）
+    private Long adminId;
+    // 姓名/昵称
+    private String realName;
+    // 身份类型：0=用户 1=志愿者 2=管理员
+    private Integer userType;
+    // 头像
+    private String avatar;
 }

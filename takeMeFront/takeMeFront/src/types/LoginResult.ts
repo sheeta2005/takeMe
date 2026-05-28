@@ -3,7 +3,7 @@
  */
 export interface LoginResult {
   token: string                // 登录凭证（必传）
-  userId?: number              // 老人ID
+  userId?: number              // 用户ID
   volunteerId?: number         // 志愿者ID
   adminId?: number             // 管理员ID
   realName: string             // 姓名

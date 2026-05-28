@@ -1,5 +1,5 @@
 /**
- * 老人用户实体
+ * 用户(老人)实体
  */
 export interface User {
   id: number                   // 主键ID（统一命名）

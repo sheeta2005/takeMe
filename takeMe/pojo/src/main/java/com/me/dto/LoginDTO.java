@@ -1,11 +1,21 @@
 package com.me.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoginDTO {
-    private String account;
+    // 账号
+    private String username;
+    // 密码
     private String password;
-    // 身份：admin1/user2/volunteer3
-    private Integer role;
+    // 用户类型：0=用户 1=志愿者 2=管理员
+    private Integer userType;
+    // 手机号（可选，短信登录用）
+    private String phone;
+    // 验证码（可选）
+    private String code;
 }

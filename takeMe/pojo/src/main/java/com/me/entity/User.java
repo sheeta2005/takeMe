@@ -1,82 +1,37 @@
-package com.me.entity;
+package com.xxx.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * 用户实体类
- * 包含：老人、志愿者、管理员（通用用户表）
- */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("user")
 public class User {
 
-    /**
-     * 主键ID（自增）
-     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 用户姓名
-     */
-    private String username;
+    private String realName;      // 真实姓名
+    private String username;      // 登录账号
+    private String phone;         // 手机号
+    private String password;      // 密码
+    private String avatar;        // 头像
 
-    /**
-     * 登录账号
-     */
-    private String account;
+    private Integer gender;       // 0男 1女
+    private Integer age;          // 年龄
+    private String address;       // 地址
 
-    /**
-     * 登录密码（加密存储）
-     */
-    private String password;
+    private String emergencyName; // 紧急联系人
+    private String emergencyPhone;// 紧急电话
 
-    /**
-     * 手机号码
-     */
-    private String phone;
-
-    /**
-     * 年龄
-     */
-    private Integer age;
-
-    /**
-     * 性别 0-女 1-男
-     */
-    private Integer gender;
-
-    /**
-     * 居住地址
-     */
-    private String address;
-
-
-    /**
-     * 头像地址
-     */
-    private String avatar;
-
-    /**
-     * 账号状态
-     * 0 禁用
-     * 1 启用
-     */
-    private Integer status;
-
-    /**
-     * 创建时间
-     */
+    private Integer status;       // 0禁用 1正常
     private LocalDateTime createTime;
+    private LocalDateTime lastLoginTime;
 }
