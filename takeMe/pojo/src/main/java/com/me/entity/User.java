@@ -1,4 +1,4 @@
-package com.xxx.entity;
+package com.me.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -26,7 +26,6 @@ public class User {
 
     private Integer gender;       // 0男 1女
     private Integer age;          // 年龄
-    private String address;       // 地址
 
     private String emergencyName; // 紧急联系人
     private String emergencyPhone;// 紧急电话

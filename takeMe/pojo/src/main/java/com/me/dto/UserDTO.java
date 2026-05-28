@@ -16,7 +16,6 @@ public class UserDTO {
     private String avatar;
     private Integer gender;
     private Integer age;
-    private String address;
     private String emergencyName;
     private String emergencyPhone;
     private Integer status;

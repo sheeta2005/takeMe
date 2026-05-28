@@ -1,7 +1,7 @@
 /**
  * 服务套餐（平台卖的服务本身）
  */
-export interface ServiceProduct {
+export interface ServicePackage {
   id: number                  // 服务套餐ID
   name: string                // 套餐名：如“助洁2小时”
   type: 0 | 1 | 2 | 3 | 4     // 服务类型：0助餐 1助洁 2助医 3代购 4陪伴
