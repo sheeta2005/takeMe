@@ -10,16 +10,12 @@ import lombok.NoArgsConstructor;
 public class LoginVO {
     // 登录凭证token
     private String token;
-    // 用户ID（普通用户登录时返回）
-    private Long userId;
-    // 志愿者ID（志愿者登录时返回）
-    private Long volunteerId;
-    // 管理员ID（管理员登录时返回）
-    private Long adminId;
+    // 当前登录人ID
+    private Long loginId;
+    // 身份类型：0=管理员 1=志愿者 2=普通用户（老人）
+    private Integer userType;
     // 姓名/昵称
     private String realName;
-    // 身份类型：0=用户 1=志愿者 2=管理员
-    private Integer userType;
     // 头像
     private String avatar;
 }

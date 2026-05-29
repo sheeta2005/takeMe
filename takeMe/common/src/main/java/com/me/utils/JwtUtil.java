@@ -1,39 +1,91 @@
 package com.me.utils;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 
+@Component
 public class JwtUtil {
 
+    @Value("${jwt.secret}")
+    private String secretKeyStr;
+
+    @Value("${jwt.expiration}")
+    private long ttlMillis;
+
+    // 构建安全的 SecretKey
+    private SecretKey getSecretKey() {
+        return Keys.hmacShaKeyFor(secretKeyStr.getBytes(StandardCharsets.UTF_8));
+    }
+
     /**
-     * jwt 密钥创建方法
-     *
-     * @param secretKey 密钥
-     * @param ttlMillis 过期时间
-     * @param claims    载荷
-     * @return
+     * 生成 JWT
+     * @param claims 自定义载荷（userId、role 等）
+     * @return token
      */
-    public static String createJWT(String secretKey, long ttlMillis, Map<String, Object> claims) {
-        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+    public String createJWT(Map<String, Object> claims) {
         long expMillis = System.currentTimeMillis() + ttlMillis;
         Date exp = new Date(expMillis);
 
         return Jwts.builder()
                 .setClaims(claims)
-                .signWith(signatureAlgorithm, secretKey.getBytes())
+                .setIssuedAt(new Date())
                 .setExpiration(exp)
+                .signWith(getSecretKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public static Claims parseJWT(String secretKey, String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(secretKey.getBytes())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+    /**
+     * 解析 JWT（统一异常）
+     * @param token JWT 字符串
+     * @return Claims
+     */
+    public Claims parseJWT(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSecretKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (ExpiredJwtException e) {
+            throw new RuntimeException("token已过期");
+        } catch (SignatureException e) {
+            throw new RuntimeException("token签名错误");
+        } catch (MalformedJwtException e) {
+            throw new RuntimeException("token格式错误");
+        } catch (Exception e) {
+            throw new RuntimeException("token解析失败");
+        }
+    }
+
+// ---------- 常用便捷方法 ----------
+
+    public Long getUserId(String token) {
+        Claims claims = parseJWT(token);
+        return claims.get("userId", Long.class);
+    }
+
+    /**
+     * 获取用户角色类型（数字版）
+     * 0=管理员 1=志愿者 2=普通用户
+     */
+    public Integer getRole(String token) {
+        Claims claims = parseJWT(token);
+        return claims.get("role", Integer.class);
+    }
+
+    public boolean isExpired(String token) {
+        try {
+            Claims claims = parseJWT(token);
+            return claims.getExpiration().before(new Date());
+        } catch (RuntimeException e) {
+            return true;
+        }
     }
 }
