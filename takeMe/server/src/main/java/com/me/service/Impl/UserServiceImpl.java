@@ -1,4 +1,4 @@
-package com.me.service.impl;
+package com.me.service.Impl;
 
 import com.me.dto.LoginDTO;
 import com.me.entity.User;
@@ -10,7 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final PasswordEncoder passwordEncoder;
 
