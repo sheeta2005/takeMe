@@ -1,5 +1,6 @@
 package com.me.utils;
 
+import com.me.vo.LoginVO;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -26,6 +28,7 @@ public class JwtUtil {
 
     /**
      * 生成 JWT
+     *
      * @param claims 自定义载荷（userId、role 等）
      * @return token
      */
@@ -43,6 +46,7 @@ public class JwtUtil {
 
     /**
      * 解析 JWT（统一异常）
+     *
      * @param token JWT 字符串
      * @return Claims
      */
@@ -64,7 +68,7 @@ public class JwtUtil {
         }
     }
 
-// ---------- 常用便捷方法 ----------
+    // ---------- 常用便捷方法 ----------
 
     public Long getUserId(String token) {
         Claims claims = parseJWT(token);
@@ -87,5 +91,29 @@ public class JwtUtil {
         } catch (RuntimeException e) {
             return true;
         }
+    }
+
+    // ---------- 新增：通用登录结果封装方法 ----------
+
+    /**
+     * 构建登录成功返回的LoginVO
+     * 统一生成token和封装返回结果，消除三个Controller的重复代码
+     */
+    public LoginVO buildLoginVO(Long userId, Integer userType, String realName, String avatar) {
+        // 生成JWT令牌
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("role", userType);
+        String token = createJWT(claims);
+
+        // 封装返回结果
+        LoginVO loginVO = new LoginVO();
+        loginVO.setToken(token);
+        loginVO.setLoginId(userId);
+        loginVO.setUserType(userType);
+        loginVO.setRealName(realName);
+        loginVO.setAvatar(avatar);
+
+        return loginVO;
     }
 }
