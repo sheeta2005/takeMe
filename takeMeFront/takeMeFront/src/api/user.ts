@@ -93,3 +93,55 @@ export function evaluateOrder(data: { orderId: number; score: number; content?: 
     data
   })
 }
+
+// ========================= 购物车 =========================
+// 获取购物车列表
+export function getCartList() {
+  return request({
+    url: '/api/user/cart/list',
+    method: 'get'
+  })
+}
+
+// 加入购物车
+export function addToCart(data: {
+  productId: number;
+  productName: string;
+  productPrice: number;
+  serviceType: string;
+}) {
+  return request({
+    url: '/api/user/cart/add',
+    method: 'post',
+    data
+  })
+}
+
+// 修改购物车商品数量
+export function updateCartItem(data: {
+  productId: number;
+  quantity: number;
+}) {
+  return request({
+    url: '/api/user/cart/update',
+    method: 'post',
+    data
+  })
+}
+
+// 删除购物车商品
+export function deleteCartItem(productId: number) {
+  return request({
+    url: '/api/user/cart/delete',
+    method: 'post',
+    params: { productId }
+  })
+}
+
+// 清空购物车
+export function clearCart() {
+  return request({
+    url: '/api/user/cart/clear',
+    method: 'post'
+  })
+}

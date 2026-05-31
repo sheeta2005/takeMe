@@ -72,6 +72,10 @@ const routes = [
       { path: 'setting', component: () => import('@/views/user/Setting.vue') },
       { path: 'create', component: () => import('@/views/user/CreateOrder.vue') },
 
+
+      // 新增：购物车页面
+      { path: 'cart', component: () => import('@/views/user/Cart.vue') },
+
       // 五大服务（含新增陪伴）
       { path: 'meal', component: () => import('@/views/user/OrderMeal.vue') },
       { path: 'clean', component: () => import('@/views/user/OrderClean.vue') },
