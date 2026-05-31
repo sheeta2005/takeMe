@@ -10,6 +10,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * Web MVC配置类
  * 注册所有拦截器并配置拦截路径
+ * 与前端API格式统一：/api/admin/**、/api/volunteer/**、/api/user/**
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
@@ -29,31 +30,25 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 管理员拦截器：拦截所有 /admin/**
+        // 管理员拦截器：拦截所有 /api/admin/**
         registry.addInterceptor(adminInterceptor)
-                .addPathPatterns("/admin/**")
+                .addPathPatterns("/api/admin/**")
                 .excludePathPatterns(
-                        "/admin/login",
-                        "/login",
-                        "/register"
+                        "/api/admin/login"
                 );
 
-        // 志愿者拦截器：拦截所有 /volunteer/**（和你现在的路径完全一致）
+        // 志愿者拦截器：拦截所有 /api/volunteer/**
         registry.addInterceptor(volunteerInterceptor)
-                .addPathPatterns("/volunteer/**")
+                .addPathPatterns("/api/volunteer/**")
                 .excludePathPatterns(
-                        "/volunteer/login",
-                        "/login",
-                        "/register"
+                        "/api/volunteer/login"
                 );
 
-        // 普通用户拦截器：拦截所有 /user/**
+        // 普通用户拦截器：拦截所有 /api/user/**
         registry.addInterceptor(userInterceptor)
-                .addPathPatterns("/user/**")
+                .addPathPatterns("/api/user/**")
                 .excludePathPatterns(
-                        "/user/login",
-                        "/login",
-                        "/register"
+                        "/api/user/login"
                 );
     }
 }

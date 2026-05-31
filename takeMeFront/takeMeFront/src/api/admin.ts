@@ -1,5 +1,13 @@
 import request from '@/utils/request'
 
+export function adminLogin(data: { username: string; password: string }) {
+  return request({
+    url: '/api/admin/login',
+    method: 'post',
+    data
+  })
+}
+
 // ========================= 工作台 =========================
 // 获取工作台统计数据
 export const getDashboardData = () => {
@@ -48,7 +56,7 @@ export const getOrderDetail = (id: number) => {
   })
 }
 
-// ========================= 志愿者管理（你已有的） =========================
+// ========================= 志愿者管理 =========================
 // 分页查询志愿者列表
 export const getVolunteerPage = (page: number, pageSize: number) => {
   return request({
@@ -120,9 +128,6 @@ export const volunteerDelete = (id: number) => {
     params: { id }
   })
 }
-
-
-
 
 // ========================= 用户（老人）管理 =========================
 // 分页查询用户列表
@@ -268,10 +273,10 @@ export const getFeedbackPage = (page: number, pageSize: number) => {
   })
 }
 
-// 发送消息（补全版，支持批量/指定发送、消息类型）
+// 发送消息
 export const sendMessage = (data: {
   receiverType: 'all_volunteer' | 'all_elder' | 'spec_volunteer' | 'spec_elder'
-  receiverIds?: number[] // 批量发送时传空，指定发送时传ID列表
+  receiverIds?: number[]
   type: 0 | 1 | 2 // 0=系统 1=任务 2=提醒
   title: string
   content: string

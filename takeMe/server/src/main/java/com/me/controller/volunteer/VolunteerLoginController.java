@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/volunteer")
+@RequestMapping("/api/volunteer")
 public class VolunteerLoginController {
 
     private final VolunteerService volunteerService;

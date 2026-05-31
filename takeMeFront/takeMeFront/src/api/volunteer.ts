@@ -1,16 +1,37 @@
 import request from '@/utils/request'
 
+export function volunteerLogin(data: { username: string; password: string }) {
+  return request({
+    url: '/api/volunteer/login',
+    method: 'post',
+    data
+  })
+}
+
+// 志愿者注册
+export function volunteerRegister(data: {
+  username: string;
+  password: string;
+  realName: string;
+  phone: string;
+}) {
+  return request({
+    url: '/api/volunteer/register',
+    method: 'post',
+    data
+  })
+}
+
+// ========================= 任务管理 =========================
 /**
  * 获取志愿者待办任务
  */
 export function getVolunteerTodo() {
-  // 真实后端接口，后期打开注释即可
-  /*
-  return request({
-    url: '/api/volunteer/todo',
-    method: 'get'
-  })
-  */
+  // 真实后端接口
+  // return request({
+  //   url: '/api/volunteer/todo',
+  //   method: 'get'
+  // })
 
   // 模拟数据
   return Promise.resolve({
@@ -39,25 +60,34 @@ export function getVolunteerTodo() {
  * @param orderId 订单ID
  */
 export function confirmOrder(orderId: string) {
-  /*
-  return request({
-    url: `/api/volunteer/confirm/${orderId}`,
-    method: 'post'
-  })
-  */
+  // return request({
+  //   url: `/api/volunteer/confirm/${orderId}`,
+  //   method: 'post'
+  // })
   return Promise.resolve({ code: 200, message: '接单成功' })
 }
 
 /**
+ * 完成服务
+ * @param orderId 订单ID
+ */
+export function completeOrder(orderId: string) {
+  // return request({
+  //   url: `/api/volunteer/complete/${orderId}`,
+  //   method: 'post'
+  // })
+  return Promise.resolve({ code: 200, message: '服务完成' })
+}
+
+// ========================= 个人中心 =========================
+/**
  * 获取消息列表
  */
 export function getMessageList() {
-  /*
-  return request({
-    url: '/api/volunteer/message',
-    method: 'get'
-  })
-  */
+  // return request({
+  //   url: '/api/volunteer/message',
+  //   method: 'get'
+  // })
   return Promise.resolve({
     code: 200,
     data: [
@@ -71,12 +101,10 @@ export function getMessageList() {
  * 获取服务记录
  */
 export function getServiceRecord() {
-  /*
-  return request({
-    url: '/api/volunteer/record',
-    method: 'get'
-  })
-  */
+  // return request({
+  //   url: '/api/volunteer/record',
+  //   method: 'get'
+  // })
   return Promise.resolve({
     code: 200,
     data: [
@@ -90,12 +118,10 @@ export function getServiceRecord() {
  * 获取积分与薪酬
  */
 export function getPoints() {
-  /*
-  return request({
-    url: '/api/volunteer/points',
-    method: 'get'
-  })
-  */
+  // return request({
+  //   url: '/api/volunteer/points',
+  //   method: 'get'
+  // })
   return Promise.resolve({
     code: 200,
     data: {
@@ -110,13 +136,11 @@ export function getPoints() {
  * 提交请假申请
  */
 export function submitLeave(data: any) {
-  /*
-  return request({
-    url: '/api/volunteer/leave',
-    method: 'post',
-    data
-  })
-  */
+  // return request({
+  //   url: '/api/volunteer/leave',
+  //   method: 'post',
+  //   data
+  // })
   return Promise.resolve({ code: 200, message: '请假提交成功' })
 }
 
@@ -124,12 +148,10 @@ export function submitLeave(data: any) {
  * 获取学习规范列表
  */
 export function getStudyList() {
-  /*
-  return request({
-    url: '/api/volunteer/study',
-    method: 'get'
-  })
-  */
+  // return request({
+  //   url: '/api/volunteer/study',
+  //   method: 'get'
+  // })
   return Promise.resolve({
     code: 200,
     data: [
@@ -143,12 +165,10 @@ export function getStudyList() {
  * 获取志愿者个人信息
  */
 export function getVolunteerInfo() {
-  /*
-  return request({
-    url: '/api/volunteer/info',
-    method: 'get'
-  })
-  */
+  // return request({
+  //   url: '/api/volunteer/info',
+  //   method: 'get'
+  // })
   return Promise.resolve({
     code: 200,
     data: {
@@ -165,12 +185,10 @@ export function getVolunteerInfo() {
  * 修改志愿者信息
  */
 export function updateVolunteerInfo(data: any) {
-  /*
-  return request({
-    url: '/api/volunteer/update',
-    method: 'post',
-    data
-  })
-  */
+  // return request({
+  //   url: '/api/volunteer/update',
+  //   method: 'post',
+  //   data
+  // })
   return Promise.resolve({ code: 200, message: '修改成功' })
 }
