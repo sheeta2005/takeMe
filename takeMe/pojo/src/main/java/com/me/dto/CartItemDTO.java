@@ -16,4 +16,5 @@ public class CartItemDTO {
     private Integer productPrice;
     private Integer quantity;
     private Integer selected;
+    private Integer serviceType;
 }

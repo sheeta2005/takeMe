@@ -1,19 +1,21 @@
 import { defineStore } from 'pinia'
+import { getCartList, addToCart, updateCartItem, deleteCartItem, clearCart } from '@/api/user'
+import { ElMessage } from 'element-plus'
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    // 购物车商品列表（每个商品都是独立条目，包含完整订单信息）
+    // 购物车商品列表（完全匹配后端返回字段）
     items: [] as {
-      id: number; // 唯一ID
+      id: number; // 后端返回的购物车条目ID
       productId: number;
       productName: string;
       productPrice: number;
       serviceType: string;
-      serviceDate: string; // 服务日期
-      serviceTime: string; // 服务时间
-      address: string; // 服务地址
-      remark: string; // 备注
-      quantity: number; // 数量
+      serviceDate: string;
+      serviceTime: string;
+      address: string;
+      remark: string;
+      quantity: number;
     }[]
   }),
 
@@ -29,8 +31,20 @@ export const useCartStore = defineStore('cart', {
   },
 
   actions: {
+    // 从后端获取购物车列表
+    async fetchCartList() {
+      try {
+        const res = await getCartList()
+        this.items = res.data
+        return true
+      } catch (err) {
+        ElMessage.error('获取购物车失败')
+        return false
+      }
+    },
+
     // ✅ 最终版逻辑：只有助餐能有数量>1，其他全部强制为1
-    addItem(item: {
+    async addItem(item: {
       productId: number;
       productName: string;
       productPrice: number;
@@ -41,75 +55,67 @@ export const useCartStore = defineStore('cart', {
       remark: string;
       quantity: number;
     }) {
-      // ✅ 强制非助餐服务的数量为1，不管前端传什么
+      // 强制非助餐服务的数量为1，不管前端传什么
       if (item.serviceType !== '助餐服务') {
         item.quantity = 1
       }
 
-      // 只有助餐服务才检查是否可以叠加
-      if (item.serviceType === '助餐服务') {
-        // 查找是否有完全相同的助餐服务（同商品、同时间、同地址）
-        const existingItem = this.items.find(i =>
-          i.productId === item.productId &&
-          i.serviceDate === item.serviceDate &&
-          i.serviceTime === item.serviceTime &&
-          i.address === item.address
-        )
-
-        if (existingItem) {
-          // 存在相同的，数量叠加
-          existingItem.quantity += item.quantity
-          this.saveToLocalStorage()
-          return
-        }
+      try {
+        await addToCart(item)
+        // 加入成功后刷新购物车列表
+        await this.fetchCartList()
+        ElMessage.success('已加入购物车')
+        return true
+      } catch (err) {
+        ElMessage.error('加入购物车失败')
+        return false
       }
-
-      // 其他所有服务直接新增独立条目
-      this.items.push({
-        id: Date.now(), // 用时间戳作为唯一ID
-        ...item
-      })
-
-      // 保存到本地存储
-      this.saveToLocalStorage()
     },
 
     // 修改商品数量时也做限制
-    updateQuantity(itemId: number, quantity: number) {
+    async updateQuantity(itemId: number, quantity: number) {
       const item = this.items.find(i => i.id === itemId)
-      if (item) {
-        // 非助餐服务数量不能修改，永远是1
-        if (item.serviceType !== '助餐服务') {
-          item.quantity = 1
-        } else {
-          item.quantity = Math.max(1, quantity)
-        }
-        this.saveToLocalStorage()
+      if (!item) return
+
+      // 非助餐服务数量不能修改，永远是1
+      if (item.serviceType !== '助餐服务') {
+        ElMessage.info('这项服务只能预约1次哦，如需多个时间请重新下单')
+        return
+      }
+
+      try {
+        await updateCartItem({
+          productId: item.productId,
+          quantity: Math.max(1, quantity)
+        })
+        await this.fetchCartList()
+      } catch (err) {
+        ElMessage.error('修改数量失败')
       }
     },
 
     // 删除单个商品
-    removeItem(itemId: number) {
-      this.items = this.items.filter(i => i.id !== itemId)
-      this.saveToLocalStorage()
+    async removeItem(itemId: number) {
+      const item = this.items.find(i => i.id === itemId)
+      if (!item) return
+
+      try {
+        await deleteCartItem(item.productId)
+        await this.fetchCartList()
+        ElMessage.success('已删除')
+      } catch (err) {
+        ElMessage.error('删除失败')
+      }
     },
 
     // 清空购物车
-    clearCart() {
-      this.items = []
-      this.saveToLocalStorage()
-    },
-
-    // 保存到本地存储
-    saveToLocalStorage() {
-      localStorage.setItem('cartItems', JSON.stringify(this.items))
-    },
-
-    // 从本地存储加载
-    loadFromLocalStorage() {
-      const savedItems = localStorage.getItem('cartItems')
-      if (savedItems) {
-        this.items = JSON.parse(savedItems)
+    async clearCart() {
+      try {
+        await clearCart()
+        this.items = []
+        ElMessage.success('购物车已清空')
+      } catch (err) {
+        ElMessage.error('清空失败')
       }
     }
   }

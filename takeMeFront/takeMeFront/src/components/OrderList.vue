@@ -12,7 +12,7 @@
       <div class="service-card" v-for="item in serviceList" :key="item.id">
         <div class="card-left">
           <div class="service-name">{{ item.name }}</div>
-          <div class="service-desc">{{ item.desc }}</div>
+          <div class="service-desc">{{ item.description }}</div>
         </div>
         <div class="card-right">
           <span class="price">¥{{ item.price }}</span>
@@ -76,7 +76,14 @@
           </div>
         </el-form-item>
         <el-form-item label="服务地址" prop="address" required>
-          <el-input v-model="cartForm.address" type="textarea" :rows="2" placeholder="请输入服务地址" />
+          <el-select v-model="cartForm.address" placeholder="请选择服务地址" size="large" style="width: 100%">
+            <el-option
+              v-for="(addr, index) in userAddressList"
+              :key="index"
+              :label="addr"
+              :value="addr"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="订单备注" prop="remark">
           <el-input v-model="cartForm.remark" type="textarea" :rows="2" placeholder="请输入特殊要求" />
@@ -118,6 +125,8 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
+import { useUserStore } from '@/stores/user'
+import { getServiceList } from '@/api/user'
 import {
   Dish, Brush, FirstAidKit, ShoppingCart, ChatLineRound
 } from '@element-plus/icons-vue'
@@ -130,8 +139,21 @@ const props = defineProps({
 })
 
 const cartStore = useCartStore()
+const userStore = useUserStore()
 const cartFormRef = ref<InstanceType<typeof ElForm>>()
-const serviceList = ref<any[]>([])
+// 完全匹配ServicePackage实体类字段
+const serviceList = ref<{
+  id: number;
+  name: string;
+  type: number;
+  price: number;
+  description: string;
+  image: string;
+  status: number;
+}[]>([])
+
+// 从用户store获取地址列表（string数组转下拉选项）
+const userAddressList = computed(() => userStore.addresses)
 
 // 加入购物车弹窗
 const addToCartVisible = ref(false)
@@ -154,14 +176,14 @@ const cartRules = {
     { required: true, message: '请选择服务时间', trigger: 'change' }
   ],
   address: [
-    { required: true, message: '请输入服务地址', trigger: 'blur' }
+    { required: true, message: '请选择服务地址', trigger: 'change' }
   ],
   quantity: [
     { required: true, message: '请输入购买数量', trigger: 'change' }
   ]
 }
 
-// 服务大类配置
+// 服务大类配置（完全匹配ServicePackage的type字段）
 const serviceConfig = {
   0: { title: '代购服务', desc: '帮您购买生活用品、药品等，送货上门', icon: ShoppingCart },
   1: { title: '助洁服务', desc: '上门日常保洁，帮您打扫房间、整理家务', icon: Brush },
@@ -176,7 +198,7 @@ const serviceDesc = computed(() => currentConfig.value.desc)
 const iconComponent = computed(() => currentConfig.value.icon)
 
 // ======================
-// 日期时间联动逻辑（完全修复）
+// 日期时间联动逻辑
 // ======================
 const now = new Date()
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -205,13 +227,9 @@ const allTimeSlots = [
 ]
 
 const availableTimeSlots = computed(() => {
-  // 没有选择日期时，返回空数组
   if (!cartForm.value.serviceDate) return []
-
-  // 如果不是今天，返回所有时间段
   if (cartForm.value.serviceDate !== dateList.value[0].value) return allTimeSlots
 
-  // 如果是今天，过滤掉已经过去的时间
   const currentHour = now.getHours()
   return allTimeSlots.filter(slot => {
     const h = parseInt(slot.value.split(':')[0])
@@ -219,12 +237,10 @@ const availableTimeSlots = computed(() => {
   })
 })
 
-// 选择日期时自动清空时间并清除验证错误
 const selectDate = async (date: string) => {
   cartForm.value.serviceDate = date
-  cartForm.value.serviceTime = '' // 清空已选时间
+  cartForm.value.serviceTime = ''
 
-  // 清除之前的验证错误
   await nextTick()
   if (cartFormRef.value) {
     cartFormRef.value.clearValidate(['serviceDate', 'serviceTime'])
@@ -232,39 +248,22 @@ const selectDate = async (date: string) => {
 }
 
 // =============================================
-// 后端接口代码 100% 保留
+// 后端接口调用
 // =============================================
 onMounted(() => {
   fetchServiceList()
+  // 确保用户信息和地址列表已加载
+  if (!userStore.addresses.length) {
+    userStore.getUserInfo()
+  }
 })
 
+// ✅ 从后端获取服务列表（完全匹配ServicePackage）
 const fetchServiceList = async () => {
   try {
-    // 模拟数据
-    const mockData = {
-      0: [
-        { id: 1, name: '生活用品代购', desc: '帮您购买日常用品', price: 10 },
-        { id: 2, name: '药品代购', desc: '帮您购买常用药品', price: 15 }
-      ],
-      1: [
-        { id: 1, name: '日常保洁2小时', desc: '打扫房间、擦桌子、拖地', price: 30 },
-        { id: 2, name: '深度保洁3小时', desc: '包含厨房、卫生间清洁', price: 50 }
-      ],
-      2: [
-        { id: 1, name: '营养套餐A', desc: '一荤两素 适合日常', price: 15 },
-        { id: 2, name: '软食易消化餐', desc: '软烂易咀嚼 适合牙口不佳', price: 20 }
-      ],
-      3: [
-        { id: 1, name: '陪同就诊服务', desc: '陪您去医院就诊、取药', price: 40 },
-        { id: 2, name: '代取药品服务', desc: '帮您取药并送上门', price: 20 }
-      ],
-      4: [
-        { id: 1, name: '聊天陪伴', desc: '陪您聊天、解闷，排解孤独', price: 25 },
-        { id: 2, name: '散步陪伴', desc: '陪您出门散步、逛公园', price: 30 }
-      ]
-    }
-    serviceList.value = mockData[props.type] || []
-
+    const res = await getServiceList(props.type)
+    // 只显示状态为启用的服务
+    serviceList.value = res.data.filter((item: any) => item.status === 1)
   } catch (err) {
     ElMessage.error('获取服务列表失败')
   }
@@ -273,7 +272,6 @@ const fetchServiceList = async () => {
 // 打开加入购物车弹窗
 const openAddToCartModal = (item: any) => {
   currentService.value = item
-  // 重置表单
   cartForm.value = {
     serviceDate: '',
     serviceTime: '',
@@ -281,9 +279,14 @@ const openAddToCartModal = (item: any) => {
     remark: '',
     quantity: 1
   }
+
+  // 自动填入第一个常用地址
+  if (userAddressList.value.length > 0) {
+    cartForm.value.address = userAddressList.value[0]
+  }
+
   addToCartVisible.value = true
 
-  // 清除所有验证错误
   nextTick(() => {
     if (cartFormRef.value) {
       cartFormRef.value.clearValidate()
@@ -291,7 +294,6 @@ const openAddToCartModal = (item: any) => {
   })
 }
 
-// 取消加入购物车
 const cancelAddToCart = () => {
   addToCartVisible.value = false
   cartFormRef.value?.resetFields()
@@ -299,7 +301,6 @@ const cancelAddToCart = () => {
 
 // 确认加入购物车
 const confirmAddToCart = async () => {
-  // 先进行表单校验
   if (!cartFormRef.value) return
 
   try {
@@ -309,7 +310,6 @@ const confirmAddToCart = async () => {
     return
   }
 
-  // 额外检查：如果今天没有可用时间，禁止提交
   if (cartForm.value.serviceDate && availableTimeSlots.length === 0) {
     ElMessage.error('今天的服务时间已全部过期，请选择明天或后天')
     return
@@ -317,12 +317,12 @@ const confirmAddToCart = async () => {
 
   addToCartLoading.value = true
   try {
-    // 加入购物车
-    cartStore.addItem({
+    await cartStore.addItem({
       productId: currentService.value.id,
       productName: currentService.value.name,
       productPrice: currentService.value.price,
-      serviceType: serviceTitle.value,
+      // ✅ 修复：传数字类型的serviceType，和后端完全匹配
+      serviceType: props.type,
       serviceDate: cartForm.value.serviceDate,
       serviceTime: cartForm.value.serviceTime,
       address: cartForm.value.address,
@@ -331,9 +331,6 @@ const confirmAddToCart = async () => {
     })
 
     addToCartVisible.value = false
-    ElMessage.success('已加入购物车')
-  } catch (err) {
-    ElMessage.error('加入购物车失败')
   } finally {
     addToCartLoading.value = false
   }
@@ -433,9 +430,23 @@ const confirmAddToCart = async () => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+  width: 100%;
 }
-.date-buttons .el-button, .time-buttons .el-button {
+.date-buttons .el-button,
+.time-buttons .el-button {
+  width: 100%;
   height: 50px;
   font-size: 18px !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 1px solid #dcdfe6;
+}
+.date-buttons .el-button.is-active,
+.time-buttons .el-button.is-active {
+  border: 1px solid #409eff;
 }
 </style>

@@ -25,4 +25,5 @@ public class CartItem {
     private Integer quantity;
     private Integer selected; // 0=否 1=是
     private LocalDateTime createTime;
+    private Integer serviceType;//0 = 代购 1 = 助洁 2 = 助餐 3 = 助医 4 = 陪伴
 }

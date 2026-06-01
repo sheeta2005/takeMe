@@ -19,7 +19,7 @@ public class ServicePackage {
     private Long id;
 
     private String name;
-    private Integer type;
+    private Integer type;// 0shop 1clean 2meal 3medical 4 companion
     private Integer price;
     private String description;
     private String image;

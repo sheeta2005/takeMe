@@ -67,7 +67,7 @@ export function getMyOrderList(params: { page: number; pageSize: number; status?
   })
 }
 
-// 下单预约服务
+// 下单预约
 export function createOrder(data: any) {
   return request({
     url: '/api/user/order/create',
@@ -91,6 +91,15 @@ export function evaluateOrder(data: { orderId: number; score: number; content?: 
     url: '/api/user/order/evaluate',
     method: 'post',
     data
+  })
+}
+
+// 根据类型获取服务列表
+export function getServiceList(type: number) {
+  return request({
+    url: '/api/user/service/list',
+    method: 'get',
+    params: { type }
   })
 }
 
