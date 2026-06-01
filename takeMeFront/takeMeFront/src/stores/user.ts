@@ -36,12 +36,15 @@ export const useUserStore = defineStore('user', {
 
     // 从后端获取完整用户详情
     async getUserInfo() {
+      // ✅ 没有token直接返回，不发起请求
+      if (!this.token) return false
+
       try {
         const res = await getUserInfo()
         this.$patch(res.data)
         return true
       } catch (err) {
-        ElMessage.error('获取用户信息失败')
+        // 401错误已经在响应拦截器处理了，这里不用再弹
         return false
       }
     },
@@ -59,13 +62,23 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    // 退出登录清空所有信息
+    // 退出登录
     async logout() {
       try {
+        // 先调用logout接口（此时token还在）
         await logout()
+      } catch (err) {
+        // 接口失败也继续清状态
       } finally {
-        localStorage.clear()
-        this.$reset()
+        // ✅ 只清登录相关字段，保留记住密码等信息
+        this.token = ''
+        this.userId = ''
+        this.username = ''
+        this.role = 2
+        localStorage.removeItem('token')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('role')
+
         ElMessage.success('已退出登录')
       }
     }

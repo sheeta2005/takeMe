@@ -95,4 +95,6 @@ public class UserController {
             return Result.error("头像上传失败");
         }
     }
+
+
 }

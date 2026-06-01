@@ -8,59 +8,47 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-/**
- * 管理员端JWT令牌校验拦截器
- * 拦截路径：/admin/**
- * 角色要求：0=管理员
- */
 @Component
 public class JwtTokenAdminInterceptor implements HandlerInterceptor {
 
     private final JwtUtil jwtUtil;
 
-    // 构造器注入（Spring 3.x推荐）
     public JwtTokenAdminInterceptor(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 判断当前拦截到的是Controller方法还是静态资源，静态资源直接放行
         if (!(handler instanceof HandlerMethod)) {
             return true;
         }
 
-        // 1. 从请求头中获取token（你约定的header名：token）
-        String token = request.getHeader("token");
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        } else if (authHeader != null) {
+            token = authHeader;
+        }
 
-        // 2. 校验令牌
         try {
             Long userId = jwtUtil.getUserId(token);
             Integer role = jwtUtil.getRole(token);
 
-            // 校验角色必须是管理员（0）
             if (role == null || role != 0) {
                 response.setStatus(401);
                 return false;
             }
 
-            // 3. 将用户信息存入ThreadLocal
             BaseContext.setLoginId(userId);
             BaseContext.setLoginType(role);
-
-            // 校验通过，放行
             return true;
         } catch (Exception ex) {
-            // 令牌无效/过期/格式错误，返回401
             response.setStatus(401);
             return false;
         }
     }
 
-    /**
-     * 请求完成后清理ThreadLocal，防止内存泄漏
-     * 无论请求成功失败都会执行
-     */
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         BaseContext.clear();

@@ -2,6 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
 const routes = [
+  // 1. 根路径直接重定向到登录页（关键）
+  {
+    path: '/',
+    redirect: '/login'
+  },
   {
     path: '/login',
     name: 'Login',
@@ -11,13 +16,12 @@ const routes = [
     path: '/admin',
     component: () => import('@/layout/admin/Layout.vue'),
     redirect: '/admin/index',
+    meta: { role: 0 }, // 管理员
     children: [
       { path: 'index', component: () => import('@/views/admin/Index.vue') },
       { path: 'order', component: () => import('@/views/admin/Order.vue') },
       { path: 'order/detail', component: () => import('@/views/admin/OrderDetail.vue') },
-      // -------- 原来 ServiceManage → 现在 OrderManage --------
       { path: 'orderManage', component: () => import('@/views/admin/OrderManage.vue') },
-
       { path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue') },
       { path: 'volunteer/detail', component: () => import('@/views/admin/VolunteerDetail.vue') },
       { path: 'user', component: () => import('@/views/admin/User.vue') },
@@ -31,7 +35,7 @@ const routes = [
   {
     path: '/volunteer',
     component: () => import('@/layout/volunteer/Layout.vue'),
-    meta: { role: 1 },
+    meta: { role: 1 }, // 志愿者
     children: [
       { path: '', component: () => import('@/views/volunteer/Index.vue') },
       { path: 'todo', component: () => import('@/views/volunteer/Todo.vue') },
@@ -61,7 +65,7 @@ const routes = [
   {
     path: '/user',
     component: () => import('@/layout/user/Layout.vue'),
-    meta: { role: 2 },
+    meta: { role: 2 }, // 普通用户
     children: [
       { path: '', component: () => import('@/views/user/Index.vue') },
       { path: 'order', component: () => import('@/views/user/Order.vue') },
@@ -71,18 +75,12 @@ const routes = [
       { path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue') },
       { path: 'setting', component: () => import('@/views/user/Setting.vue') },
       { path: 'create', component: () => import('@/views/user/CreateOrder.vue') },
-
-
-      // 新增：购物车页面
       { path: 'cart', component: () => import('@/views/user/Cart.vue') },
-
-      // 五大服务（含新增陪伴）
       { path: 'meal', component: () => import('@/views/user/OrderMeal.vue') },
       { path: 'clean', component: () => import('@/views/user/OrderClean.vue') },
       { path: 'medical', component: () => import('@/views/user/OrderMedical.vue') },
       { path: 'shop', component: () => import('@/views/user/OrderShop.vue') },
       { path: 'companion', component: () => import('@/views/user/OrderCompanion.vue') },
-
       { path: 'message', component: () => import('@/views/user/Message.vue') },
       { path: 'message/detail/:id', component: () => import('@/views/user/MessageDetail.vue') }
     ]
@@ -98,37 +96,28 @@ const router = createRouter({
   routes
 })
 
-let userStore: ReturnType<typeof useUserStore>
-router.beforeEach((to, _, next) => {
-  if (!userStore) {
-    userStore = useUserStore()
-  }
+// 路由守卫：核心修改在这里
+router.beforeEach((to, from, next) => {
+  const userStore = useUserStore()
   const token = userStore.token
 
+  // 1. 没 token → 一律去登录页（除了登录页自己）
   if (!token) {
-    if (to.path === '/login') {
-      next()
-    } else {
-      next('/login')
-    }
-    return
+    return to.path === '/login' ? next() : next('/login')
   }
 
+  // 2. 有 token 还访问登录页 → 按角色跳转到首页
   if (to.path === '/login') {
-    if (userStore.role === 0) {
-      next('/admin')
-    } else if (userStore.role === 1) {
-      next('/volunteer')
-    } else {
-      next('/user')
-    }
-    return
+    const role = userStore.role
+    if (role === 0) return next('/admin')
+    if (role === 1) return next('/volunteer')
+    return next('/user')
   }
 
+  // 3. 检查权限：meta.role 和当前角色是否一致
   if (to.meta.role !== undefined && to.meta.role !== userStore.role) {
     alert('无权限访问')
-    next(false)
-    return
+    return next(false)
   }
 
   next()

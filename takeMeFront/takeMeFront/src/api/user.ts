@@ -111,13 +111,17 @@ export function getCartList() {
     method: 'get'
   })
 }
-
 // 加入购物车
 export function addToCart(data: {
   productId: number;
   productName: string;
   productPrice: number;
-  serviceType: string;
+  serviceType: number; // 改为 number！！！
+  serviceDate?: string;
+  serviceTime?: string;
+  address?: string;
+  remark?: string;s
+  quantity: number;
 }) {
   return request({
     url: '/api/user/cart/add',
@@ -125,7 +129,6 @@ export function addToCart(data: {
     data
   })
 }
-
 // 修改购物车商品数量
 export function updateCartItem(data: {
   productId: number;

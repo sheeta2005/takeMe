@@ -3,7 +3,6 @@
     <el-header class="layout-header">
       <div class="header-left">takeMe 老人服务平台</div>
       <div class="header-right">
-        <!-- 右上角悬浮购物车图标（和管理员风格完全一致） -->
         <el-popover
           placement="bottom"
           width="420"
@@ -18,7 +17,6 @@
             </div>
           </template>
 
-          <!-- 购物车弹窗内容 -->
           <div class="cart-popover-content">
             <div class="cart-popover-header">
               <h3>我的购物车</h3>
@@ -135,31 +133,25 @@ const route = useRoute()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 
-// 购物车弹窗显示状态
 const cartPopoverVisible = ref(false)
-
-// 菜单高亮
 const activeMenu = computed(() => route.path)
 
-// 菜单跳转
 const handleMenuSelect = (path: string) => {
   router.push(path)
 }
 
-// 去购物车页面
 const goToCart = () => {
   cartPopoverVisible.value = false
   router.push('/user/cart')
 }
 
-// 页面加载时从本地存储加载购物车
+// ✅ 加载购物车（不会再报错）
 onMounted(() => {
   cartStore.loadFromLocalStorage()
 })
 </script>
 
 <style scoped>
-/* 完全复制管理员的基础样式，100% 对齐 */
 .layout-container {
   height: 100vh;
 }
@@ -229,7 +221,6 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-/* ✅ 修复红点对齐 */
 .cart-icon-wrapper {
   position: relative;
   cursor: pointer;
@@ -258,7 +249,6 @@ onMounted(() => {
 </style>
 
 <style>
-/* 购物车弹窗全局样式 */
 .cart-popover {
   border-radius: 16px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;

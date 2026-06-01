@@ -18,23 +18,27 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
 
     private final JwtUtil jwtUtil;
 
-    // 构造注入（Spring 3.x推荐）
     public JwtTokenInterceptor(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * 前置拦截：Controller执行之前
-     */
     @Override
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) throws Exception {
 
-        // 1. 获取请求头中的token（你约定的header名：token）
-        String token = request.getHeader("token");
+        // 1. 获取请求头中的 Authorization（标准头）
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
 
-        // 2. token非空校验
+        // 2. 解析 token：支持 "Bearer <token>" 或 直接 token 字符串
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7); // 去掉 "Bearer "
+        } else if (authHeader != null) {
+            token = authHeader; // 兼容直接传 token
+        }
+
+        // 3. token 非空校验
         if (token == null || token.trim().isEmpty()) {
             response.setStatus(401);
             response.setContentType("application/json;charset=UTF-8");
@@ -42,31 +46,17 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 3. 解析token（异常在JwtUtil里已捕获抛Runtime）
+        // 4. 解析 token
         Long userId = jwtUtil.getUserId(token);
         Integer role = jwtUtil.getRole(token);
 
-        // 4. 角色转Integer（你BaseContext里是0=管理员、1=志愿者、2=普通用户）
-        Integer loginType;
-        try {
-            loginType = role;
-        } catch (NumberFormatException e) {
-            response.setStatus(401);
-            response.getWriter().write("{\"code\":401,\"msg\":\"token角色格式错误\"}");
-            return false;
-        }
-
-        // 5. 存入ThreadLocal（BaseContext）
+        // 5. 存入 ThreadLocal
         BaseContext.setLoginId(userId);
-        BaseContext.setLoginType(loginType);
+        BaseContext.setLoginType(role);
 
-        // 放行
         return true;
     }
 
-    /**
-     * Controller执行后、视图渲染前
-     */
     @Override
     public void postHandle(HttpServletRequest request,
                            HttpServletResponse response,
@@ -75,10 +65,6 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
         // 一般不用
     }
 
-    /**
-     * 整个请求完毕（视图渲染后），无论成功失败都会执行
-     * 核心：清理ThreadLocal，防止内存泄漏
-     */
     @Override
     public void afterCompletion(HttpServletRequest request,
                                 HttpServletResponse response,

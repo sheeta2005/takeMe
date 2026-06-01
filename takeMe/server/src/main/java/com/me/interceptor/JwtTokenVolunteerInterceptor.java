@@ -8,11 +8,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-/**
- * 志愿者端JWT令牌校验拦截器
- * 拦截路径：/vol/**
- * 角色要求：1=志愿者
- */
 @Component
 public class JwtTokenVolunteerInterceptor implements HandlerInterceptor {
 
@@ -28,13 +23,18 @@ public class JwtTokenVolunteerInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String token = request.getHeader("token");
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        } else if (authHeader != null) {
+            token = authHeader;
+        }
 
         try {
             Long userId = jwtUtil.getUserId(token);
             Integer role = jwtUtil.getRole(token);
 
-            // 校验角色必须是志愿者（1）
             if (role == null || role != 1) {
                 response.setStatus(401);
                 return false;

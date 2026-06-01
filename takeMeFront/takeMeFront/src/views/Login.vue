@@ -326,7 +326,7 @@ const handleLogin = async () => {
     }
 
     const token = res.data.token
-    const userId = res.data.id || '1'
+    const userId = String(res.data.loginId)
 
     // 存入状态管理
     userStore.setUserInfo(token, userId, loginForm.value.username, loginForm.value.role)
