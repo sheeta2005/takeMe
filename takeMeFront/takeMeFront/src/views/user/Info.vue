@@ -4,7 +4,7 @@
 
     <div class="info-card">
       <div class="avatar-section">
-        <img :src="avatarUrl || defaultAvatar" class="avatar" alt="头像" />
+        <img :src="userStore.avatar || defaultAvatar" class="avatar" alt="头像" />
       </div>
 
       <div class="info-list">
@@ -26,11 +26,11 @@
         </div>
         <div class="info-item">
           <span class="label">性别：</span>
-          <span class="value">{{ userStore.gender === 0 ? '男' : '女' }}</span>
+          <span class="value">{{ userStore.gender === 0 ? '男' : userStore.gender === 1 ? '女' : '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">默认住址：</span>
-          <span class="value">{{ userStore.addresses?.[0] || '未填写' }}</span>
+          <span class="value">{{ defaultAddress || '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">紧急联系人：</span>
@@ -50,24 +50,43 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { getUserAddressList } from '@/api/user'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
 
+// 静态资源
 const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
-// ✅ 修复：改成响应式，头像修改后自动更新
-const avatarUrl = computed(() => userStore.avatar)
+// 地址列表
+const addressList = ref<any[]>([])
 
-const goEdit = () => {
-  router.push('/user/info/edit')
+// 计算默认地址
+const defaultAddress = computed(() => {
+  const addr = addressList.value.find(item => item.isDefault === 1)
+  return addr?.address || '未填写'
+})
+
+// 加载地址列表
+const loadAddress = async () => {
+  try {
+    const res = await getUserAddressList()
+    if (res.code === 200) addressList.value = res.data
+  } catch (e) {
+    ElMessage.error('获取地址失败')
+  }
 }
 
+// 跳转修改页
+const goEdit = () => router.push('/user/info/edit')
+
 onMounted(() => {
-  // 确保每次进入都刷新最新数据
+  // 从Store获取用户信息 + 接口获取地址
   userStore.getUserInfo()
+  loadAddress()
 })
 </script>
 

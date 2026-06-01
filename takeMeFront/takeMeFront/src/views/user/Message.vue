@@ -8,7 +8,7 @@
     <div class="filter-bar">
       <div class="filter-item">
         <label class="filter-label">消息类型</label>
-        <el-select v-model="filterType" placeholder="请选择类型" @change="fetchMsgs">
+        <el-select v-model="filterType" placeholder="请选择类型" @change="fetchMsgs" clearable>
           <el-option label="全部" value="" />
           <el-option label="系统通知" :value="0" />
           <el-option label="服务通知" :value="1" />
@@ -18,7 +18,7 @@
 
       <div class="filter-item">
         <label class="filter-label">状态</label>
-        <el-select v-model="filterStatus" placeholder="请选择状态" @change="fetchMsgs">
+        <el-select v-model="filterStatus" placeholder="请选择状态" @change="fetchMsgs" clearable>
           <el-option label="全部" value="" />
           <el-option label="未读" :value="false" />
           <el-option label="已读" :value="true" />
@@ -30,9 +30,14 @@
     </div>
 
     <!-- 消息列表卡片 -->
-    <div class="list-card">
+    <div class="list-card" v-loading="loading">
       <el-list :data="msgList" class="msg-list">
-        <el-list-item v-for="msg in msgList" :key="msg.id" class="msg-item" @click="goToDetail(msg)">
+        <el-list-item
+          v-for="msg in msgList"
+          :key="msg.id"
+          class="msg-item"
+          @click="goToDetail(msg)"
+        >
           <template #default>
             <div class="msg-content">
               <div class="msg-header">
@@ -66,11 +71,11 @@
         </el-list-item>
       </el-list>
 
-      <el-empty v-if="msgList.length === 0" description="暂无消息" />
+      <el-empty v-if="msgList.length === 0 && !loading" description="暂无消息记录" :image-size="120" />
     </div>
 
     <!-- 分页 -->
-    <div class="pagination-wrapper">
+    <div class="pagination-wrapper" v-if="total > 0">
       <el-pagination
         v-model:currentPage="currentPage"
         v-model:page-size="pageSize"
@@ -88,44 +93,32 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Bell } from '@element-plus/icons-vue'
-// import { getUserMessages } from '@/api/user'
-import type { message } from '@/types/Message.ts'
+import type { Message } from '@/types/Message.ts'
 
 const router = useRouter()
 
-// 筛选
-const filterType = ref('')
-const filterStatus = ref('')
+// 筛选条件
+const filterType = ref<string | number>('')
+const filterStatus = ref<boolean | string>('')
 
-// 分页
+// 分页配置
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const loading = ref(false)
 
 // 列表数据
-const msgList = ref<message[]>([])
+const msgList = ref<Message[]>([])
 
 onMounted(() => {
   fetchMsgs()
 })
 
-// 获取消息列表（接口已注释，后端优先返回未读消息）
+// 获取消息列表
 const fetchMsgs = async () => {
+  loading.value = true
   try {
-    // --- 后端接口调用（已注释） ---
-    /*
-    const params = {
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      type: filterType.value || undefined,
-      isRead: filterStatus.value === '' ? undefined : filterStatus.value
-    }
-    const res = await getUserMessages(params)
-    msgList.value = res.data.list
-    total.value = res.data.total
-    */
-
-    // --- 模拟数据 ---
+    // 模拟数据（保留你的原有逻辑）
     msgList.value = [
       {
         id: 1,
@@ -145,7 +138,9 @@ const fetchMsgs = async () => {
         title: '平台通知：服务更新',
         content: '平台已更新助洁服务流程，现在可以预约周末服务了，欢迎体验。',
         createTime: '2026-05-18 14:00:00',
-        isRead: true
+        isRead: true,
+        relatedId: '',
+        relatedUrl: ''
       },
       {
         id: 3,
@@ -154,13 +149,17 @@ const fetchMsgs = async () => {
         title: '温馨提醒：天气变化',
         content: '未来三天有降雨，您的服务可能会调整时间，请留意订单通知。',
         createTime: '2026-05-17 11:00:00',
-        isRead: false
+        isRead: false,
+        relatedId: '',
+        relatedUrl: ''
       }
     ]
     total.value = 3
   } catch (err) {
     console.error('获取消息失败', err)
     ElMessage.error('获取消息列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -173,32 +172,25 @@ const resetFilter = () => {
 }
 
 // 跳转到消息详情
-const goToDetail = (msg: message) => {
+const goToDetail = (msg: Message) => {
+  if (!msg.id) return
   router.push(`/user/message/detail/${msg.id}`)
 }
 
 // 标记已读
-const handleMarkRead = (msg: message) => {
-  ElMessage.success('已标记为已读')
+const handleMarkRead = (msg: Message) => {
   msg.isRead = true
+  ElMessage.success('标记已读成功')
 }
 
 // 类型映射
-const getTypeText = (type: number) => {
-  const map: Record<number, string> = {
-    0: '系统通知',
-    1: '服务通知',
-    2: '温馨提醒'
-  }
+const getTypeText = (type: number): string => {
+  const map = { 0: '系统通知', 1: '服务通知', 2: '温馨提醒' }
   return map[type] || '未知'
 }
 
-const getTypeTagType = (type: number) => {
-  const map: Record<number, string> = {
-    0: 'primary',
-    1: 'warning',
-    2: 'success'
-  }
+const getTypeTagType = (type: number): string => {
+  const map = { 0: 'primary', 1: 'warning', 2: 'success' }
   return map[type] || ''
 }
 </script>
@@ -206,7 +198,7 @@ const getTypeTagType = (type: number) => {
 <style scoped>
 .page-container {
   width: 100%;
-  padding: 10px 0;
+  padding: 12px 0;
 }
 
 .header-row {
@@ -215,8 +207,8 @@ const getTypeTagType = (type: number) => {
 
 .page-title {
   font-size: 28px;
-  font-weight: bold;
-  color: #222;
+  font-weight: 600;
+  color: #1f2937;
   margin: 0;
 }
 
@@ -225,10 +217,10 @@ const getTypeTagType = (type: number) => {
   flex-wrap: wrap;
   gap: 16px;
   align-items: center;
-  background: #fff;
-  padding: 20px;
+  background: #ffffff;
+  padding: 20px 24px;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 184, 153, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 184, 153, 0.08);
   margin-bottom: 20px;
 }
 
@@ -240,16 +232,17 @@ const getTypeTagType = (type: number) => {
 
 .filter-label {
   font-size: 14px;
-  color: #666;
-  white-space: nowrap;
+  color: #4b5563;
+  font-weight: 500;
 }
 
 .list-card {
-  background: #fff;
+  background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 184, 153, 0.06);
-  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 184, 153, 0.08);
+  padding: 16px 24px;
   margin-bottom: 20px;
+  min-height: 200px;
 }
 
 .msg-list {
@@ -260,9 +253,10 @@ const getTypeTagType = (type: number) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 18px 0;
+  border-bottom: 1px solid #f3f4f6;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .msg-item:last-child {
@@ -270,7 +264,8 @@ const getTypeTagType = (type: number) => {
 }
 
 .msg-item:hover {
-  background-color: #fafafa;
+  background-color: #f9fafb;
+  padding-left: 8px;
 }
 
 .msg-content {
@@ -297,11 +292,11 @@ const getTypeTagType = (type: number) => {
 .msg-title {
   font-size: 16px;
   font-weight: 500;
-  color: #333;
+  color: #374151;
 }
 
 .msg-title.unread {
-  color: #222;
+  color: #111827;
   font-weight: 600;
 }
 
@@ -312,12 +307,12 @@ const getTypeTagType = (type: number) => {
 
 .msg-time {
   font-size: 14px;
-  color: #999;
+  color: #9ca3af;
 }
 
 .msg-preview {
   font-size: 14px;
-  color: #666;
+  color: #6b7280;
   line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -325,8 +320,6 @@ const getTypeTagType = (type: number) => {
 }
 
 .msg-actions {
-  display: flex;
-  gap: 16px;
   flex-shrink: 0;
 }
 
@@ -336,6 +329,6 @@ const getTypeTagType = (type: number) => {
   background: #fff;
   padding: 16px 20px;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 184, 153, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 184, 153, 0.08);
 }
 </style>

@@ -17,11 +17,10 @@ public class CartItem {
 
     @TableId(type = IdType.AUTO)
     private Long id;
-
     private Long cartId;
-    private Long productId;
-    private String productName;
-    private Integer productPrice;
+    private Long serviceId;
+    private String serviceName;
+    private Integer servicePrice;
     private Integer quantity;
     private Integer selected; // 0=否 1=是
     private LocalDateTime createTime;

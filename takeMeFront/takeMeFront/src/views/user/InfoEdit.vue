@@ -32,21 +32,15 @@
         </el-radio-group>
       </el-form-item>
 
+      <!-- 地址管理 -->
       <el-form-item label="常用地址">
         <div class="address-list">
-          <div v-for="(addr, idx) in form.addresses" :key="idx" class="address-item">
-            <el-input v-model="form.addresses[idx]" placeholder="请输入地址" class="input-large" />
-            <el-button
-              v-if="form.addresses.length > 1"
-              type="danger"
-              @click="removeAddress(idx)"
-            >删除</el-button>
+          <div v-for="(addr, idx) in form.addresses" :key="addr.id || idx" class="address-item">
+            <el-input v-model="addr.address" placeholder="请输入地址" class="input-large" />
+            <el-checkbox v-model="addr.isDefault">默认</el-checkbox>
+            <el-button v-if="form.addresses.length > 1" type="danger" @click="removeAddress(idx, addr)">删除</el-button>
           </div>
-          <el-button
-            v-if="form.addresses.length < 3"
-            type="primary"
-            @click="addAddress"
-          >添加地址</el-button>
+          <el-button v-if="form.addresses.length < 3" type="primary" @click="addAddress">添加地址</el-button>
         </div>
       </el-form-item>
 
@@ -58,10 +52,11 @@
         <el-input v-model="form.emergencyPhone" placeholder="电话" class="input-large" />
       </el-form-item>
 
+      <!-- 头像上传 -->
       <el-form-item label="头像">
         <el-upload
           class="avatar-upload"
-          action="http://localhost:8080/api/user/uploadAvatar"
+          action="/api/user/uploadAvatar"
           :headers="{ Authorization: userStore.token }"
           :show-file-list="false"
           :on-success="handleAvatarSuccess"
@@ -73,9 +68,7 @@
       </el-form-item>
 
       <el-form-item class="btn-group">
-        <el-button type="primary" size="large" @click="submitForm" :loading="isSubmitting">
-          保存修改
-        </el-button>
+        <el-button type="primary" size="large" @click="submitForm" :loading="isSubmitting">保存修改</el-button>
         <el-button size="large" @click="back">返回</el-button>
       </el-form-item>
     </el-form>
@@ -84,120 +77,153 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+// 导入API
+import {
+  getUserAddressList,
+  addUserAddress,
+  updateUserAddress,
+  deleteUserAddress,
+  setDefaultAddress
+} from '@/api/user'
 
-const userStore = useUserStore()
 const router = useRouter()
-const formRef = ref()
+const userStore = useUserStore()
+const formRef = ref<any>(null)
 const isSubmitting = ref(false)
 
+// 表单数据
 const form = ref({
   realName: '',
   account: '',
   phone: '',
-  age: null,
+  age: null as number | null,
   gender: 0,
-  addresses: [] as string[],
   emergencyName: '',
   emergencyPhone: '',
-  avatar: ''
+  avatar: '',
+  addresses: [] as any[]
 })
 
-// ✅ 新增：表单验证规则
+// 校验规则
 const rules = {
   realName: [
     { required: true, message: '请输入姓名', trigger: 'blur' },
-    { min: 2, max: 20, message: '姓名长度为2-20位', trigger: 'blur' }
+    { min: 2, max: 20, message: '长度2-20位', trigger: 'blur' }
   ],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+    { pattern: /^1[3-9]\d{9}$/, message: '格式错误', trigger: 'blur' }
   ],
   emergencyPhone: [
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+    { pattern: /^1[3-9]\d{9}$/, message: '格式错误', trigger: 'blur' }
   ]
 }
 
-// ✅ 修复：地址添加/删除功能
+// 地址操作
 const addAddress = () => {
   if (form.value.addresses.length < 3) {
-    form.value.addresses.push('')
+    form.value.addresses.push({ id: null, address: '', isDefault: 0 })
   }
 }
-
-const removeAddress = (index: number) => {
+const removeAddress = async (index: number, addr: any) => {
+  if (addr.id) await deleteUserAddress(addr.id)
   form.value.addresses.splice(index, 1)
 }
 
-onMounted(async () => {
-  // ✅ 修复：直接访问修改页时，先加载用户信息
+// 初始化数据（Store + API）
+const initForm = async () => {
   await userStore.getUserInfo()
-
+  // 从Store赋值基础信息
   form.value = {
     realName: userStore.realName || '',
     account: userStore.account || '',
     phone: userStore.phone || '',
     age: userStore.age,
     gender: userStore.gender ?? 0,
-    // ✅ 修复：默认至少有一个地址输入框
-    addresses: userStore.addresses?.length ? [...userStore.addresses] : [''],
     emergencyName: userStore.emergencyName || '',
     emergencyPhone: userStore.emergencyPhone || '',
-    avatar: userStore.avatar || ''
+    avatar: userStore.avatar || '',
+    addresses: []
   }
-})
+  // 从API获取地址
+  try {
+    const res = await getUserAddressList()
+    if (res.code === 200) {
+      // ✅ 修复：强制转为数字类型，避免布尔值
+      form.value.addresses = res.data.map(item => ({
+        ...item,
+        isDefault: Number(item.isDefault)
+      }))
+    } else {
+      form.value.addresses = [{ id: null, address: '', isDefault: 0 }]
+    }
+  } catch {
+    form.value.addresses = [{ id: null, address: '', isDefault: 0 }]
+  }
+}
 
+// 头像上传
 const handleAvatarSuccess = (res: any) => {
   if (res.code === 200) {
-    form.value.avatar = res.data.url
-    // 同步更新store，返回Info页时直接显示新头像
-    userStore.avatar = res.data.url
-    ElMessage.success('头像上传成功')
-  } else {
-    ElMessage.error(res.msg || '头像上传失败')
-  }
+    form.value.avatar = res.data
+    userStore.avatar = res.data
+    ElMessage.success('上传成功')
+  } else ElMessage.error('上传失败')
 }
+const handleAvatarError = () => ElMessage.error('网络异常')
 
-// ✅ 新增：头像上传失败处理
-const handleAvatarError = () => {
-  ElMessage.error('头像上传失败，请检查网络')
-}
-
+// 提交保存（Store + API）
 const submitForm = async () => {
-  // 先验证表单
-  const valid = await formRef.value?.validate()
+  const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
   isSubmitting.value = true
-
   try {
-    const ok = await userStore.updateUserInfo(form.value)
-    if (ok) {
-      ElMessage.success('保存成功')
-      router.push('/user/info')
+    // 1. 保存基础信息（Store封装）
+    const { addresses, ...userData } = form.value
+    await userStore.updateUserInfo(userData)
+
+    // 2. 保存地址（API）✅ 核心修复：布尔值转 0/1
+    for (const addr of form.value.addresses) {
+      if (!addr.address) continue
+      // 强制转换类型
+      const isDefaultNum = addr.isDefault ? 1 : 0
+
+      if (addr.id) {
+        await updateUserAddress({
+          id: addr.id,
+          address: addr.address,
+          isDefault: isDefaultNum
+        })
+      } else {
+        const res = await addUserAddress({
+          address: addr.address,
+          isDefault: isDefaultNum
+        })
+        addr.id = res.data.id
+      }
+      if (isDefaultNum === 1) {
+        await setDefaultAddress(addr.id)
+      }
     }
+
+    ElMessage.success('保存成功')
+    router.push('/user/info')
+  } catch (err) {
+    ElMessage.error('保存失败')
   } finally {
     isSubmitting.value = false
   }
 }
 
-const back = () => {
-  // ✅ 新增：表单有修改时提示确认
-  if (formRef.value?.isDirty) {
-    ElMessageBox.confirm(
-      '您有未保存的修改，确定要返回吗？',
-      '提示',
-      { type: 'warning' }
-    ).then(() => {
-      router.push('/user/info')
-    }).catch(() => {})
-  } else {
-    router.push('/user/info')
-  }
-}
+// 返回
+const back = () => router.push('/user/info')
+
+onMounted(() => initForm())
 </script>
 
 <style scoped>

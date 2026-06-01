@@ -2,6 +2,15 @@ import { defineStore } from 'pinia'
 import { getUserInfo, updateUserInfo, logout } from '@/api/user'
 import { ElMessage } from 'element-plus'
 
+// ✅ 定义地址对象类型（匹配后端）
+interface UserAddress {
+  id: number
+  address: string
+  isDefault: number
+  userId?: number
+  createTime?: string
+}
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     // 基础登录信息
@@ -15,7 +24,8 @@ export const useUserStore = defineStore('user', {
     phone: '',
     age: null as number | null,
     gender: 0, // 0男 1女
-    addresses: [] as string[], // 常用地址列表（最多3个）
+    // ✅ 修复：改为对象数组，不再是string[]
+    addresses: [] as UserAddress[],
     emergencyName: '', // 紧急联系人姓名
     emergencyPhone: '', // 紧急联系人电话
     avatar: ''
@@ -34,17 +44,19 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem('role', String(role))
     },
 
+    // ✅ 新增：更新地址列表
+    setAddresses(list: UserAddress[]) {
+      this.addresses = list
+    },
+
     // 从后端获取完整用户详情
     async getUserInfo() {
-      // ✅ 没有token直接返回，不发起请求
       if (!this.token) return false
-
       try {
         const res = await getUserInfo()
         this.$patch(res.data)
         return true
       } catch (err) {
-        // 401错误已经在响应拦截器处理了，这里不用再弹
         return false
       }
     },
@@ -65,12 +77,8 @@ export const useUserStore = defineStore('user', {
     // 退出登录
     async logout() {
       try {
-        // 先调用logout接口（此时token还在）
         await logout()
-      } catch (err) {
-        // 接口失败也继续清状态
-      } finally {
-        // ✅ 只清登录相关字段，保留记住密码等信息
+      } catch (err) {} finally {
         this.token = ''
         this.userId = ''
         this.username = ''
@@ -78,7 +86,6 @@ export const useUserStore = defineStore('user', {
         localStorage.removeItem('token')
         localStorage.removeItem('userId')
         localStorage.removeItem('role')
-
         ElMessage.success('已退出登录')
       }
     }

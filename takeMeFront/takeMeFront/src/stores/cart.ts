@@ -4,15 +4,15 @@ import { ElMessage } from 'element-plus'
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    // 购物车商品列表（完全匹配后端 OrderItemVO 返回字段）
+    // 匹配后端 CartItemVO 字段
     items: [] as {
       id: number;
-      orderId: number;
+      cartId: number;
       serviceId: number;
       serviceName: string;
       servicePrice: number;
       quantity: number;
-      itemPrice: number;
+      selected: number;
       createTime: string;
     }[]
   }),
@@ -22,12 +22,11 @@ export const useCartStore = defineStore('cart', {
       return state.items.reduce((sum, item) => sum + item.quantity, 0)
     },
     totalPrice: (state) => {
-      return state.items.reduce((sum, item) => sum + item.itemPrice, 0)
+      return state.items.reduce((sum, item) => sum + item.servicePrice * item.quantity, 0)
     }
   },
 
   actions: {
-    // 从后端获取购物车列表
     async fetchCartList() {
       try {
         const res = await getCartList()
@@ -39,19 +38,29 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
+    // ✅ 核心修复：完全匹配后端 CartItemDTO 字段
     async addItem(item: {
       serviceId: number;
       serviceName: string;
       servicePrice: number;
       quantity: number;
+      serviceType: number; // 后端必填字段
     }) {
       // 非助餐服务数量强制为1
-      if (item.serviceId !== 2) {
+      if (item.serviceType !== 2) {
         item.quantity = 1
       }
 
       try {
-        await addToCart(item)
+        // 传入后端需要的完整参数，selected 默认 1（Integer类型，杜绝布尔值）
+        await addToCart({
+          serviceId: item.serviceId,
+          serviceName: item.serviceName,
+          servicePrice: item.servicePrice,
+          quantity: item.quantity,
+          serviceType: item.serviceType,
+          selected: 1
+        })
         await this.fetchCartList()
         ElMessage.success('已加入购物车')
         return true
@@ -65,15 +74,14 @@ export const useCartStore = defineStore('cart', {
       const item = this.items.find(i => i.id === itemId)
       if (!item) return
 
-      // 只有助餐服务(serviceId=2)可修改数量
-      if (item.serviceId !== 2) {
+      if (item.serviceType !== 2) {
         ElMessage.info('这项服务只能预约1次哦，如需多个时间请重新下单')
         return
       }
 
       try {
         await updateCartItem({
-          id: item.id,
+          productId: item.serviceId,
           quantity: Math.max(1, quantity)
         })
         await this.fetchCartList()

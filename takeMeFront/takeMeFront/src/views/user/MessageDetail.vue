@@ -4,24 +4,24 @@
       <h2 class="page-title">消息详情</h2>
     </div>
 
-    <div class="detail-card">
+    <div class="detail-card" v-loading="loading">
       <div class="detail-header">
-        <div class="detail-title">{{ message.title }}</div>
-        <el-tag :type="getTypeTagType(message.type)" size="large">
-          {{ getTypeText(message.type) }}
+        <div class="detail-title">{{ message?.title || '暂无标题' }}</div>
+        <el-tag :type="getTypeTagType(message?.type)" size="large">
+          {{ getTypeText(message?.type) }}
         </el-tag>
       </div>
 
       <div class="detail-content">
-        <p class="content-text">{{ message.content }}</p>
+        <p class="content-text">{{ message?.content || '暂无内容' }}</p>
 
-        <!-- 关联订单跳转（修复版） -->
-        <div v-if="message.relatedId" class="related-order">
+        <!-- 关联订单跳转 -->
+        <div v-if="message?.relatedId" class="related-order">
           <span>关联订单：</span>
           <el-button
             type="primary"
             link
-            size="large"
+            size="default"
             @click="goToOrder(message.relatedUrl)"
           >
             查看订单 {{ message.relatedId }}
@@ -30,16 +30,16 @@
       </div>
 
       <div class="detail-footer">
-        <span class="create-time">发送时间：{{ message.createTime }}</span>
+        <span class="create-time">发送时间：{{ message?.createTime || '未知时间' }}</span>
       </div>
     </div>
 
     <div class="action-buttons">
-      <el-button size="large" @click="$router.back()">返回列表</el-button>
+      <el-button size="default" @click="$router.back()">返回列表</el-button>
       <el-button
-        v-if="!message.isRead"
+        v-if="!message?.isRead"
         type="primary"
-        size="large"
+        size="default"
         @click="confirmMarkRead"
       >
         标记为已读
@@ -52,30 +52,28 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-// import { getUserMessageDetail } from '@/api/user'
-import type { message } from '@/types/Message.ts'
+import type { Message } from '@/types/Message.ts'
 
 const route = useRoute()
 const router = useRouter()
-const message = ref<message>({} as message)
+const message = ref<Message>({} as Message)
+const loading = ref(false)
 
 onMounted(() => {
   const id = Number(route.params.id)
   if (id) {
     fetchMessageDetail(id)
+  } else {
+    ElMessage.error('参数异常')
+    router.back()
   }
 })
 
-// 获取消息详情（接口已注释）
+// 获取消息详情
 const fetchMessageDetail = async (id: number) => {
+  loading.value = true
   try {
-    // --- 后端接口调用（已注释） ---
-    /*
-    const res = await getUserMessageDetail(id)
-    message.value = res.data
-    */
-
-    // --- 模拟数据 ---
+    // 模拟数据
     message.value = {
       id: id,
       userId: 2001,
@@ -90,40 +88,36 @@ const fetchMessageDetail = async (id: number) => {
   } catch (err) {
     console.error('获取消息详情失败', err)
     ElMessage.error('获取消息详情失败')
+  } finally {
+    loading.value = false
   }
 }
 
-// 修复：跳转到关联订单
+// 跳转到关联订单
 const goToOrder = (url?: string) => {
-  if (url) {
-    router.push(url)
-  } else {
+  if (!url) {
     ElMessage.info('暂无关联订单')
+    return
   }
+  router.push(url)
 }
 
 // 标记已读
 const confirmMarkRead = () => {
   message.value.isRead = true
-  ElMessage.success('已标记为已读')
+  ElMessage.success('标记已读成功')
 }
 
 // 类型映射
-const getTypeText = (type: number) => {
-  const map: Record<number, string> = {
-    0: '系统通知',
-    1: '服务通知',
-    2: '温馨提醒'
-  }
+const getTypeText = (type?: number): string => {
+  if (type === undefined) return '未知'
+  const map = { 0: '系统通知', 1: '服务通知', 2: '温馨提醒' }
   return map[type] || '未知'
 }
 
-const getTypeTagType = (type: number) => {
-  const map: Record<number, string> = {
-    0: 'primary',
-    1: 'warning',
-    2: 'success'
-  }
+const getTypeTagType = (type?: number): string => {
+  if (type === undefined) return ''
+  const map = { 0: 'primary', 1: 'warning', 2: 'success' }
   return map[type] || ''
 }
 </script>
@@ -131,7 +125,7 @@ const getTypeTagType = (type: number) => {
 <style scoped>
 .page-container {
   width: 100%;
-  padding: 10px 0;
+  padding: 12px 0;
   max-width: 800px;
   margin: 0 auto;
 }
@@ -141,18 +135,19 @@ const getTypeTagType = (type: number) => {
 }
 
 .page-title {
-  font-size: 32px;
-  font-weight: bold;
-  color: #222;
+  font-size: 28px;
+  font-weight: 600;
+  color: #1f2937;
   margin: 0;
 }
 
 .detail-card {
-  background: #fff;
+  background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 184, 153, 0.1);
-  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0, 184, 153, 0.1);
+  padding: 36px 40px;
   margin-bottom: 24px;
+  min-height: 300px;
 }
 
 .detail-header {
@@ -161,13 +156,13 @@ const getTypeTagType = (type: number) => {
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #eee;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .detail-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
-  color: #333;
+  color: #1f2937;
 }
 
 .detail-content {
@@ -175,35 +170,36 @@ const getTypeTagType = (type: number) => {
 }
 
 .content-text {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.8;
-  color: #333;
-  margin-bottom: 16px;
+  color: #4b5563;
+  margin-bottom: 20px;
+  white-space: pre-wrap;
 }
 
 .related-order {
-  font-size: 18px;
-  color: #666;
+  font-size: 16px;
+  color: #6b7280;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  display: inline-block;
 }
 
 .detail-footer {
   padding-top: 16px;
-  border-top: 2px solid #eee;
+  border-top: 1px solid #e5e7eb;
 }
 
 .create-time {
-  font-size: 16px;
-  color: #999;
+  font-size: 14px;
+  color: #9ca3af;
 }
 
 .action-buttons {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   justify-content: center;
-}
-
-:deep(.el-button) {
-  font-size: 18px;
-  padding: 12px 32px;
+  margin-top: 12px;
 }
 </style>

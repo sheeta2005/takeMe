@@ -76,14 +76,19 @@
           </div>
         </el-form-item>
         <el-form-item label="服务地址" prop="address" required>
+          <!-- ✅ 修复：地址下拉选择框 -->
           <el-select v-model="cartForm.address" placeholder="请选择服务地址" size="large" style="width: 100%">
             <el-option
-              v-for="(addr, index) in userAddressList"
-              :key="index"
-              :label="addr"
-              :value="addr"
+              v-for="addr in userAddressList"
+              :key="addr.id"
+              :label="addr.address"
+              :value="addr.address"
             />
           </el-select>
+          <!-- 无地址提示 -->
+          <div v-if="userAddressList.length === 0" class="form-error" style="margin-top:8px">
+            请先前往个人中心添加服务地址
+          </div>
         </el-form-item>
         <el-form-item label="订单备注" prop="remark">
           <el-input v-model="cartForm.remark" type="textarea" :rows="2" placeholder="请输入特殊要求" />
@@ -112,7 +117,7 @@
           type="primary"
           @click="confirmAddToCart"
           :loading="addToCartLoading"
-          :disabled="cartForm.serviceDate && availableTimeSlots.length === 0"
+          :disabled="cartForm.serviceDate && availableTimeSlots.length === 0 || userAddressList.length === 0"
         >
           确认加入购物车
         </el-button>
@@ -127,6 +132,8 @@ import { ElMessage, ElForm } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { getServiceList } from '@/api'
+// ✅ 导入地址接口
+import { getUserAddressList } from '@/api/user'
 import {
   Dish, Brush, FirstAidKit, ShoppingCart, ChatLineRound
 } from '@element-plus/icons-vue'
@@ -141,7 +148,6 @@ const props = defineProps({
 const cartStore = useCartStore()
 const userStore = useUserStore()
 const cartFormRef = ref<InstanceType<typeof ElForm>>()
-// 完全匹配ServicePackage实体类字段
 const serviceList = ref<{
   id: number;
   name: string;
@@ -152,10 +158,10 @@ const serviceList = ref<{
   status: number;
 }[]>([])
 
-// 从用户store获取地址列表（string数组转下拉选项）
+// ✅ 修复：获取地址对象数组
 const userAddressList = computed(() => userStore.addresses)
 
-// 加入购物车弹窗
+// 弹窗状态
 const addToCartVisible = ref(false)
 const addToCartLoading = ref(false)
 const currentService = ref<any>({})
@@ -167,23 +173,15 @@ const cartForm = ref({
   quantity: 1
 })
 
-// 表单验证规则
+// 校验规则
 const cartRules = {
-  serviceDate: [
-    { required: true, message: '请选择服务日期', trigger: 'change' }
-  ],
-  serviceTime: [
-    { required: true, message: '请选择服务时间', trigger: 'change' }
-  ],
-  address: [
-    { required: true, message: '请选择服务地址', trigger: 'change' }
-  ],
-  quantity: [
-    { required: true, message: '请输入购买数量', trigger: 'change' }
-  ]
+  serviceDate: [{ required: true, message: '请选择服务日期', trigger: 'change' }],
+  serviceTime: [{ required: true, message: '请选择服务时间', trigger: 'change' }],
+  address: [{ required: true, message: '请选择服务地址', trigger: 'change' }],
+  quantity: [{ required: true, message: '请输入购买数量', trigger: 'change' }]
 }
 
-// 服务大类配置（完全匹配ServicePackage的type字段）
+// 服务配置
 const serviceConfig = {
   0: { title: '代购服务', desc: '帮您购买生活用品、药品等，送货上门', icon: ShoppingCart },
   1: { title: '助洁服务', desc: '上门日常保洁，帮您打扫房间、整理家务', icon: Brush },
@@ -197,9 +195,7 @@ const serviceTitle = computed(() => currentConfig.value.title)
 const serviceDesc = computed(() => currentConfig.value.desc)
 const iconComponent = computed(() => currentConfig.value.icon)
 
-// ======================
-// 日期时间联动逻辑
-// ======================
+// 日期时间逻辑
 const now = new Date()
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
@@ -229,69 +225,59 @@ const allTimeSlots = [
 const availableTimeSlots = computed(() => {
   if (!cartForm.value.serviceDate) return []
   if (cartForm.value.serviceDate !== dateList.value[0].value) return allTimeSlots
-
   const currentHour = now.getHours()
-  return allTimeSlots.filter(slot => {
-    const h = parseInt(slot.value.split(':')[0])
-    return h > currentHour
-  })
+  return allTimeSlots.filter(slot => parseInt(slot.value.split(':')[0]) > currentHour)
 })
 
 const selectDate = async (date: string) => {
   cartForm.value.serviceDate = date
   cartForm.value.serviceTime = ''
-
   await nextTick()
-  if (cartFormRef.value) {
-    cartFormRef.value.clearValidate(['serviceDate', 'serviceTime'])
-  }
+  cartFormRef.value?.clearValidate(['serviceDate', 'serviceTime'])
 }
 
 // =============================================
-// 后端接口调用
+// 接口调用
 // =============================================
-onMounted(() => {
+onMounted(async () => {
   fetchServiceList()
-  // 确保用户信息和地址列表已加载
-  if (!userStore.addresses.length) {
-    userStore.getUserInfo()
-  }
+  // ✅ 修复：主动加载地址列表到store
+  await loadAddressList()
 })
 
-// ✅ 从后端获取服务列表（完全匹配ServicePackage）
+// ✅ 新增：加载地址列表
+const loadAddressList = async () => {
+  try {
+    const res = await getUserAddressList()
+    if (res.code === 200) {
+      userStore.setAddresses(res.data)
+    }
+  } catch (e) {
+    ElMessage.error('加载地址失败')
+  }
+}
+
 const fetchServiceList = async () => {
   try {
     const res = await getServiceList(props.type)
-    // 只显示状态为启用的服务
     serviceList.value = res.data.filter((item: any) => item.status === 1)
   } catch (err) {
     ElMessage.error('获取服务列表失败')
   }
 }
 
-// 打开加入购物车弹窗
+// 打开弹窗
 const openAddToCartModal = (item: any) => {
   currentService.value = item
-  cartForm.value = {
-    serviceDate: '',
-    serviceTime: '',
-    address: '',
-    remark: '',
-    quantity: 1
-  }
+  cartForm.value = { serviceDate: '', serviceTime: '', address: '', remark: '', quantity: 1 }
 
-  // 自动填入第一个常用地址
+  // ✅ 修复：自动填充第一个地址
   if (userAddressList.value.length > 0) {
-    cartForm.value.address = userAddressList.value[0]
+    cartForm.value.address = userAddressList.value[0].address
   }
 
   addToCartVisible.value = true
-
-  nextTick(() => {
-    if (cartFormRef.value) {
-      cartFormRef.value.clearValidate()
-    }
-  })
+  nextTick(() => cartFormRef.value?.clearValidate())
 }
 
 const cancelAddToCart = () => {
@@ -299,32 +285,36 @@ const cancelAddToCart = () => {
   cartFormRef.value?.resetFields()
 }
 
-// 确认加入购物车
+// =============================================
+// ✅ 核心修复：适配后端 CartItemDTO，解决报错
+// =============================================
 const confirmAddToCart = async () => {
-  if (!cartFormRef.value) return
-
   try {
-    await cartFormRef.value.validate()
-  } catch (err) {
-    ElMessage.warning('请填写完整的服务信息')
-    return
-  }
-
-  if (cartForm.value.serviceDate && availableTimeSlots.length === 0) {
-    ElMessage.error('今天的服务时间已全部过期，请选择明天或后天')
+    await cartFormRef.value!.validate()
+  } catch {
+    ElMessage.warning('请填写完整信息')
     return
   }
 
   addToCartLoading.value = true
   try {
+    // 1. 助餐服务使用表单数量，其他服务固定1
+    const realQuantity = currentConfig.value.title === '助餐服务' ? cartForm.value.quantity : 1
+
+    // 2. 传递后端必填的 serviceType，彻底解决类型/字段缺失报错
     await cartStore.addItem({
       serviceId: currentService.value.id,
       serviceName: currentService.value.name,
       servicePrice: currentService.value.price,
-      quantity: 1
+      quantity: realQuantity,
+      serviceType: currentService.value.type // 后端强制必填字段
     })
 
     addToCartVisible.value = false
+    ElMessage.success('加入购物车成功')
+  } catch (err) {
+    ElMessage.error('加入购物车失败')
+    console.error(err)
   } finally {
     addToCartLoading.value = false
   }
@@ -400,7 +390,6 @@ const confirmAddToCart = async () => {
   border-radius: 12px !important;
 }
 
-/* 弹窗表单样式 */
 .form-value {
   font-size: 18px;
   color: #333;

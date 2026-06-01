@@ -13,9 +13,9 @@ public class CartItemVO {
 
     private Long id;
     private Long cartId;
-    private Long productId;
-    private String productName;
-    private Integer productPrice;
+    private Long serviceId;
+    private String serviceName;
+    private Integer servicePrice;
     private Integer quantity;
     private Integer selected;
     private LocalDateTime createTime;

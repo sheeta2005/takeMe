@@ -53,7 +53,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         // 检查购物车中是否已存在相同商品
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getProductId, item.getProductId());
+                .eq(CartItem::getServiceId, item.getServiceId());
         CartItem existingItem = cartItemMapper.selectOne(wrapper);
 
         if (existingItem != null) {
@@ -86,7 +86,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getProductId, productId);
+                .eq(CartItem::getServiceId, productId);
         CartItem item = cartItemMapper.selectOne(wrapper);
 
         if (item == null) {
@@ -113,7 +113,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getProductId, productId);
+                .eq(CartItem::getServiceId, productId);
         cartItemMapper.delete(wrapper);
 
         cart.setUpdateTime(LocalDateTime.now());

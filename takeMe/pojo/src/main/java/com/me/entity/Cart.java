@@ -17,7 +17,6 @@ public class Cart {
 
     @TableId(type = IdType.AUTO)
     private Long id;
-
     private Long userId;       // 老人ID
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
