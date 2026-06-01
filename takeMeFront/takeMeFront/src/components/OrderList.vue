@@ -126,7 +126,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
-import { getServiceList } from '@/api/user'
+import { getServiceList } from '@/api'
 import {
   Dish, Brush, FirstAidKit, ShoppingCart, ChatLineRound
 } from '@element-plus/icons-vue'
@@ -318,16 +318,10 @@ const confirmAddToCart = async () => {
   addToCartLoading.value = true
   try {
     await cartStore.addItem({
-      productId: currentService.value.id,
-      productName: currentService.value.name,
-      productPrice: currentService.value.price,
-      // ✅ 修复：传数字类型的serviceType，和后端完全匹配
-      serviceType: props.type,
-      serviceDate: cartForm.value.serviceDate,
-      serviceTime: cartForm.value.serviceTime,
-      address: cartForm.value.address,
-      remark: cartForm.value.remark,
-      quantity: cartForm.value.quantity
+      serviceId: currentService.value.id,
+      serviceName: currentService.value.name,
+      servicePrice: currentService.value.price,
+      quantity: 1
     })
 
     addToCartVisible.value = false

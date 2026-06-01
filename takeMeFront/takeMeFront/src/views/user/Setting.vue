@@ -14,6 +14,7 @@
         <el-button
           class="action-btn danger-btn"
           @click="handleLogout"
+          :loading="isLoggingOut"
         >
           退出登录
         </el-button>
@@ -23,34 +24,63 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
-import { logout } from '@/api/user'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+const isLoggingOut = ref(false)
 
 const goFontSize = () => {
   ElMessage.info('字体调节功能开发中')
 }
 
-// ✅ 修复：异步 + 调用后端退出接口 + 确保跳转一定执行
+// ✅ 真实前后端联调版退出登录
 const handleLogout = async () => {
-  //模拟阶段停止调用
-  // try {
-  //   await logout() // 调用后端退出
-  // } catch (e) {
-  //   console.log('退出接口异常，继续本地退出')
-  // }
+  // 二次确认，防止误操作
+  try {
+    await ElMessageBox.confirm(
+      '确定要退出当前账号吗？',
+      '退出确认',
+      {
+        confirmButtonText: '确定退出',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+  } catch {
+    // 用户点击取消，直接返回
+    return
+  }
 
-  // 清空状态
-  userStore.logout()
+  isLoggingOut.value = true
 
-  ElMessage.success('已安全退出登录')
+  try {
+    // 1. 先调用后端退出接口（此时token还在，能正常访问）
+    await userStore.logout()
 
-  // ✅ 强制跳转，确保一定回到登录页
-  await router.replace('/login')
+    // 2. 提示成功
+    ElMessage.success('已安全退出登录')
+
+    // 3. 强制跳转到登录页，清除历史记录
+    await router.replace('/login')
+  } catch (err) {
+    // 即使后端接口失败，也要强制清本地状态并跳转
+    console.error('退出登录接口异常:', err)
+    ElMessage.warning('网络异常，已本地退出')
+
+    // 强制清状态
+    userStore.$reset()
+    localStorage.removeItem('token')
+    localStorage.removeItem('userId')
+    localStorage.removeItem('role')
+
+    await router.replace('/login')
+  } finally {
+    isLoggingOut.value = false
+  }
 }
 </script>
 

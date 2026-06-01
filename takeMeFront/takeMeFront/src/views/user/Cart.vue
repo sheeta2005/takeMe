@@ -9,14 +9,8 @@
       <div class="cart-list">
         <div class="cart-item" v-for="item in currentPageItems" :key="item.id">
           <div class="item-info">
-            <div class="item-service-type">{{ item.serviceType }}</div>
-            <div class="item-name">{{ item.productName }}</div>
-            <div class="item-detail">
-              <span>服务时间：{{ item.serviceDate }} {{ item.serviceTime }}</span>
-              <span>服务地址：{{ item.address }}</span>
-              <span v-if="item.remark">备注：{{ item.remark }}</span>
-            </div>
-            <div class="item-price">单价：¥{{ item.productPrice }}</div>
+            <div class="item-name">{{ item.serviceName }}</div>
+            <div class="item-price">单价：¥{{ item.servicePrice }}</div>
           </div>
 
           <div class="item-quantity">
@@ -26,7 +20,7 @@
           </div>
 
           <div class="item-subtotal">
-            ¥{{ item.productPrice * item.quantity }}
+            ¥{{ item.itemPrice }}
           </div>
 
           <div class="item-actions">
@@ -90,31 +84,19 @@
             </div>
             <div class="info-item">
               <span class="label">服务名称：</span>
-              <span class="value">{{ currentDetailItem.productName }}</span>
+              <span class="value">{{ currentDetailItem.serviceName }}</span>
             </div>
             <div class="info-item">
               <span class="label">服务价格：</span>
-              <span class="value price">¥{{ currentDetailItem.productPrice }}</span>
+              <span class="value price">¥{{ currentDetailItem.servicePrice }}</span>
             </div>
             <div class="info-item">
               <span class="label">购买数量：</span>
               <span class="value">{{ currentDetailItem.quantity }}</span>
             </div>
             <div class="info-item">
-              <span class="label">服务时间：</span>
-              <span class="value">{{ currentDetailItem.serviceDate }} {{ currentDetailItem.serviceTime }}</span>
-            </div>
-            <div class="info-item full-width">
-              <span class="label">服务地址：</span>
-              <span class="value">{{ currentDetailItem.address }}</span>
-            </div>
-            <div class="info-item full-width" v-if="currentDetailItem.remark">
-              <span class="label">订单备注：</span>
-              <span class="value">{{ currentDetailItem.remark }}</span>
-            </div>
-            <div class="info-item">
               <span class="label">小计金额：</span>
-              <span class="value price">¥{{ currentDetailItem.productPrice * currentDetailItem.quantity }}</span>
+              <span class="value price">¥{{ currentDetailItem.itemPrice }}</span>
             </div>
           </div>
         </div>

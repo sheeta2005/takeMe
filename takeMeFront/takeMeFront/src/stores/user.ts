@@ -9,7 +9,7 @@ export const useUserStore = defineStore('user', {
     userId: localStorage.getItem('userId') || '',
     username: '',
     role: Number(localStorage.getItem('role')) || 2, // 0管理员 1志愿者 2普通用户
-
+    realName: '',
     // 完整用户详情信息
     account: '',
     phone: '',

@@ -13,10 +13,10 @@
         <!-- 接收方类型 -->
         <el-form-item label="接收方类型" prop="receiverType">
           <el-radio-group v-model="form.receiverType" @change="handleReceiverChange">
-            <el-radio label="all_volunteer">所有志愿者</el-radio>
-            <el-radio label="all_elder">所有老人</el-radio>
-            <el-radio label="spec_volunteer">指定志愿者</el-radio>
-            <el-radio label="spec_elder">指定老人</el-radio>
+            <el-radio value="all_volunteer">所有志愿者</el-radio>
+            <el-radio value="all_elder">所有老人</el-radio>
+            <el-radio value="spec_volunteer">指定志愿者</el-radio>
+            <el-radio value="spec_elder">指定老人</el-radio>
           </el-radio-group>
         </el-form-item>
 

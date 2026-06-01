@@ -26,10 +26,10 @@
             <div class="cart-popover-list" v-if="cartStore.items.length > 0">
               <div class="cart-item" v-for="item in cartStore.items" :key="item.id">
                 <div class="item-info">
-                  <div class="item-name">{{ item.productName }}</div>
-                  <div class="item-price">¥{{ item.productPrice }} × {{ item.quantity }}</div>
+                  <div class="item-name">{{ item.serviceName }}</div>
+                  <div class="item-price">¥{{ item.servicePrice }} × {{ item.quantity }}</div>
                 </div>
-                <div class="item-subtotal">¥{{ item.productPrice * item.quantity }}</div>
+                <div class="item-subtotal">¥{{ item.itemPrice }}</div>
               </div>
             </div>
 

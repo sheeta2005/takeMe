@@ -3,46 +3,43 @@
     <h2 class="page-title">个人信息</h2>
 
     <div class="info-card">
-      <!-- 头像区域 -->
       <div class="avatar-section">
-        <img :src="userInfo.avatar || defaultAvatar" class="avatar" alt="头像" />
+        <img :src="avatarUrl || defaultAvatar" class="avatar" alt="头像" />
       </div>
 
-      <!-- 信息列表 -->
       <div class="info-list">
         <div class="info-item">
           <span class="label">姓名：</span>
-          <span class="value">{{ userInfo.username || '未填写' }}</span>
+          <span class="value">{{ userStore.realName || '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">账号：</span>
-          <span class="value">{{ userInfo.account || '未绑定' }}</span>
+          <span class="value">{{ userStore.account || '未绑定' }}</span>
         </div>
         <div class="info-item">
           <span class="label">手机号：</span>
-          <span class="value">{{ userInfo.phone || '未填写' }}</span>
+          <span class="value">{{ userStore.phone || '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">年龄：</span>
-          <span class="value">{{ userInfo.age || '未填写' }} 岁</span>
+          <span class="value">{{ userStore.age || '未填写' }} 岁</span>
         </div>
         <div class="info-item">
           <span class="label">性别：</span>
-          <span class="value">{{ userInfo.gender === 0 ? '男' : '女' }}</span>
+          <span class="value">{{ userStore.gender === 0 ? '男' : '女' }}</span>
         </div>
         <div class="info-item">
           <span class="label">默认住址：</span>
-          <span class="value">{{ userInfo.addresses?.[0] || '未填写' }}</span>
+          <span class="value">{{ userStore.addresses?.[0] || '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">紧急联系人：</span>
           <span class="value">
-            {{ userInfo.emergencyName || '未填写' }} / {{ userInfo.emergencyPhone || '未填写' }}
+            {{ userStore.emergencyName || '未填写' }} / {{ userStore.emergencyPhone || '未填写' }}
           </span>
         </div>
       </div>
 
-      <!-- 修改按钮 -->
       <div class="action-section">
         <el-button type="primary" size="large" @click="goEdit">
           修改信息
@@ -53,36 +50,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// 默认头像
 const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+// ✅ 修复：改成响应式，头像修改后自动更新
+const avatarUrl = computed(() => userStore.avatar)
 
-// 直接绑定store的state，自动响应式更新
-const userInfo = userStore.$state
-
-// 加载用户信息
-const loadUserInfo = async () => {
-  try {
-    await userStore.getUserInfo()
-  } catch (e) {
-    ElMessage.error('加载用户信息失败')
-  }
-}
-
-// 跳转到修改页
 const goEdit = () => {
   router.push('/user/info/edit')
 }
 
 onMounted(() => {
-  loadUserInfo()
+  // 确保每次进入都刷新最新数据
+  userStore.getUserInfo()
 })
 </script>
 

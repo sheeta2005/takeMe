@@ -1,21 +1,19 @@
 import { defineStore } from 'pinia'
-import { getCartList, addToCart, updateCartItem, deleteCartItem, clearCart } from '@/api/user'
+import { getCartList, addToCart, updateCartItem, deleteCartItem, clearCart } from '@/api'
 import { ElMessage } from 'element-plus'
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    // 购物车商品列表（完全匹配后端返回字段）
+    // 购物车商品列表（完全匹配后端 OrderItemVO 返回字段）
     items: [] as {
       id: number;
-      productId: number;
-      productName: string;
-      productPrice: number;
-      serviceType: number; // ✅ 改为数字
-      serviceDate: string;
-      serviceTime: string;
-      address: string;
-      remark: string;
+      orderId: number;
+      serviceId: number;
+      serviceName: string;
+      servicePrice: number;
       quantity: number;
+      itemPrice: number;
+      createTime: string;
     }[]
   }),
 
@@ -24,7 +22,7 @@ export const useCartStore = defineStore('cart', {
       return state.items.reduce((sum, item) => sum + item.quantity, 0)
     },
     totalPrice: (state) => {
-      return state.items.reduce((sum, item) => sum + item.productPrice * item.quantity, 0)
+      return state.items.reduce((sum, item) => sum + item.itemPrice, 0)
     }
   },
 
@@ -41,20 +39,14 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
-    // ✅ 修复：serviceType 使用数字判断
     async addItem(item: {
-      productId: number;
-      productName: string;
-      productPrice: number;
-      serviceType: number;
-      serviceDate: string;
-      serviceTime: string;
-      address: string;
-      remark: string;
+      serviceId: number;
+      serviceName: string;
+      servicePrice: number;
       quantity: number;
     }) {
-      // 只有 2=助餐 可以数量>1，其他全部强制1
-      if (item.serviceType !== 2) {
+      // 非助餐服务数量强制为1
+      if (item.serviceId !== 2) {
         item.quantity = 1
       }
 
@@ -73,15 +65,15 @@ export const useCartStore = defineStore('cart', {
       const item = this.items.find(i => i.id === itemId)
       if (!item) return
 
-      // 只有 2=助餐 可修改数量
-      if (item.serviceType !== 2) {
+      // 只有助餐服务(serviceId=2)可修改数量
+      if (item.serviceId !== 2) {
         ElMessage.info('这项服务只能预约1次哦，如需多个时间请重新下单')
         return
       }
 
       try {
         await updateCartItem({
-          productId: item.productId,
+          id: item.id,
           quantity: Math.max(1, quantity)
         })
         await this.fetchCartList()
@@ -91,11 +83,8 @@ export const useCartStore = defineStore('cart', {
     },
 
     async removeItem(itemId: number) {
-      const item = this.items.find(i => i.id === itemId)
-      if (!item) return
-
       try {
-        await deleteCartItem(item.productId)
+        await deleteCartItem(itemId)
         await this.fetchCartList()
         ElMessage.success('已删除')
       } catch (err) {
@@ -113,7 +102,6 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
-    // ✅ 修复报错：补上这个方法
     loadFromLocalStorage() {
       this.fetchCartList()
     }

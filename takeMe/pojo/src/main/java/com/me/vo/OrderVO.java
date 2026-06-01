@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -26,4 +27,6 @@ public class OrderVO {
     private LocalDateTime createTime;
     private LocalDateTime completeTime;
     private Integer isReviewed;
+
+    private List<OrderItemVO> items;
 }

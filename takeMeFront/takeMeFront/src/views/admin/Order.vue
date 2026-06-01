@@ -147,7 +147,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrderPage } from '@/api/admin'
+import { getMyOrderList, getOrderDetail, confirmOrder, cancelOrder } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -164,7 +164,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 订单列表数据（模拟）
+// 订单列表数据
 const orderList = ref<any[]>([])
 
 // 页面加载
@@ -175,30 +175,18 @@ onMounted(() => {
   fetchOrders()
 })
 
-// 获取订单列表（接口已注释，用模拟数据）
+// 获取订单列表
 const fetchOrders = async () => {
   try {
-    // --- 接口调用已注释 ---
-    /*
     const params = {
       page: currentPage.value,
       pageSize: pageSize.value,
-      status: filterStatus.value || undefined,
-      type: filterType.value || undefined,
-      userName: filterUserName.value || undefined,
-      volunteerName: filterVolunteerName.value || undefined,
-      startDate: filterDateRange.value?.[0] || undefined,
-      endDate: filterDateRange.value?.[1] || undefined
+      status: filterStatus.value || undefined
     }
-    const res = await getOrderPage(params)
-    orderList.value = res.data.list
-    total.value = res.data.total
-    */
-
-    // --- 模拟数据（当前使用） ---
-    const mockData = generateMockData()
-    orderList.value = mockData.list
-    total.value = mockData.total
+    const res = await getMyOrderList(params)
+    orderList.value = res.data.records || res.data.list || []
+    total.value = res.data.total || 0
+    console.log('订单列表数据:', orderList.value)
   } catch (err) {
     console.error('获取订单失败', err)
     ElMessage.error('获取订单列表失败')
@@ -229,96 +217,89 @@ const goToVolunteerDetail = (volunteerId: number) => {
   router.push({ path: '/admin/volunteer/detail', query: { id: volunteerId } })
 }
 
-// 操作按钮事件（模拟）
-const handleComplete = (row: any) => {
-  ElMessageBox.confirm('确定要标记为已完成吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
+// 操作按钮事件
+const handleComplete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm('确定要标记为已完成吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await confirmOrder(row.id)
     ElMessage.success(`订单 ${row.id} 已标记为已完成`)
     fetchOrders()
-  })
+  } catch (err) {
+    if (err !== 'cancel') {
+      console.error('操作失败', err)
+      ElMessage.error('操作失败')
+    }
+  }
 }
 
-const handleCancel = (row: any) => {
-  ElMessageBox.confirm('确定要取消订单吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
+const handleCancel = async (row: any) => {
+  try {
+    await ElMessageBox.confirm('确定要取消订单吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await cancelOrder(row.id)
     ElMessage.success(`订单 ${row.id} 已取消`)
     fetchOrders()
-  })
+  } catch (err) {
+    if (err !== 'cancel') {
+      console.error('操作失败', err)
+      ElMessage.error('操作失败')
+    }
+  }
 }
 
 // 状态映射
-const getStatusText = (status: string) => {
-  const map: Record<string, string> = {
-    active: '服务中',
-    completed: '已完成',
-    cancelled: '已取消'
+const getStatusText = (status: number) => {
+  const map: Record<number, string> = {
+    0: '待接单',
+    1: '已接单',
+    2: '服务中',
+    3: '待确认',
+    4: '已完成',
+    5: '已取消'
   }
   return map[status] || '未知'
 }
 
-const getStatusTagType = (status: string) => {
-  const map: Record<string, string> = {
-    active: 'primary',
-    completed: 'success',
-    cancelled: 'danger'
+const getStatusTagType = (status: number) => {
+  const map: Record<number, string> = {
+    0: 'warning',   // 待接单
+    1: 'primary',   // 已接单
+    2: 'primary',   // 服务中
+    3: 'success',   // 待确认
+    4: 'success',   // 已完成
+    5: 'danger'     // 已取消
   }
   return map[status] || 'info'
 }
 
 // 服务类型映射
-const getTypeText = (type: string) => {
-  const map: Record<string, string> = {
-    meal: '助餐服务',
-    clean: '助洁服务',
-    medical: '助医服务',
-    buy: '代购服务'
+const getTypeText = (type: number) => {
+  const map: Record<number, string> = {
+    0: '代购服务',
+    1: '助洁服务',
+    2: '助餐服务',
+    3: '助医服务',
+    4: '陪伴服务'
   }
   return map[type] || '其他'
 }
 
-const getTypeTagType = (type: string) => {
-  const map: Record<string, string> = {
-    meal: 'warning',
-    clean: 'info',
-    medical: 'danger',
-    buy: 'success'
+const getTypeTagType = (type: number) => {
+  const map: Record<number, string> = {
+    0: 'success',   // 代购
+    1: 'info',      // 助洁
+    2: 'warning',   // 助餐
+    3: 'danger',    // 助医
+    4: 'primary'    // 陪伴
   }
   return map[type] || ''
-}
-
-// 生成模拟数据（包含用户ID/志愿者ID）
-const generateMockData = () => {
-  const types = ['meal', 'clean', 'medical', 'buy']
-  const statuses = ['active', 'completed', 'cancelled']
-  const users = ['王奶奶', '李爷爷', '张婆婆', '刘大爷']
-  const volunteers = ['小张', '小李', '小王', '小赵']
-  const addresses = ['幸福小区1栋', '阳光花园3栋', '和平社区5栋', '温馨家园2栋']
-
-  const list = []
-  for (let i = 1; i <= 10; i++) {
-    list.push({
-      id: 10000 + i,
-      type: types[i % 4],
-      userId: 2000 + i,
-      userName: users[i % 4],
-      volunteerId: 3000 + i,
-      volunteerName: volunteers[i % 4],
-      address: addresses[i % 4],
-      createTime: `2026-05-${20 + i} 10:30:00`,
-      status: statuses[i % 3]
-    })
-  }
-
-  return {
-    list,
-    total: 128
-  }
 }
 </script>
 

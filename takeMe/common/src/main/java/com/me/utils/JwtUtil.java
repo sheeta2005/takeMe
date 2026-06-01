@@ -116,4 +116,26 @@ public class JwtUtil {
 
         return loginVO;
     }
+
+    /**
+     * 从 Authorization 头中提取用户 ID（自动处理 Bearer 前缀）
+     */
+    public Long getUserIdFromAuthHeader(String authHeader) {
+        if (authHeader == null || authHeader.trim().isEmpty()) {
+            throw new RuntimeException("Authorization 头为空");
+        }
+        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        return getUserId(token);
+    }
+
+    /**
+     * 从 Authorization 头中提取角色（自动处理 Bearer 前缀）
+     */
+    public Integer getRoleFromAuthHeader(String authHeader) {
+        if (authHeader == null || authHeader.trim().isEmpty()) {
+            throw new RuntimeException("Authorization 头为空");
+        }
+        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        return getRole(token);
+    }
 }

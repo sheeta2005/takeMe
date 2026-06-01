@@ -6,65 +6,87 @@
     </div>
 
     <div class="detail-card">
+      <!-- 订单基础信息 -->
       <div class="detail-section">
-        <h3 class="section-title">基础信息</h3>
-        <div class="detail-row">
-          <span class="label">订单号：</span>
-          <span class="value">{{ orderDetail.id }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">服务类型：</span>
-          <el-tag :type="getTypeTagType(orderDetail.type)">{{ getTypeText(orderDetail.type) }}</el-tag>
-        </div>
-        <div class="detail-row">
-          <span class="label">订单状态：</span>
-          <el-tag :type="getStatusTagType(orderDetail.status)" size="large">
-            {{ getStatusText(orderDetail.status) }}
-          </el-tag>
-        </div>
-        <div class="detail-row">
-          <span class="label">创建时间：</span>
-          <span class="value">{{ orderDetail.createTime }}</span>
+        <h3 class="section-title">订单信息</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">订单号：</span>
+            <span class="value">{{ orderDetail.orderNo }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">服务类型：</span>
+            <el-tag v-if="orderItems.length > 0" :type="getServiceTypeTagType(orderItems[0].serviceType)">
+              {{ getServiceTypeText(orderItems[0].serviceType) }}
+            </el-tag>
+            <el-tag v-else>未知</el-tag>
+          </div>
+          <div class="info-item">
+            <span class="label">订单状态：</span>
+            <el-tag :type="getOrderStatusTagType(orderDetail.status)" size="large">
+              {{ getOrderStatusText(orderDetail.status) }}
+            </el-tag>
+          </div>
+          <div class="info-item">
+            <span class="label">下单时间：</span>
+            <span class="value">{{ formatDateTime(orderDetail.createTime) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">服务时间：</span>
+            <span class="value">{{ orderDetail.serviceDate }} {{ orderDetail.serviceTime }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">订单金额：</span>
+            <span class="value price">¥{{ orderDetail.totalPrice }}</span>
+          </div>
         </div>
       </div>
 
+      <!-- 服务地址信息 -->
       <div class="detail-section">
-        <h3 class="section-title">用户信息</h3>
-        <div class="detail-row">
-          <span class="label">用户ID：</span>
-          <el-button type="primary" link @click="goToUserDetail(orderDetail.userId)">
-            {{ orderDetail.userId }}
-          </el-button>
-        </div>
-        <div class="detail-row">
-          <span class="label">用户姓名：</span>
-          <span class="value">{{ orderDetail.userName }}</span>
+        <h3 class="section-title">服务地址</h3>
+        <div class="address-info">
+          <el-icon><Location /></el-icon>
+          <span>{{ orderDetail.address }}</span>
         </div>
       </div>
 
-      <div class="detail-section">
-        <h3 class="section-title">志愿者信息</h3>
-        <div class="detail-row">
-          <span class="label">志愿者ID：</span>
-          <el-button type="primary" link @click="goToVolunteerDetail(orderDetail.volunteerId)">
-            {{ orderDetail.volunteerId }}
-          </el-button>
-        </div>
-        <div class="detail-row">
-          <span class="label">志愿者姓名：</span>
-          <span class="value">{{ orderDetail.volunteerName }}</span>
+      <!-- 服务项列表 -->
+      <div class="detail-section" v-if="orderItems.length > 0">
+        <h3 class="section-title">服务项目</h3>
+        <div class="service-items">
+          <div class="service-item" v-for="item in orderItems" :key="item.id">
+            <div class="item-info">
+              <span class="item-name">{{ item.serviceName }}</span>
+              <span class="item-price">¥{{ item.servicePrice }} × {{ item.quantity }}</span>
+            </div>
+            <span class="item-total">¥{{ item.itemPrice }}</span>
+          </div>
         </div>
       </div>
 
-      <div class="detail-section">
-        <h3 class="section-title">服务信息</h3>
-        <div class="detail-row">
-          <span class="label">服务地址：</span>
-          <span class="value">{{ orderDetail.address }}</span>
+      <!-- 备注信息 -->
+      <div class="detail-section" v-if="orderDetail.remark">
+        <h3 class="section-title">订单备注</h3>
+        <div class="remark-info">
+          {{ orderDetail.remark }}
         </div>
-        <div class="detail-row">
-          <span class="label">备注：</span>
-          <span class="value">{{ orderDetail.remark || '无' }}</span>
+      </div>
+
+      <!-- 完成时间（仅已完成订单显示） -->
+      <div class="detail-section" v-if="orderDetail.completeTime">
+        <h3 class="section-title">完成信息</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">完成时间：</span>
+            <span class="value">{{ formatDateTime(orderDetail.completeTime) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">评价状态：</span>
+            <el-tag :type="orderDetail.isReviewed === 1 ? 'success' : 'info'">
+              {{ orderDetail.isReviewed === 1 ? '已评价' : '未评价' }}
+            </el-tag>
+          </div>
         </div>
       </div>
     </div>
@@ -75,96 +97,109 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getOrderDetail } from '@/api/admin'
+import { Location } from '@element-plus/icons-vue'
+import { getOrderDetail } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 
+interface OrderItem {
+  id: number
+  orderId: number
+  serviceId: number
+  serviceName: string
+  servicePrice: number
+  quantity: number
+  itemPrice: number
+  createTime: string
+}
+
 const orderDetail = ref<any>({})
+const orderItems = ref<OrderItem[]>([])
 
 onMounted(() => {
-  const orderId = route.query.id as number
+  // ✅ 修复1：用 params 取路由参数
+  const orderId = route.params.id as string
   if (orderId) {
-    fetchOrderDetail(orderId)
+    fetchOrderDetail(Number(orderId))
+  } else {
+    ElMessage.error('订单ID无效')
+    router.back()
   }
 })
 
 const fetchOrderDetail = async (id: number) => {
   try {
-    // --- 接口调用已注释 ---
-    /*
     const res = await getOrderDetail(id)
-    orderDetail.value = res.data
-    */
-
-    // --- 模拟数据 ---
-    orderDetail.value = {
-      id: id,
-      type: 'meal',
-      status: 'active',
-      createTime: '2026-05-21 10:30:00',
-      userId: 2001,
-      userName: '王奶奶',
-      volunteerId: 3001,
-      volunteerName: '小张',
-      address: '幸福小区1栋',
-      remark: '请提前10分钟到达'
-    }
+    // ✅ 修复2：取后端返回的 data 字段
+    orderDetail.value = res.data.data
+    orderItems.value = res.data.data.items || []
   } catch (err) {
     console.error('获取订单详情失败', err)
     ElMessage.error('获取订单详情失败')
   }
 }
 
-const goToUserDetail = (userId: number) => {
-  router.push({ path: '/admin/user/detail', query: { id: userId } })
+// 格式化日期时间
+const formatDateTime = (dateTime: string | null) => {
+  if (!dateTime) return '-'
+  return new Date(dateTime).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
-const goToVolunteerDetail = (volunteerId: number) => {
-  router.push({ path: '/admin/volunteer/detail', query: { id: volunteerId } })
+// 服务类型映射（对应ServicePackage的type字段）
+const getServiceTypeText = (type: number) => {
+  const map: Record<number, string> = {
+    0: '代购服务',
+    1: '助洁服务',
+    2: '助餐服务',
+    3: '助医服务',
+    4: '陪伴服务'
+  }
+  return map[type] || '未知'
 }
 
-// 状态/类型映射
-const getStatusText = (status: string) => {
-  const map: Record<string, string> = {
-    active: '服务中',
-    completed: '已完成',
-    cancelled: '已取消'
+const getServiceTypeTagType = (type: number) => {
+  const map: Record<number, string> = {
+    0: 'success',    // 代购
+    1: 'info',       // 助洁
+    2: 'warning',    // 助餐
+    3: 'danger',     // 助医
+    4: 'primary'     // 陪伴
+  }
+  return map[type] || 'info'
+}
+
+// 订单状态映射（需要根据您的业务逻辑调整）
+const getOrderStatusText = (status: number) => {
+  const map: Record<number, string> = {
+    0: '待接单',
+    1: '服务中',
+    2: '已完成',
+    3: '已取消'
   }
   return map[status] || '未知'
 }
 
-const getStatusTagType = (status: string) => {
-  const map: Record<string, string> = {
-    active: 'primary',
-    completed: 'success',
-    cancelled: 'danger'
+const getOrderStatusTagType = (status: number) => {
+  const map: Record<number, string> = {
+    0: 'warning',   // 待接单
+    1: 'primary',   // 服务中
+    2: 'success',   // 已完成
+    3: 'danger'     // 已取消
   }
   return map[status] || 'info'
-}
-
-const getTypeText = (type: string) => {
-  const map: Record<string, string> = {
-    meal: '助餐服务',
-    clean: '助洁服务',
-    medical: '助医服务',
-    buy: '代购服务'
-  }
-  return map[type] || '其他'
-}
-
-const getTypeTagType = (type: string) => {
-  const map: Record<string, string> = {
-    meal: 'warning',
-    clean: 'info',
-    medical: 'danger',
-    buy: 'success'
-  }
-  return map[type] || ''
 }
 </script>
 
 <style scoped>
+/* 样式部分无需修改 */
 .detail-container {
   width: 100%;
   padding: 10px 0;
@@ -204,20 +239,91 @@ const getTypeTagType = (type: string) => {
   margin-bottom: 20px;
 }
 
-.detail-row {
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.info-item {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 8px;
 }
 
 .label {
-  width: 100px;
   font-size: 14px;
   color: #666;
+  white-space: nowrap;
 }
 
 .value {
   font-size: 14px;
   color: #333;
+}
+
+.price {
+  color: #f56c6c;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.address-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.service-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.service-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.item-info {
+  display: flex;
+  justify-content: space-between;
+  flex: 1;
+  margin-right: 20px;
+}
+
+.item-name {
+  font-size: 14px;
+  color: #333;
+}
+
+.item-price {
+  font-size: 14px;
+  color: #909399;
+}
+
+.item-total {
+  font-size: 14px;
+  color: #f56c6c;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.remark-info {
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
 }
 </style>

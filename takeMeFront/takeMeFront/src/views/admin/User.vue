@@ -102,8 +102,8 @@
         </el-form-item>
         <el-form-item label="性别">
           <el-radio-group v-model="formData.gender">
-            <el-radio label="男" />
-            <el-radio label="女" />
+            <el-radio value="男" />
+            <el-radio value="女" />
           </el-radio-group>
         </el-form-item>
         <el-form-item label="居住地址">

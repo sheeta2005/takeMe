@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/user")
-@RequiredArgsConstructor // ✅ 自动生成构造器
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
@@ -24,8 +24,8 @@ public class UserController {
 
     // 获取当前用户信息
     @GetMapping("/info")
-    public Result<User> getUserInfo(@RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.getUserId(token);
+    public Result<User> getUserInfo(@RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         User user = userService.getById(userId);
 
         if (user == null) {
@@ -39,10 +39,10 @@ public class UserController {
     // 修改用户信息
     @PostMapping("/update")
     public Result updateUserInfo(
-            @RequestHeader("Authorization") String token,
+            @RequestHeader("Authorization") String authHeader,
             @RequestBody User user
     ) {
-        Long userId = jwtUtil.getUserId(token);
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         user.setId(userId);
 
         // 禁止修改敏感字段
@@ -59,7 +59,7 @@ public class UserController {
     // 头像上传
     @PostMapping("/uploadAvatar")
     public Result<Map<String, String>> uploadAvatar(
-            @RequestHeader("Authorization") String token,
+            @RequestHeader("Authorization") String authHeader,
             @RequestParam("file") MultipartFile file
     ) {
         if (file.isEmpty()) {
@@ -79,7 +79,7 @@ public class UserController {
             }
             file.transferTo(dest);
 
-            Long userId = jwtUtil.getUserId(token);
+            Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
             User user = new User();
             user.setId(userId);
             // ⚠️ 替换成你实际的访问前缀
@@ -95,6 +95,4 @@ public class UserController {
             return Result.error("头像上传失败");
         }
     }
-
-
 }

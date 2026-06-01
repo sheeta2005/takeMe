@@ -69,8 +69,8 @@ const routes = [
     children: [
       { path: '', component: () => import('@/views/user/Index.vue') },
       { path: 'order', component: () => import('@/views/user/Order.vue') },
-      { path: 'order/detail/:orderNo', component: () => import('@/views/user/OrderDetail.vue') },
-      { path: 'order/review/:orderNo', component: () => import('@/views/user/OrderReview.vue') },
+      { path: 'order/detail/:id', component: () => import('@/views/user/OrderDetail.vue') },
+      { path: 'order/review/:id', component: () => import('@/views/user/OrderReview.vue') },
       { path: 'info', component: () => import('@/views/user/Info.vue') },
       { path: 'info/edit', component: () => import('@/views/user/InfoEdit.vue') },
       { path: 'setting', component: () => import('@/views/user/Setting.vue') },

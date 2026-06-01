@@ -56,10 +56,10 @@ export function getVolunteerTodo() {
 }
 
 /**
- * 确认接单
+ * 确认接单（改名避免冲突）
  * @param orderId 订单ID
  */
-export function confirmOrder(orderId: string) {
+export function volunteerConfirmOrder(orderId: string) {
   // return request({
   //   url: `/api/volunteer/confirm/${orderId}`,
   //   method: 'post'

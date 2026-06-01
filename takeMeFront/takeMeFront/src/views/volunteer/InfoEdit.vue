@@ -32,8 +32,8 @@
 
       <el-form-item label="性别" prop="gender">
         <el-radio-group v-model="form.gender">
-          <el-radio label="男">男</el-radio>
-          <el-radio label="女">女</el-radio>
+          <el-radio value="男">男</el-radio>
+          <el-radio value="女">女</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -62,10 +62,10 @@
 
       <el-form-item label="可服务业务" prop="serviceType">
         <el-radio-group v-model="form.serviceType">
-          <el-radio label="代购服务" />
-          <el-radio label="助洁服务" />
-          <el-radio label="送餐服务" />
-          <el-radio label="陪医服务" />
+          <el-radio value="代购服务" />
+          <el-radio value="助洁服务" />
+          <el-radio value="送餐服务" />
+          <el-radio value="陪医服务" />
         </el-radio-group>
       </el-form-item>
 

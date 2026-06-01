@@ -21,8 +21,8 @@ public class CartController {
 
     // 获取购物车列表
     @GetMapping("/list")
-    public Result<List<CartItemVO>> getCartList(@RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.getUserId(token);
+    public Result<List<CartItemVO>> getCartList(@RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         List<CartItemVO> list = cartService.getCartItemList(userId);
         return Result.success(list);
     }
@@ -30,10 +30,10 @@ public class CartController {
     // 加入购物车
     @PostMapping("/add")
     public Result addToCart(
-            @RequestHeader("Authorization") String token,
+            @RequestHeader("Authorization") String authHeader,
             @RequestBody CartItemDTO dto
     ) {
-        Long userId = jwtUtil.getUserId(token);
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         try {
             cartService.addItem(userId, dto);
             return Result.success();
@@ -45,10 +45,10 @@ public class CartController {
     // 修改购物车商品数量
     @PostMapping("/update")
     public Result updateCartItem(
-            @RequestHeader("Authorization") String token,
+            @RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, Object> data
     ) {
-        Long userId = jwtUtil.getUserId(token);
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         Long productId = Long.valueOf(data.get("productId").toString());
         Integer quantity = Integer.valueOf(data.get("quantity").toString());
 
@@ -63,18 +63,18 @@ public class CartController {
     // 删除购物车商品
     @PostMapping("/delete")
     public Result deleteCartItem(
-            @RequestHeader("Authorization") String token,
+            @RequestHeader("Authorization") String authHeader,
             @RequestParam Long productId
     ) {
-        Long userId = jwtUtil.getUserId(token);
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         cartService.deleteItem(userId, productId);
         return Result.success();
     }
 
     // 清空购物车
     @PostMapping("/clear")
-    public Result clearCart(@RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.getUserId(token);
+    public Result clearCart(@RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         cartService.clearCart(userId);
         return Result.success();
     }
