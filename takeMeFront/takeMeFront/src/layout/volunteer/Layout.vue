@@ -91,7 +91,7 @@ const userName = ref(volunteerStore.realName || '志愿者')
 
 onMounted(async () => {
   // ✅ 只调用志愿者自己的信息
-  await volunteerStore.getVolunteerInfo()
+  await volunteerStore.fetchVolunteerInfo()
   userName.value = volunteerStore.realName || '志愿者'
 })
 

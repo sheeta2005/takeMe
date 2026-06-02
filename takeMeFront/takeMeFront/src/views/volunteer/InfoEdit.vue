@@ -5,6 +5,7 @@
     <el-form
       ref="formRef"
       :model="form"
+      :rules="rules"
       label-width="130px"
       class="info-form"
     >
@@ -32,8 +33,8 @@
 
       <el-form-item label="性别" prop="gender">
         <el-radio-group v-model="form.gender">
-          <el-radio value="男">男</el-radio>
-          <el-radio value="女">女</el-radio>
+          <el-radio :value="0">男</el-radio>
+          <el-radio :value="1">女</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -49,11 +50,11 @@
       <el-form-item label="可服务时间" prop="serviceDays">
         <div class="days-selector">
           <div
-            v-for="day in weekDays"
-            :key="day"
+            v-for="(day, index) in weekDays"
+            :key="index"
             class="day-btn"
-            :class="{ active: form.serviceDays.includes(day) }"
-            @click="toggleDay(day)"
+            :class="{ active: form.serviceDays.includes(index) }"
+            @click="toggleDay(index)"
           >
             {{ day }}
           </div>
@@ -61,16 +62,13 @@
       </el-form-item>
 
       <el-form-item label="可服务业务" prop="serviceType">
-        <el-radio-group v-model="form.serviceType">
-          <el-radio value="代购服务" />
-          <el-radio value="助洁服务" />
-          <el-radio value="送餐服务" />
-          <el-radio value="陪医服务" />
-        </el-radio-group>
-      </el-form-item>
-
-      <el-form-item label="服务状态">
-        <el-input v-model="form.status" disabled class="input-large" />
+        <el-select v-model="form.serviceType" placeholder="请选择服务业务" class="input-large">
+          <el-option label="代购服务" :value="0" />
+          <el-option label="助洁服务" :value="1" />
+          <el-option label="助餐服务" :value="2" />
+          <el-option label="助医服务" :value="3" />
+          <el-option label="陪伴服务" :value="4" />
+        </el-select>
       </el-form-item>
 
       <el-form-item label="紧急联系人" prop="emergencyName">
@@ -84,9 +82,8 @@
       <el-form-item label="头像">
         <el-upload
           class="avatar-upload"
-          action="/api/volunteer/uploadAvatar"
           :show-file-list="false"
-          :on-success="handleAvatarSuccess"
+          :before-upload="handleBeforeUpload"
         >
           <img v-if="form.avatar" :src="form.avatar" class="avatar" />
           <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
@@ -110,13 +107,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getVolunteerInfo, updateVolunteerInfo } from '@/api/volunteer'
+import { useVolunteerStore } from '@/stores/volunteer'
 
 const router = useRouter()
-const formRef = ref(null)
+const volunteerStore = useVolunteerStore()
+const formRef = ref()
 
 // 一周七天
-const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const weekDays = ['周天', '周一', '周二', '周三', '周四', '周五', '周六']
 
 const form = ref({
   realName: '',
@@ -124,21 +122,40 @@ const form = ref({
   phone: '',
   password: '',
   avatar: '',
-  serviceDays: [] as string[], // 多选数组
-  serviceType: '',
-  status: '正常服务中',
-  gender: '',
-  age: 0,
+  serviceDays: [] as number[], // 多选数组，存储0-6的数字
+  serviceType: 0,
+  gender: 0,
+  age: 20,
   address: '',
   emergencyName: '',
   emergencyPhone: ''
 })
 
-// 切换选中日期（最少保留1个）
-const toggleDay = (day: string) => {
-  const index = form.value.serviceDays.indexOf(day)
+// 表单验证规则
+const rules = {
+  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+  ],
+  age: [{ required: true, message: '请输入年龄', trigger: 'blur' }],
+  address: [{ required: true, message: '请填写居住地址', trigger: 'blur' }],
+  emergencyName: [{ required: true, message: '请输入紧急联系人姓名', trigger: 'blur' }],
+  emergencyPhone: [
+    { required: true, message: '请输入紧急联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '电话格式不正确', trigger: 'blur' }
+  ]
+}
+
+// 切换选中日期（最少1个，最多3个）
+const toggleDay = (dayIndex: number) => {
+  const index = form.value.serviceDays.indexOf(dayIndex)
   if (index === -1) {
-    form.value.serviceDays.push(day)
+    if (form.value.serviceDays.length >= 3) {
+      ElMessage.warning('最多只能选择3天可服务时间')
+      return
+    }
+    form.value.serviceDays.push(dayIndex)
   } else {
     if (form.value.serviceDays.length > 1) {
       form.value.serviceDays.splice(index, 1)
@@ -150,45 +167,89 @@ const toggleDay = (day: string) => {
 
 // 加载用户信息
 onMounted(async () => {
-  try {
-    const res = await getVolunteerInfo()
-    if (res.code === 200) {
-      form.value = {
-        ...form.value,
-        ...res.data,
-        serviceDays: res.data.serviceDays ? res.data.serviceDays.split(',') : [],
-        password: ''
-      }
-    }
-  } catch {
-    ElMessage.error('加载信息失败')
+  await volunteerStore.fetchVolunteerInfo()
+
+  const serviceDaysStr = volunteerStore.serviceDays || ''
+  const serviceDaysArr = serviceDaysStr ? serviceDaysStr.split(',').map(d => parseInt(d.trim())) : [0]
+
+  form.value = {
+    realName: volunteerStore.realName || '',
+    username: volunteerStore.username || '',
+    phone: volunteerStore.phone || '',
+    password: '',
+    avatar: volunteerStore.avatar || '',
+    serviceDays: serviceDaysArr,
+    serviceType: volunteerStore.serviceType || 0,
+    gender: volunteerStore.gender || 0,
+    age: volunteerStore.age || 20,
+    address: volunteerStore.address || '',
+    emergencyName: volunteerStore.emergencyName || '',
+    emergencyPhone: volunteerStore.emergencyPhone || ''
   }
 })
 
-// 头像上传
-const handleAvatarSuccess = (res: any) => {
-  form.value.avatar = res.url
-  ElMessage.success('头像上传成功')
+// 头像上传前校验
+const handleBeforeUpload = async (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+
+  const url = await volunteerStore.uploadAvatar(file)
+  if (url) {
+    form.value.avatar = url
+  }
+  return false // 阻止默认上传行为
 }
 
 // 提交
 const submitForm = async () => {
-  if (form.value.serviceDays.length === 0) {
-    ElMessage.warning('请至少选择一天可服务时间')
-    return
-  }
+  if (!formRef.value) return
 
-  try {
-    const submitData = {
-      ...form.value,
-      serviceDays: form.value.serviceDays.join(',')
+  await formRef.value.validate(async (valid: boolean) => {
+    if (!valid) return
+
+    if (form.value.serviceDays.length === 0) {
+      ElMessage.warning('请至少选择一天可服务时间')
+      return
     }
-    await updateVolunteerInfo(submitData)
-    ElMessage.success('修改成功')
-    router.push('/volunteer/info')
-  } catch {
-    ElMessage.error('修改失败，请重试')
-  }
+
+    if (form.value.serviceDays.length > 3) {
+      ElMessage.warning('最多只能选择3天可服务时间')
+      return
+    }
+
+    try {
+      const submitData = {
+        realName: form.value.realName,
+        phone: form.value.phone,
+        avatar: form.value.avatar,
+        gender: form.value.gender,
+        age: form.value.age,
+        address: form.value.address,
+        serviceDays: form.value.serviceDays.sort((a, b) => a - b).join(','),
+        serviceType: form.value.serviceType,
+        emergencyName: form.value.emergencyName,
+        emergencyPhone: form.value.emergencyPhone
+      }
+
+      if (form.value.password) {
+        Object.assign(submitData, { password: form.value.password })
+      }
+
+      await volunteerStore.updateVolunteerInfo(submitData)
+      router.push('/volunteer/info')
+    } catch {
+      ElMessage.error('修改失败，请重试')
+    }
+  })
 }
 
 // 返回
@@ -220,8 +281,7 @@ const back = () => {
 }
 
 .input-large {
-  font-size: 18px !important;
-  padding: 10px 16px !important;
+  width: 100%;
 }
 
 .btn-group {
@@ -234,6 +294,7 @@ const back = () => {
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
+  cursor: pointer;
 }
 
 .avatar-uploader-icon {
@@ -250,7 +311,7 @@ const back = () => {
 }
 
 .avatar-uploader-icon:hover {
-  border-color: #409eff;
+  border-color: #00b899;
 }
 
 :deep(.el-form-item__label) {

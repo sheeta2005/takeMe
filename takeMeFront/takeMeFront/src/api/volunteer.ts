@@ -30,7 +30,6 @@ export function volunteerRegister(data: {
 
 /**
  * 志愿者退出登录
- * ✅ 修复：补全缺失的 volunteerLogout 导出，解决当前报错
  */
 export function volunteerLogout() {
   return request({
@@ -64,42 +63,16 @@ export function updateVolunteerInfo(data: any) {
 /**
  * 志愿者头像上传
  */
-export function uploadVolunteerAvatar(data: any) {
+export function uploadVolunteerAvatar(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
   return request({
     url: '/api/volunteer/uploadAvatar',
     method: 'post',
-    data
-  })
-}
-
-// ========================= 任务管理 =========================
-/**
- * 获取志愿者待办任务
- */
-export function getVolunteerTodo() {
-  return request({
-    url: '/api/volunteer/todo',
-    method: 'get'
-  })
-}
-
-/**
- * 确认接单
- */
-export function volunteerConfirmOrder(orderId: string) {
-  return request({
-    url: `/api/volunteer/confirm/${orderId}`,
-    method: 'post'
-  })
-}
-
-/**
- * 完成服务
- */
-export function completeOrder(orderId: string) {
-  return request({
-    url: `/api/volunteer/complete/${orderId}`,
-    method: 'post'
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
   })
 }
 
@@ -108,7 +81,7 @@ export function completeOrder(orderId: string) {
  * 获取当前志愿者消息列表（分页+筛选）
  */
 export function getVolunteerMessages(params: {
-  page?: number
+  pageNum?: number
   pageSize?: number
   type?: number
   isRead?: number
@@ -163,11 +136,26 @@ export function getPoints() {
 
 // ========================= 考勤请假 =========================
 /**
+ * 获取请假记录列表
+ */
+export function getLeaveList() {
+  return request({
+    url: '/api/volunteer/leave/list',
+    method: 'get'
+  })
+}
+
+/**
  * 提交请假申请
  */
-export function submitLeave(data: any) {
+export function submitLeave(data: {
+  type: number
+  startTime: string
+  endTime: string
+  reason: string
+}) {
   return request({
-    url: '/api/volunteer/leave',
+    url: '/api/volunteer/leave/submit',
     method: 'post',
     data
   })
@@ -190,6 +178,60 @@ export function getStudyList() {
 export function getStudyDetail(id: number) {
   return request({
     url: `/api/volunteer/study/${id}`,
+    method: 'get'
+  })
+}
+
+export function getVolunteerOrderList(params: { page: number; pageSize: number; status?: number }) {
+  return request({
+    url: '/api/volunteer/order/list',
+    method: 'get',
+    params
+  })
+}
+
+export function getVolunteerOrderDetail(orderId: number) {
+  return request({
+    url: '/api/volunteer/order/detail',
+    method: 'get',
+    params: { orderId }
+  })
+}
+
+export function confirmOrder(orderId: number) {
+  return request({
+    url: '/api/volunteer/order/confirm',
+    method: 'post',
+    params: { orderId }
+  })
+}
+
+export function abandonOrder(orderId: number) {
+  return request({
+    url: '/api/volunteer/order/abandon',
+    method: 'post',
+    params: { orderId }
+  })
+}
+
+export function completeOrder(orderId: number) {
+  return request({
+    url: '/api/volunteer/order/complete',
+    method: 'post',
+    params: { orderId }
+  })
+}
+
+export function getPointsList() {
+  return request({
+    url: '/api/volunteer/points/list',
+    method: 'get'
+  })
+}
+
+export function getPointsSummary() {
+  return request({
+    url: '/api/volunteer/points/summary',
     method: 'get'
   })
 }

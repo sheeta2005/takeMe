@@ -67,6 +67,41 @@ public class OrderServiceImpl implements OrderService {
         return voPage;
     }
 
+    @Override
+    public Page<OrderVO> getVolunteerOrderList(Long volunteerId, Integer page, Integer pageSize, Integer status) {
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Order::getVolunteerId, volunteerId);
+        if (status != null) {
+            wrapper.eq(Order::getStatus, status);
+        }
+        wrapper.orderByDesc(Order::getCreateTime);
+
+        Page<Order> orderPage = orderMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        Page<OrderVO> voPage = new Page<>();
+        BeanUtils.copyProperties(orderPage, voPage);
+
+        List<OrderVO> records = orderPage.getRecords().stream().map(order -> {
+            OrderVO vo = new OrderVO();
+            BeanUtils.copyProperties(order, vo);
+
+            LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+            itemWrapper.eq(OrderItem::getOrderId, order.getId());
+            List<OrderItem> orderItems = orderItemMapper.selectList(itemWrapper);
+
+            List<OrderItemVO> itemVOList = orderItems.stream().map(item -> {
+                OrderItemVO itemVO = new OrderItemVO();
+                BeanUtils.copyProperties(item, itemVO);
+                return itemVO;
+            }).collect(Collectors.toList());
+            vo.setItems(itemVOList);
+
+            return vo;
+        }).collect(Collectors.toList());
+
+        voPage.setRecords(records);
+        return voPage;
+    }
+
     // ===================== 订单详情（含明细） =====================
     @Override
     public OrderVO getOrderDetail(Long userId, Long orderId) {
@@ -87,6 +122,27 @@ public class OrderServiceImpl implements OrderService {
         }).collect(Collectors.toList());
 
         // 前端展示需要，手动塞入明细
+        orderVO.setItems(itemVOList);
+        return orderVO;
+    }
+
+    @Override
+    public OrderVO getVolunteerOrderDetail(Long volunteerId, Long orderId) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
+            throw new RuntimeException("订单不存在");
+        }
+
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(order, orderVO);
+
+        List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
+        List<OrderItemVO> itemVOList = items.stream().map(item -> {
+            OrderItemVO vo = new OrderItemVO();
+            BeanUtils.copyProperties(item, vo);
+            return vo;
+        }).collect(Collectors.toList());
+
         orderVO.setItems(itemVOList);
         return orderVO;
     }
@@ -135,6 +191,50 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setStatus(5);
+        orderMapper.updateById(order);
+    }
+
+    @Override
+    public void volunteerConfirmOrder(Long volunteerId, Long orderId) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
+            throw new RuntimeException("订单不存在");
+        }
+        if (order.getStatus() != 1) {
+            throw new RuntimeException("仅待确认状态可接单");
+        }
+
+        order.setStatus(2);
+        orderMapper.updateById(order);
+    }
+
+    @Override
+    public void volunteerAbandonOrder(Long volunteerId, Long orderId) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
+            throw new RuntimeException("订单不存在");
+        }
+        if (order.getStatus() != 2) {
+            throw new RuntimeException("仅服务中状态可放弃");
+        }
+
+        order.setStatus(6);
+        order.setVolunteerId(null);
+        orderMapper.updateById(order);
+    }
+
+    @Override
+    public void volunteerCompleteOrder(Long volunteerId, Long orderId) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
+            throw new RuntimeException("订单不存在");
+        }
+        if (order.getStatus() != 2) {
+            throw new RuntimeException("仅服务中状态可完成");
+        }
+
+        order.setStatus(3);
+        order.setCompleteTime(LocalDateTime.now());
         orderMapper.updateById(order);
     }
 

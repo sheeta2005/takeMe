@@ -1,186 +1,151 @@
 <template>
-  <div class="info-container">
+  <div class="info-page">
     <h2 class="page-title">个人信息</h2>
+
     <div class="info-card">
-      <div class="avatar-box">
-        <img class="avatar" :src="volunteerInfo.avatar" alt="头像" />
+      <div class="avatar-section">
+        <img :src="volunteerStore.avatar || defaultAvatar" class="avatar" alt="头像" />
       </div>
+
       <div class="info-list">
         <div class="info-item">
           <span class="label">姓名：</span>
-          <span class="value">{{ volunteerInfo.realName }}</span>
+          <span class="value">{{ volunteerStore.realName || '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">账号：</span>
-          <span class="value">{{ volunteerInfo.username }}</span>
+          <span class="value">{{ volunteerStore.username || '未绑定' }}</span>
         </div>
         <div class="info-item">
           <span class="label">手机号：</span>
-          <span class="value">{{ volunteerInfo.phone || '未绑定' }}</span>
+          <span class="value">{{ volunteerStore.phone || '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">性别：</span>
-          <span class="value">{{ volunteerInfo.gender }}</span>
+          <span class="value">{{ volunteerStore.gender === 0 ? '男' : volunteerStore.gender === 1 ? '女' : '未填写' }}</span>
         </div>
         <div class="info-item">
           <span class="label">年龄：</span>
-          <span class="value">{{ volunteerInfo.age }}</span>
+          <span class="value">{{ volunteerStore.age || '未填写' }} 岁</span>
         </div>
         <div class="info-item">
           <span class="label">居住地址：</span>
-          <span class="value">{{ volunteerInfo.address || '未填写' }}</span>
+          <span class="value">{{ volunteerStore.address || '未填写' }}</span>
         </div>
-
-        <!-- 可服务时间：按钮展示 -->
         <div class="info-item">
           <span class="label">可服务时间：</span>
-          <div class="days-display">
-            <span
-              v-for="day in weekDays"
-              :key="day"
-              class="day-tag"
-              :class="{ active: serviceDaysArr.includes(day) }"
-            >
-              {{ day }}
-            </span>
-          </div>
+          <span class="value">{{ volunteerStore.serviceDayText }}</span>
         </div>
-
         <div class="info-item">
           <span class="label">可服务业务：</span>
-          <span class="value">{{ volunteerInfo.serviceType }}</span>
+          <span class="value">{{ volunteerStore.serviceTypeText }}</span>
         </div>
         <div class="info-item">
-          <span class="label">服务状态：</span>
-          <span class="value">{{ volunteerInfo.status }}</span>
+          <span class="label">工作状态：</span>
+          <span class="value">{{ volunteerStore.workStatusText }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">累计服务时长：</span>
+          <span class="value">{{ volunteerStore.totalServiceHours || 0 }} 小时</span>
         </div>
         <div class="info-item">
           <span class="label">紧急联系人：</span>
-          <span class="value">{{ volunteerInfo.emergencyName || '未填写' }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">紧急联系电话：</span>
-          <span class="value">{{ volunteerInfo.emergencyPhone || '未填写' }}</span>
+          <span class="value">
+            {{ volunteerStore.emergencyName || '未填写' }} / {{ volunteerStore.emergencyPhone || '未填写' }}
+          </span>
         </div>
       </div>
-      <el-button type="primary" size="large" @click="goEditInfo">
-        修改信息
-      </el-button>
+
+      <div class="action-section">
+        <el-button type="primary" size="large" @click="goEdit">
+          修改信息
+        </el-button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { getVolunteerInfo } from '@/api/volunteer'
+import { useVolunteerStore } from '@/stores/volunteer'
 
 const router = useRouter()
-const volunteerInfo = ref({
-  realName: '',
-  username: '',
-  phone: '',
-  avatar: '',
-  serviceDays: '', // 后端返回字符串（如"周一,周三"）
-  serviceType: '',
-  status: '正常服务中',
-  gender: '',
-  age: 0,
-  address: '',
-  emergencyName: '',
-  emergencyPhone: ''
+const volunteerStore = useVolunteerStore()
+
+// 静态资源
+const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+
+// 跳转修改页
+const goEdit = () => router.push('/volunteer/info/edit')
+
+onMounted(() => {
+  // 从Store获取志愿者信息
+  volunteerStore.fetchVolunteerInfo()
 })
-
-// 星期列表（和编辑页一致）
-const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-
-// 字符串转数组，用于按钮高亮判断
-const serviceDaysArr = computed(() => {
-  return volunteerInfo.value.serviceDays?.split(',') || []
-})
-
-onMounted(async () => {
-  try {
-    const res = await getVolunteerInfo()
-    if (res.code === 200) {
-      volunteerInfo.value = {
-        ...volunteerInfo.value,
-        ...res.data
-      }
-    }
-  } catch {
-    ElMessage.error('加载信息失败')
-  }
-})
-
-const goEditInfo = () => {
-  router.push('/volunteer/info/edit')
-}
 </script>
 
 <style scoped>
-.info-container {
+.info-page {
   max-width: 700px;
   margin: 0 auto;
+  padding: 20px 0;
 }
+
 .page-title {
   font-size: 28px;
   font-weight: bold;
   color: #333;
-  margin-bottom: 24px;
+  margin: 0 0 30px 0;
+  text-align: center;
 }
+
 .info-card {
   background: #fff;
   border-radius: 16px;
-  padding: 32px;
+  padding: 40px;
   box-shadow: 0 4px 12px rgba(0, 184, 153, 0.08);
-  display: flex;
-  align-items: center;
-  gap: 32px;
 }
-.avatar-box .avatar {
-  width: 100px;
-  height: 100px;
+
+.avatar-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.avatar {
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
+  border: 3px solid #00b899;
 }
+
 .info-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  flex: 1;
-}
-.info-item .label {
-  font-size: 18px;
-  color: #666;
-  width: 130px;
-  display: inline-block;
-  vertical-align: top;
-}
-.info-item .value {
-  font-size: 18px;
-  color: #333;
+  gap: 20px;
+  margin-bottom: 40px;
 }
 
-/* 可服务时间按钮样式（和编辑页统一） */
-.days-display {
+.info-item {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  display: inline-block;
+  align-items: flex-start;
 }
-.day-tag {
-  display: inline-block;
-  padding: 4px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
-  font-size: 14px;
-  margin-right: 6px;
+
+.label {
+  font-size: 18px;
+  color: #666;
+  width: 120px;
+  flex-shrink: 0;
 }
-.day-tag.active {
-  background-color: #00b899;
-  color: #fff;
-  border-color: #00b899;
+
+.value {
+  font-size: 18px;
+  color: #333;
+  word-break: break-all;
+}
+
+.action-section {
+  text-align: center;
 }
 </style>

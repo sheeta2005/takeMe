@@ -2,13 +2,12 @@
   <div class="leave-container">
     <h2 class="page-title">出勤请假</h2>
     <div class="content-wrapper">
-      <!-- 左侧：本月日历 -->
       <div class="calendar-card">
         <h3 class="card-title">本月工作日历</h3>
         <div class="calendar-header">
-          <el-button size="small" icon="el-icon-arrow-left" @click="prevMonth"></el-button>
+          <el-button size="small" @click="prevMonth">◀</el-button>
           <span class="month-text">{{ currentMonth }}</span>
-          <el-button size="small" icon="el-icon-arrow-right" @click="nextMonth"></el-button>
+          <el-button size="small" @click="nextMonth">▶</el-button>
         </div>
         <div class="calendar-weekdays">
           <span v-for="day in weekdays" :key="day">{{ day }}</span>
@@ -27,17 +26,20 @@
             {{ date.day }}
           </div>
         </div>
+        <div class="workday-tip">
+          <span class="tip-label">工作日：</span>
+          <el-tag v-for="day in workDaysText" :key="day" type="success" size="small" style="margin: 2px;">{{ day }}</el-tag>
+        </div>
       </div>
 
-      <!-- 右侧：表单 + 记录 -->
       <div class="right-content">
         <div class="form-card">
           <h3 class="card-title">提交请假申请</h3>
           <el-form :model="leaveForm" label-width="100px">
             <el-form-item label="请假类型">
               <el-select v-model="leaveForm.type" placeholder="请选择">
-                <el-option label="事假" value="事假" />
-                <el-option label="病假" value="病假" />
+                <el-option label="事假" :value="0" />
+                <el-option label="病假" :value="1" />
               </el-select>
             </el-form-item>
             <el-form-item label="请假时间">
@@ -47,6 +49,8 @@
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                :default-time="[new Date(2000, 1, 1, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59)]"
               />
             </el-form-item>
             <el-form-item label="请假原因">
@@ -58,7 +62,7 @@
               />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" @click="submitLeave">提交申请</el-button>
+              <el-button type="primary" @click="submitLeaveForm">提交申请</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -66,10 +70,13 @@
         <div class="record-card">
           <h3 class="card-title">请假记录</h3>
           <div class="leave-list">
+            <el-empty v-if="leaveList.length === 0" description="暂无请假记录" />
             <div class="leave-item" v-for="item in leaveList" :key="item.id">
-              <span class="type">{{ item.type }}</span>
-              <span class="time">{{ item.time }}</span>
-              <el-tag :type="getTagType(item.status)" size="small">{{ item.status }}</el-tag>
+              <span class="type">{{ item.type === 0 ? '事假' : '病假' }}</span>
+              <span class="time">{{ item.startTime }} 至 {{ item.endTime }}</span>
+              <el-tag :type="getTagType(item.status)" size="small">
+                {{ item.status === 0 ? '待审核' : item.status === 1 ? '已通过' : '已拒绝' }}
+              </el-tag>
             </div>
           </div>
         </div>
@@ -81,53 +88,37 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-
-// 👉 替换成你的 Pinia
 import { useVolunteerStore } from '@/stores/volunteer'
+import { submitLeave, getLeaveList } from '@/api/volunteer'
 
-// =========== 后端接口（先注释） ===========
-// import { submitLeaveApi, getLeaveListApi } from '@/api/volunteer'
-
-// 👉 使用 Pinia
 const volunteerStore = useVolunteerStore()
 
-// 请假表单
 const leaveForm = ref({
-  type: '' as '事假' | '病假',
+  type: undefined as number | undefined,
   time: [] as string[],
   reason: ''
 })
 
-// 请假记录类型
-interface LeaveRecord {
-  id: number
-  type: '事假' | '病假'
-  time: string
-  status: '已通过' | '待审核' | '已拒绝'
-}
+const leaveList = ref<any[]>([])
 
-// 请假记录
-const leaveList = ref<LeaveRecord[]>([
-  { id: 1, type: '事假', time: '2026-05-25 至 2026-05-26', status: '已通过' }
-])
-
-// 日历相关
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const currentDate = new Date()
 const currentYear = ref(currentDate.getFullYear())
 const currentMonthIndex = ref(currentDate.getMonth())
 
-// 👉 从 PINIA 获取工作周几（自动解析 serviceDays）
-const userWorkDays = computed(() => {
-  return volunteerStore.workDays || []
+const workDaysArray = computed(() => {
+  return volunteerStore.workDaysArray
 })
 
-// 月份文本
+const workDaysText = computed(() => {
+  const dayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  return workDaysArray.value.map(d => dayMap[d])
+})
+
 const currentMonth = computed(() => {
   return `${currentYear.value}年${currentMonthIndex.value + 1}月`
 })
 
-// 生成日历日期（含是否工作日）
 const calendarDays = computed(() => {
   const year = currentYear.value
   const month = currentMonthIndex.value
@@ -140,7 +131,6 @@ const calendarDays = computed(() => {
   const prevMonth = new Date(year, month, 0)
   const prevMonthDays = prevMonth.getDate()
 
-  // 上个月末尾补全
   for (let i = startDay - 1; i >= 0; i--) {
     result.push({
       day: prevMonthDays - i,
@@ -150,12 +140,11 @@ const calendarDays = computed(() => {
     })
   }
 
-  // 当前月日期
   const today = new Date()
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month, day)
-    const dayOfWeek = weekdays[date.getDay()]
-    const isWorkDay = userWorkDays.value.includes(dayOfWeek)
+    const dayOfWeek = date.getDay()
+    const isWorkDay = workDaysArray.value.includes(dayOfWeek)
     const isToday = date.toDateString() === today.toDateString()
     result.push({
       day,
@@ -165,7 +154,6 @@ const calendarDays = computed(() => {
     })
   }
 
-  // 下个月开头补全
   const totalCells = 42
   const nextMonthStart = 1
   for (let i = result.length; i < totalCells; i++) {
@@ -180,7 +168,6 @@ const calendarDays = computed(() => {
   return result
 })
 
-// 上/下一月
 const prevMonth = () => {
   if (currentMonthIndex.value === 0) {
     currentMonthIndex.value = 11
@@ -189,6 +176,7 @@ const prevMonth = () => {
     currentMonthIndex.value--
   }
 }
+
 const nextMonth = () => {
   if (currentMonthIndex.value === 11) {
     currentMonthIndex.value = 0
@@ -198,52 +186,46 @@ const nextMonth = () => {
   }
 }
 
-// 请假记录状态标签
-const getTagType = (status: string) => {
-  if (status === '已通过') return 'success'
-  if (status === '待审核') return 'warning'
+const getTagType = (status: number) => {
+  if (status === 1) return 'success'
+  if (status === 0) return 'warning'
   return 'info'
 }
 
-// 提交请假申请
-const submitLeave = async () => {
-  if (!leaveForm.value.type || !leaveForm.value.time.length) {
+const submitLeaveForm = async () => {
+  if (!leaveForm.value.type || !leaveForm.value.time.length || !leaveForm.value.reason) {
     ElMessage.warning('请完善请假信息')
     return
   }
 
-  // =========== 后端联调时打开 ===========
-  // try {
-  //   await submitLeaveApi({
-  //     type: leaveForm.value.type,
-  //     startDate: leaveForm.value.time[0],
-  //     endDate: leaveForm.value.time[1],
-  //     reason: leaveForm.value.reason
-  //   })
-  //   ElMessage.success('请假申请已提交')
-  //   fetchLeaveList()
-  // } catch {
-  //   ElMessage.error('提交失败，请重试')
-  // }
-
-  // 模拟提交
-  ElMessage.success('请假申请已提交（模拟）')
-  leaveForm.value = { type: '' as '事假' | '病假', time: [], reason: '' }
+  try {
+    await submitLeave({
+      type: leaveForm.value.type,
+      startTime: leaveForm.value.time[0],
+      endTime: leaveForm.value.time[1],
+      reason: leaveForm.value.reason
+    })
+    ElMessage.success('请假申请已提交')
+    leaveForm.value = { type: undefined, time: [], reason: '' }
+    await loadLeaveList()
+  } catch {
+    ElMessage.error('提交失败，请重试')
+  }
 }
 
-// 获取请假记录（后端接口）
-const fetchLeaveList = async () => {
-  // =========== 后端联调时打开 ===========
-  // try {
-  //   const res = await getLeaveListApi()
-  //   leaveList.value = res.data
-  // } catch {
-  //   ElMessage.error('加载记录失败')
-  // }
+const loadLeaveList = async () => {
+  try {
+    const res = await getLeaveList()
+    if (res.code === 200) {
+      leaveList.value = res.data || []
+    }
+  } catch {
+    ElMessage.error('加载记录失败')
+  }
 }
 
 onMounted(() => {
-  fetchLeaveList()
+  loadLeaveList()
 })
 </script>
 
@@ -263,13 +245,12 @@ onMounted(() => {
   gap: 24px;
 }
 
-/* 左侧日历卡片 */
 .calendar-card {
   background: #fff;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 184, 153, 0.08);
-  width: 300px;
+  width: 320px;
 }
 .calendar-header {
   display: flex;
@@ -288,14 +269,15 @@ onMounted(() => {
   margin-bottom: 8px;
   text-align: center;
   color: #666;
+  font-size: 14px;
 }
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 .calendar-day {
-  padding: 8px;
+  padding: 8px 4px;
   text-align: center;
   border-radius: 4px;
   font-size: 14px;
@@ -307,13 +289,26 @@ onMounted(() => {
 .calendar-day.workday {
   background-color: #00b899;
   color: #fff;
-}
-.calendar-day.today {
-  border: 1px solid #00b899;
   font-weight: bold;
 }
+.calendar-day.today {
+  border: 2px solid #006d5c;
+  font-weight: bold;
+}
+.workday-tip {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tip-label {
+  font-size: 14px;
+  color: #666;
+}
 
-/* 右侧内容 */
 .right-content {
   flex: 1;
   display: flex;

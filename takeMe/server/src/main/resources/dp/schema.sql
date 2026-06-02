@@ -170,14 +170,15 @@ CREATE TABLE `order`
 DROP TABLE IF EXISTS order_item;
 CREATE TABLE order_item
 (
-    id            INT PRIMARY KEY AUTO_INCREMENT COMMENT '订单项ID',
-    order_id      INT          NOT NULL COMMENT '所属订单ID',
-    product_id    INT          NOT NULL COMMENT '服务套餐ID',
-    product_name  VARCHAR(100) NOT NULL COMMENT '服务名称',
-    product_price INT          NOT NULL COMMENT '购买时价格',
-    quantity      INT          NOT NULL COMMENT '数量',
-    item_price    INT          NOT NULL COMMENT '小计金额',
-    create_time   DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    id             INT PRIMARY KEY AUTO_INCREMENT COMMENT '订单项ID',
+    order_id       INT          NOT NULL COMMENT '所属订单ID',
+    service_id     INT          NOT NULL COMMENT '服务套餐ID',
+    service_name   VARCHAR(100) NOT NULL COMMENT '服务名称',
+    service_price  INT          NOT NULL COMMENT '购买时价格',
+    quantity       INT          NOT NULL COMMENT '数量',
+    item_price     INT          NOT NULL COMMENT '小计金额',
+    service_type   TINYINT      NULL COMMENT '服务类型：0代购 1助洁 2助餐 3助医 4陪伴',
+    create_time    DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     INDEX idx_order_id (order_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='订单项表';

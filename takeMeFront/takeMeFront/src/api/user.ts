@@ -123,7 +123,7 @@ export function userRegister(data: {
  * @param params 筛选参数（页码、类型、已读状态）
  */
 export function getUserMessages(params: {
-  page?: number
+  pageNum?: number
   pageSize?: number
   type?: number
   isRead?: number

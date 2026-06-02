@@ -1,54 +1,165 @@
 <template>
-  <div class="todo-container">
-    <h2 class="page-title">我的待办任务</h2>
-
-    <!-- 有进行中的订单 → 只显示这一个 -->
-    <div v-if="currentOrder" class="order-list">
-      <div class="order-card">
-        <div class="order-header">
-          <span class="order-id">订单号：{{ currentOrder.id }}</span>
-          <el-tag type="primary" size="large">服务中</el-tag>
-        </div>
-        <div class="order-body">
-          <div class="order-info">
-            <div class="service-type">{{ currentOrder.serviceType }}</div>
-            <div class="service-time">服务时间：{{ currentOrder.serviceTime }}</div>
-            <div class="address">服务地址：{{ currentOrder.address }}</div>
-          </div>
-        </div>
-        <div class="order-footer">
-          <el-button type="success" size="large" @click="goToOrderDetail">
-            查看订单详情
-          </el-button>
-          <el-button type="danger" size="large" @click="giveUpOrder">
-            放弃订单
-          </el-button>
-        </div>
-      </div>
+  <div class="page-container">
+    <div class="page-header">
+      <h2 class="page-title">我的待办</h2>
+      <p class="page-subtitle">管理您的服务订单</p>
     </div>
 
-    <!-- 无进行中订单 → 显示3个待接单（三选一） -->
-    <div v-else class="order-list">
-      <div class="order-card" v-for="order in availableOrders" :key="order.id">
-        <div class="order-header">
-          <span class="order-id">订单号：{{ order.id }}</span>
-          <el-tag type="warning" size="large">待确认</el-tag>
+    <el-skeleton :rows="3" animated v-if="loading" />
+
+    <template v-else>
+      <el-empty v-if="!currentOrder && availableOrders.length === 0" description="暂无待办任务" :image-size="200">
+        <el-button type="primary" @click="refreshData">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+      </el-empty>
+
+      <template v-else>
+        <el-alert
+          v-if="currentOrder"
+          title="您有一个进行中的订单，请先完成该订单"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="notice-alert"
+        />
+
+        <div v-if="currentOrder" class="current-order-section">
+          <h3 class="section-title">
+            <el-icon><Clock /></el-icon>
+            进行中的订单
+          </h3>
+          <el-card class="order-card current-order-card" shadow="hover">
+            <div class="order-card-header">
+              <div class="order-info">
+                <span class="order-label">订单编号</span>
+                <span class="order-no">{{ currentOrder.orderNo }}</span>
+              </div>
+              <el-tag type="primary" size="large" effect="dark">
+                <el-icon><Loading /></el-icon>
+                服务中
+              </el-tag>
+            </div>
+
+            <el-divider />
+
+            <div class="order-card-body">
+              <el-descriptions :column="1" border>
+                <el-descriptions-item label="服务类型">
+                  <el-tag :type="getServiceTypeTag(currentOrder.serviceType)">
+                    {{ getServiceTypeName(currentOrder.serviceType) }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="服务时间">
+                  <div class="time-info">
+                    <el-icon><Calendar /></el-icon>
+                    <span>{{ currentOrder.serviceDate }} {{ currentOrder.serviceTime }}</span>
+                  </div>
+                </el-descriptions-item>
+                <el-descriptions-item label="服务地址">
+                  <div class="address-info">
+                    <el-icon><Location /></el-icon>
+                    <span>{{ currentOrder.address }}</span>
+                  </div>
+                </el-descriptions-item>
+                <el-descriptions-item label="备注" v-if="currentOrder.remark">
+                  <el-alert :title="currentOrder.remark" type="info" :closable="false" show-icon />
+                </el-descriptions-item>
+              </el-descriptions>
+            </div>
+
+            <div class="order-card-footer">
+              <div class="price-info">
+                <span class="price-label">订单金额：</span>
+                <span class="price-value">¥{{ currentOrder.totalPrice }}</span>
+              </div>
+              <div class="action-buttons">
+                <el-button type="primary" size="large" @click="goToOrderDetail(currentOrder.id)">
+                  <el-icon><View /></el-icon>
+                  查看详情
+                </el-button>
+                <el-button type="success" size="large" @click="completeOrder(currentOrder)">
+                  <el-icon><CircleCheck /></el-icon>
+                  完成服务
+                </el-button>
+                <el-button type="danger" size="large" @click="abandonOrder(currentOrder)">
+                  <el-icon><CloseBold /></el-icon>
+                  放弃订单
+                </el-button>
+              </div>
+            </div>
+          </el-card>
         </div>
-        <div class="order-body">
-          <div class="order-info">
-            <div class="service-type">{{ order.serviceType }}</div>
-            <div class="service-time">服务时间：{{ order.serviceTime }}</div>
-            <div class="address">服务地址：{{ order.address }}</div>
+
+        <div v-if="availableOrders.length > 0" class="available-orders-section">
+          <h3 class="section-title">
+            <el-icon><List /></el-icon>
+            待接单任务
+            <el-badge :value="availableOrders.length" :max="99" class="badge" />
+          </h3>
+          <div class="order-grid">
+            <el-card
+              v-for="order in availableOrders"
+              :key="order.id"
+              class="order-card available-order-card"
+              shadow="hover"
+            >
+              <div class="order-card-header">
+                <div class="order-info">
+                  <span class="order-label">订单编号</span>
+                  <span class="order-no">{{ order.orderNo }}</span>
+                </div>
+                <el-tag type="warning" size="large">
+                  <el-icon><Bell /></el-icon>
+                  待确认
+                </el-tag>
+              </div>
+
+              <el-divider />
+
+              <div class="order-card-body">
+                <div class="info-item">
+                  <el-icon class="info-icon"><Ticket /></el-icon>
+                  <span class="info-label">服务类型：</span>
+                  <el-tag :type="getServiceTypeTag(order.serviceType)" size="small">
+                    {{ getServiceTypeName(order.serviceType) }}
+                  </el-tag>
+                </div>
+                <div class="info-item">
+                  <el-icon class="info-icon"><Calendar /></el-icon>
+                  <span class="info-label">服务时间：</span>
+                  <span class="info-value">{{ order.serviceDate }} {{ order.serviceTime }}</span>
+                </div>
+                <div class="info-item">
+                  <el-icon class="info-icon"><Location /></el-icon>
+                  <span class="info-label">服务地址：</span>
+                  <span class="info-value">{{ order.address }}</span>
+                </div>
+                <div class="info-item" v-if="order.remark">
+                  <el-icon class="info-icon"><Document /></el-icon>
+                  <span class="info-label">备注：</span>
+                  <span class="info-value">{{ order.remark }}</span>
+                </div>
+              </div>
+
+              <div class="order-card-footer">
+                <div class="price-info">
+                  <span class="price-label">订单金额：</span>
+                  <span class="price-value">¥{{ order.totalPrice }}</span>
+                </div>
+                <div class="action-buttons">
+                  <el-button type="primary" size="large" @click="confirmOrder(order)">
+                    <el-icon><Check /></el-icon>
+                    确认接单
+                  </el-button>
+                </div>
+              </div>
+            </el-card>
           </div>
         </div>
-        <div class="order-footer">
-          <el-button type="primary" size="large" @click="confirmTask(order)">
-            确认接单
-          </el-button>
-        </div>
-      </div>
-      <div class="empty-tip" v-if="availableOrders.length === 0">暂无待接单任务</div>
-    </div>
+      </template>
+    </template>
   </div>
 </template>
 
@@ -56,62 +167,128 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-// import { confirmOrder, giveUpOrder } from '@/api/volunteer' // 后端接口，先注释
+import {
+  Refresh, Clock, Loading, Calendar, Location, Document, View,
+  CircleCheck, CloseBold, List, Bell, Ticket, Check
+} from '@element-plus/icons-vue'
+import {
+  getVolunteerOrderList,
+  confirmOrder as apiConfirmOrder,
+  completeOrder as apiCompleteOrder,
+  abandonOrder as apiAbandonOrder
+} from '@/api/volunteer'
 
 const router = useRouter()
 
-// 模拟3个订单（三选一）
-const todoList = ref<any[]>([
-  { id: 'ORD20260520001', serviceType: '助餐服务-营养套餐A', status: '待确认', serviceTime: '2026-05-21 11:30', address: '西安市雁塔区科技二路66号' },
-  { id: 'ORD20260520002', serviceType: '助洁服务-日常保洁', status: '待确认', serviceTime: '2026-05-21 14:00', address: '西安市高新区锦业路1号' },
-  { id: 'ORD20260520003', serviceType: '陪医服务-陪同就诊', status: '待确认', serviceTime: '2026-05-22 09:00', address: '西安市未央区凤城八路' }
-])
+const loading = ref(true)
+const orderList = ref<any[]>([])
 
-// 当前正在服务的订单（只能有一个）
-const currentOrder = ref<any>(null)
+const currentOrder = computed(() => {
+  return orderList.value.find(o => o.status === 2) || null
+})
 
-// 可选择的订单（未接单时显示）
 const availableOrders = computed(() => {
-  return todoList.value.filter(o => o.status === '待确认')
+  return orderList.value.filter(o => o.status === 1).slice(0, 3)
 })
 
-// 从 localStorage 恢复状态（刷新页面也不丢）
-onMounted(() => {
-  const saved = localStorage.getItem('currentOrder')
-  if (saved) {
-    const parsed = JSON.parse(saved)
-    currentOrder.value = parsed
-  }
-})
-
-// 确认接单（三选一，其他隐藏，跳转详情）
-const confirmTask = async (order: any) => {
-  // ===== 后端联调（上线打开注释）=====
-  // try {
-  //   await confirmOrder(order.id)
-  // } catch (e) {
-  //   ElMessage.error('接单失败')
-  //   return
-  // }
-
-  // 纯前端模拟
-  ElMessage.success(`已接单：${order.id}`)
-
-  // 标记当前订单为服务中
-  const newOrder = { ...order, status: '服务中' }
-  currentOrder.value = newOrder
-  localStorage.setItem('currentOrder', JSON.stringify(newOrder))
-
-  // 跳转到订单详情页
-  router.push(`/volunteer/order/${order.id}`)
+const serviceTypeMap: Record<number, string> = {
+  0: '代购服务',
+  1: '助洁服务',
+  2: '助餐服务',
+  3: '助医服务',
+  4: '陪伴服务'
 }
 
-// 放弃订单（扣分+恢复状态）
-const giveUpOrder = async () => {
+const serviceTypeTagMap: Record<number, string> = {
+  0: 'info',
+  1: 'primary',
+  2: 'success',
+  3: 'warning',
+  4: 'danger'
+}
+
+const getServiceTypeName = (type: number) => {
+  return serviceTypeMap[type] || '未知'
+}
+
+const getServiceTypeTag = (type: number) => {
+  return serviceTypeTagMap[type] || 'info'
+}
+
+const loadOrders = async () => {
+  loading.value = true
+  try {
+    const res = await getVolunteerOrderList({
+      page: 1,
+      pageSize: 20
+    })
+    if (res.code === 200) {
+      orderList.value = res.data?.records || []
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载订单列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const refreshData = () => {
+  loadOrders()
+}
+
+const goToOrderDetail = (orderId: number) => {
+  router.push(`/volunteer/order/${orderId}`)
+}
+
+const confirmOrder = async (order: any) => {
   try {
     await ElMessageBox.confirm(
-      '放弃订单会扣除信用分，确定放弃吗？',
-      '警告',
+      `确认接取订单 ${order.orderNo}？接单后请及时完成服务。`,
+      '确认接单',
+      {
+        confirmButtonText: '确认接单',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    await apiConfirmOrder(order.id)
+    ElMessage.success('接单成功')
+    await loadOrders()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '接单失败')
+    }
+  }
+}
+
+const completeOrder = async (order: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认已完成订单 ${order.orderNo} 的服务？完成后将获得相应积分。`,
+      '完成服务',
+      {
+        confirmButtonText: '确认完成',
+        cancelButtonText: '取消',
+        type: 'success'
+      }
+    )
+
+    await apiCompleteOrder(order.id)
+    ElMessage.success('订单已完成，积分已发放')
+    await loadOrders()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '完成订单失败')
+    }
+  }
+}
+
+const abandonOrder = async (order: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要放弃订单 ${order.orderNo} 吗？放弃订单可能会影响您的信用评分。`,
+      '放弃订单',
       {
         confirmButtonText: '确定放弃',
         cancelButtonText: '取消',
@@ -119,70 +296,182 @@ const giveUpOrder = async () => {
       }
     )
 
-    // ===== 后端联调（上线打开注释）=====
-    // try {
-    //   await giveUpOrder(currentOrder.value.id)
-    // } catch (e) {
-    //   ElMessage.error('放弃订单失败')
-    //   return
-    // }
-
-    // 纯前端模拟：恢复为待确认订单
-    const orderId = currentOrder.value.id
-    todoList.value = todoList.value.map(o => {
-      if (o.id === orderId) {
-        return { ...o, status: '待确认' }
-      }
-      return o
-    })
-
-    // 清空当前订单
-    currentOrder.value = null
-    localStorage.removeItem('currentOrder')
-
-    ElMessage.warning('订单已放弃，已扣除信用分')
-  } catch {
-    // 用户取消操作，不处理
+    await apiAbandonOrder(order.id)
+    ElMessage.warning('订单已放弃')
+    await loadOrders()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '放弃订单失败')
+    }
   }
 }
 
-// 去订单详情页
-const goToOrderDetail = () => {
-  router.push(`/volunteer/order/${currentOrder.value.id}`)
-}
+onMounted(() => {
+  loadOrders()
+})
 </script>
 
 <style scoped>
-.todo-container {
-  max-width: 900px;
+.page-container {
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 24px 0;
 }
+
+.page-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
 .page-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: bold;
   color: #333;
+  margin: 0 0 8px 0;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.notice-alert {
   margin-bottom: 24px;
+  border-radius: 8px;
 }
-.order-list {
+
+.current-order-section,
+.available-orders-section {
+  margin-bottom: 40px;
+}
+
+.section-title {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
 }
+
+.badge {
+  margin-left: 8px;
+}
+
+.order-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+}
+
 .order-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 184, 153, 0.08);
+  border-radius: 12px;
+  transition: all 0.3s ease;
 }
-.order-header {
+
+.order-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 184, 153, 0.15);
+}
+
+.current-order-card {
+  border: 2px solid #00b899;
+}
+
+.order-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
 }
-.order-id { font-size: 18px; color: #666; }
-.order-info .service-type { font-size: 20px; font-weight: 600; color: #006d5c; margin-bottom: 8px; }
-.order-info .service-time, .order-info .address { font-size: 16px; color: #999; margin-bottom: 4px; }
-.order-footer { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
-.empty-tip { text-align: center; font-size: 20px; color: #999; padding: 60px 0; }
+
+.order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.order-no {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  font-family: 'Courier New', monospace;
+}
+
+.order-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-icon {
+  color: #00b899;
+  font-size: 18px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #666;
+  min-width: 80px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #333;
+}
+
+.time-info,
+.address-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-info .el-icon,
+.address-info .el-icon {
+  color: #00b899;
+}
+
+.order-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.price-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.price-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #f5222d;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
 </style>

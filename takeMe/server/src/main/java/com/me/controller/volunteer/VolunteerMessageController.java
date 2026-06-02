@@ -1,4 +1,4 @@
-package com.me.controller.user;
+package com.me.controller.volunteer;
 
 import com.me.context.BaseContext;
 import com.me.dto.PageQueryDTO;
@@ -10,9 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/user/message")
+@RequestMapping("/api/volunteer/message")
 @RequiredArgsConstructor
-public class MessageController {
+public class VolunteerMessageController {
 
     private final MessageService messageService;
 
