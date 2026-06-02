@@ -3,6 +3,7 @@ package com.me.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.LoginDTO;
+import com.me.dto.UserRegisterDTO;
 import com.me.entity.User;
 import com.me.mapper.UserMapper;
 import com.me.service.UserService;
@@ -21,20 +22,51 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
 
     @Override
     public User login(LoginDTO loginDTO) {
-        // 1. 根据账号查询普通用户
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getUsername, loginDTO.getUsername());
         User user = this.getOne(queryWrapper);
 
-        // 2. 账号不存在、密码错误或账号禁用，返回null
         if (user == null
                 || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())
-                || user.getStatus() != 1) { // status=1表示正常，0表示禁用
+                || user.getStatus() != 1) {
             return null;
         }
 
-        // 3. 登录成功，返回用户信息
         return user;
+    }
+    
+    @Override
+    public boolean register(UserRegisterDTO registerDTO) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getUsername, registerDTO.getUsername());
+        Long count = this.count(wrapper);
+        if (count > 0) {
+            return false;
+        }
+        
+        User user = new User();
+        user.setUsername(registerDTO.getUsername());
+        user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
+        user.setRealName(registerDTO.getRealName());
+        user.setPhone(registerDTO.getPhone());
+        user.setStatus(1);
+        
+        return this.save(user);
+    }
+    
+    @Override
+    public boolean updatePassword(Long userId, String oldPassword, String newPassword) {
+        User user = this.getById(userId);
+        if (user == null) {
+            return false;
+        }
+        
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return false;
+        }
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        return this.updateById(user);
     }
     
     @Override

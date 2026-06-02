@@ -2,7 +2,7 @@
   <div class="info-page">
     <h2 class="page-title">个人信息</h2>
 
-    <div class="info-card">
+    <div class="info-card" v-loading="loading">
       <div class="avatar-section">
         <img :src="userStore.avatar || defaultAvatar" class="avatar" alt="头像" />
       </div>
@@ -14,7 +14,7 @@
         </div>
         <div class="info-item">
           <span class="label">账号：</span>
-          <span class="value">{{ userStore.account || '未绑定' }}</span>
+          <span class="value">{{ userStore.username || '未绑定' }}</span>
         </div>
         <div class="info-item">
           <span class="label">手机号：</span>
@@ -58,35 +58,36 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+const loading = ref(false)
 
-// 静态资源
 const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
-// 地址列表
 const addressList = ref<any[]>([])
 
-// 计算默认地址
 const defaultAddress = computed(() => {
   const addr = addressList.value.find(item => item.isDefault === 1)
   return addr?.address || '未填写'
 })
 
-// 加载地址列表
 const loadAddress = async () => {
   try {
     const res = await getUserAddressList()
     if (res.code === 200) addressList.value = res.data
   } catch (e) {
+    console.error('获取地址失败:', e)
     ElMessage.error('获取地址失败')
   }
 }
 
-// 跳转修改页
 const goEdit = () => router.push('/user/info/edit')
 
-onMounted(() => {
-  // 从Store获取用户信息 + 接口获取地址
-  userStore.getUserInfo()
-  loadAddress()
+onMounted(async () => {
+  loading.value = true
+  try {
+    await userStore.getUserInfo()
+    await loadAddress()
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 

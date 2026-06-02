@@ -17,4 +17,8 @@ public class CartItemDTO {
     private Integer quantity;
     private Integer selected;
     private Integer serviceType;
+    private String serviceDate;
+    private String serviceTime;
+    private String address;
+    private String remark;
 }

@@ -5,6 +5,7 @@ import com.me.result.Result;
 import com.me.service.CartService;
 import com.me.utils.JwtUtil;
 import com.me.vo.CartItemVO;
+import com.me.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,6 @@ public class CartController {
     private final CartService cartService;
     private final JwtUtil jwtUtil;
 
-    // 获取购物车列表
     @GetMapping("/list")
     public Result<List<CartItemVO>> getCartList(@RequestHeader("Authorization") String authHeader) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
@@ -27,7 +27,6 @@ public class CartController {
         return Result.success(list);
     }
 
-    // 加入购物车
     @PostMapping("/add")
     public Result addToCart(
             @RequestHeader("Authorization") String authHeader,
@@ -42,40 +41,50 @@ public class CartController {
         }
     }
 
-    // 修改购物车商品数量
     @PostMapping("/update")
     public Result updateCartItem(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, Object> data
     ) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
-        Long productId = Long.valueOf(data.get("productId").toString());
+        Long cartItemId = Long.valueOf(data.get("cartItemId").toString());
         Integer quantity = Integer.valueOf(data.get("quantity").toString());
 
         try {
-            cartService.updateItemQuantity(userId, productId, quantity);
+            cartService.updateItemQuantity(userId, cartItemId, quantity);
             return Result.success();
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }
     }
 
-    // 删除购物车商品
     @PostMapping("/delete")
     public Result deleteCartItem(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam Long productId
+            @RequestBody Map<String, Object> data
     ) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
-        cartService.deleteItem(userId, productId);
+        Long cartItemId = Long.valueOf(data.get("cartItemId").toString());
+        cartService.deleteItem(userId, cartItemId);
         return Result.success();
     }
 
-    // 清空购物车
     @PostMapping("/clear")
     public Result clearCart(@RequestHeader("Authorization") String authHeader) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         cartService.clearCart(userId);
         return Result.success();
+    }
+
+    @PostMapping("/checkout")
+    public Result<OrderVO> checkout(@RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
+        
+        try {
+            OrderVO orderVO = cartService.checkout(userId);
+            return Result.success(orderVO);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
     }
 }

@@ -5,18 +5,22 @@
       <p>共 {{ cartStore.totalCount }} 件商品，总计 ¥{{ cartStore.totalPrice }}</p>
     </div>
 
-    <div class="cart-content" v-if="cartStore.items.length > 0">
+    <div class="cart-content" v-if="cartStore.items.length > 0" v-loading="loading">
       <div class="cart-list">
         <div class="cart-item" v-for="item in currentPageItems" :key="item.id">
           <div class="item-info">
             <div class="item-name">{{ item.serviceName }}</div>
             <div class="item-price">单价：¥{{ item.servicePrice }}</div>
+            <div class="item-detail" v-if="item.serviceDate || item.serviceTime">
+              <span v-if="item.serviceDate">服务日期：{{ item.serviceDate }}</span>
+              <span v-if="item.serviceTime" style="margin-left: 10px">服务时间：{{ item.serviceTime }}</span>
+            </div>
           </div>
 
           <div class="item-quantity">
-            <el-button size="large" @click="decreaseQuantity(item)">-</el-button>
+            <el-button size="large" @click="decreaseQuantity(item)" :disabled="item.quantity <= 1">-</el-button>
             <span class="quantity">{{ item.quantity }}</span>
-            <el-button size="large" @click="increaseQuantity(item)">+</el-button>
+            <el-button size="large" @click="increaseQuantity(item)" :disabled="item.serviceType !== 2">+</el-button>
           </div>
 
           <div class="item-subtotal">
@@ -50,7 +54,12 @@
         <div class="total-section">
           <span class="total-text">总计：</span>
           <span class="total-price">¥{{ cartStore.totalPrice }}</span>
-          <el-button type="primary" size="large" @click="goToCheckout">
+          <el-button
+            type="primary"
+            size="large"
+            @click="goToCheckout"
+            :disabled="cartStore.items.length === 0"
+          >
             去结算
           </el-button>
         </div>
@@ -96,7 +105,18 @@
               <span class="label">小计金额：</span>
               <span class="value price">¥{{ currentDetailItem.servicePrice * currentDetailItem.quantity }}</span>
             </div>
-
+            <div class="info-item full-width" v-if="currentDetailItem.serviceDate">
+              <span class="label">服务日期：</span>
+              <span class="value">{{ currentDetailItem.serviceDate }}</span>
+            </div>
+            <div class="info-item full-width" v-if="currentDetailItem.serviceTime">
+              <span class="label">服务时间：</span>
+              <span class="value">{{ currentDetailItem.serviceTime }}</span>
+            </div>
+            <div class="info-item full-width" v-if="currentDetailItem.address">
+              <span class="label">服务地址：</span>
+              <span class="value">{{ currentDetailItem.address }}</span>
+            </div>
             <div class="info-item full-width" v-if="currentDetailItem.remark">
               <span class="label">备注：</span>
               <span class="value">{{ currentDetailItem.remark }}</span>
@@ -113,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
@@ -121,6 +141,7 @@ import { ShoppingCart } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const loading = ref(false)
 
 const currentPage = ref(1)
 const pageSize = 5
@@ -134,8 +155,8 @@ const currentPageItems = computed(() => {
   return cartStore.items.slice(start, end)
 })
 
-const getServiceTypeName = (type) => {
-  const typeMap = {
+const getServiceTypeName = (type: number) => {
+  const typeMap: Record<number, string> = {
     0: '代购服务',
     1: '助洁服务',
     2: '助餐服务',
@@ -145,63 +166,101 @@ const getServiceTypeName = (type) => {
   return typeMap[type] || '未知服务'
 }
 
-const handlePageChange = (page) => {
+const handlePageChange = (page: number) => {
   currentPage.value = page
 }
 
-const decreaseQuantity = (item) => {
-  if (item.serviceType !== 2) {
-    ElMessage.info('这项服务只能预约1次')
+const decreaseQuantity = async (item: any) => {
+  if (item.quantity === 1) {
+    try {
+      await ElMessageBox.confirm('确定删除此服务？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      const success = await cartStore.removeItem(item.id)
+      if (success) {
+        ElMessage.success('已删除')
+        if (currentPageItems.value.length === 0 && currentPage.value > 1) {
+          currentPage.value--
+        }
+      }
+    } catch {
+    }
     return
   }
-  if (item.quantity > 1) {
-    cartStore.updateQuantity(item.id, item.quantity - 1)
-  }
-}
 
-const increaseQuantity = (item) => {
-  if (item.serviceType !== 2) {
+  if (item.serviceType === 2) {
+    await cartStore.updateQuantity(item.id, item.quantity - 1)
+  } else {
     ElMessage.info('这项服务只能预约1次')
-    return
   }
-  cartStore.updateQuantity(item.id, item.quantity + 1)
 }
 
-const removeItem = (itemId) => {
-  ElMessageBox.confirm('确定删除？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    cartStore.removeItem(itemId)
-    ElMessage.success('已删除')
-  }).catch(() => {})
+const increaseQuantity = async (item: any) => {
+  if (item.serviceType === 2) {
+    await cartStore.updateQuantity(item.id, item.quantity + 1)
+  } else {
+    ElMessage.info('这项服务只能预约1次')
+  }
 }
 
-const clearCart = () => {
-  ElMessageBox.confirm('确定清空？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    cartStore.clearCart()
+const removeItem = async (cartItemId: number) => {
+  try {
+    await ElMessageBox.confirm('确定删除？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    const success = await cartStore.removeItem(cartItemId)
+    if (success) {
+      ElMessage.success('已删除')
+      if (currentPageItems.value.length === 0 && currentPage.value > 1) {
+        currentPage.value--
+      }
+    }
+  } catch {
+  }
+}
+
+const clearCart = async () => {
+  try {
+    await ElMessageBox.confirm('确定清空？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await cartStore.clearCart()
     currentPage.value = 1
-    ElMessage.success('已清空')
-  }).catch(() => {})
+  } catch {
+  }
 }
 
-const viewItemDetail = (item) => {
+const viewItemDetail = (item: any) => {
   currentDetailItem.value = item
   detailVisible.value = true
 }
 
 const goToCheckout = () => {
-  router.push({ path: '/user/create', query: { fromCart: 'true' } })
+  if (cartStore.items.length === 0) {
+    ElMessage.warning('购物车为空')
+    return
+  }
+  router.push('/user/checkout')
 }
 
 const goToHome = () => {
   router.push('/user')
 }
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    await cartStore.fetchCartList()
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <style scoped>
@@ -250,6 +309,11 @@ const goToHome = () => {
 .item-price {
   font-size: 18px;
   color: #666;
+}
+.item-detail {
+  font-size: 14px;
+  color: #999;
+  margin-top: 8px;
 }
 .item-quantity {
   flex: 1;

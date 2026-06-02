@@ -6,9 +6,9 @@
       <div class="button-group">
         <el-button
           class="action-btn primary-btn"
-          @click="goFontSize"
+          @click="goPasswordChange"
         >
-          字体大小调节
+          修改密码
         </el-button>
 
         <el-button
@@ -33,13 +33,11 @@ const router = useRouter()
 const userStore = useUserStore()
 const isLoggingOut = ref(false)
 
-const goFontSize = () => {
-  ElMessage.info('字体调节功能开发中')
+const goPasswordChange = () => {
+  router.push('/user/password-change')
 }
 
-// ✅ 真实前后端联调版退出登录
 const handleLogout = async () => {
-  // 二次确认，防止误操作
   try {
     await ElMessageBox.confirm(
       '确定要退出当前账号吗？',
@@ -51,27 +49,19 @@ const handleLogout = async () => {
       }
     )
   } catch {
-    // 用户点击取消，直接返回
     return
   }
 
   isLoggingOut.value = true
 
   try {
-    // 1. 先调用后端退出接口（此时token还在，能正常访问）
     await userStore.logout()
-
-    // 2. 提示成功
     ElMessage.success('已安全退出登录')
-
-    // 3. 强制跳转到登录页，清除历史记录
     await router.replace('/login')
   } catch (err) {
-    // 即使后端接口失败，也要强制清本地状态并跳转
     console.error('退出登录接口异常:', err)
     ElMessage.warning('网络异常，已本地退出')
 
-    // 强制清状态
     userStore.$reset()
     localStorage.removeItem('token')
     localStorage.removeItem('userId')

@@ -14,7 +14,7 @@
       </el-form-item>
 
       <el-form-item label="账号">
-        <el-input v-model="form.account" disabled class="input-large" />
+        <el-input v-model="form.username" disabled class="input-large" />
       </el-form-item>
 
       <el-form-item label="手机号" prop="phone">
@@ -32,7 +32,6 @@
         </el-radio-group>
       </el-form-item>
 
-      <!-- 地址管理 -->
       <el-form-item label="常用地址">
         <div class="address-list">
           <div v-for="(addr, idx) in form.addresses" :key="addr.id || idx" class="address-item">
@@ -52,7 +51,6 @@
         <el-input v-model="form.emergencyPhone" placeholder="电话" class="input-large" />
       </el-form-item>
 
-      <!-- 头像上传 -->
       <el-form-item label="头像">
         <el-upload
           class="avatar-upload"
@@ -81,7 +79,6 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-// 导入API
 import {
   getUserAddressList,
   addUserAddress,
@@ -95,10 +92,9 @@ const userStore = useUserStore()
 const formRef = ref<any>(null)
 const isSubmitting = ref(false)
 
-// 表单数据
 const form = ref({
   realName: '',
-  account: '',
+  username: '',
   phone: '',
   age: null as number | null,
   gender: 0,
@@ -108,7 +104,6 @@ const form = ref({
   addresses: [] as any[]
 })
 
-// 校验规则
 const rules = {
   realName: [
     { required: true, message: '请输入姓名', trigger: 'blur' },
@@ -123,24 +118,28 @@ const rules = {
   ]
 }
 
-// 地址操作
 const addAddress = () => {
   if (form.value.addresses.length < 3) {
     form.value.addresses.push({ id: null, address: '', isDefault: 0 })
   }
 }
+
 const removeAddress = async (index: number, addr: any) => {
-  if (addr.id) await deleteUserAddress(addr.id)
-  form.value.addresses.splice(index, 1)
+  try {
+    if (addr.id) {
+      await deleteUserAddress(addr.id)
+    }
+    form.value.addresses.splice(index, 1)
+  } catch (e) {
+    ElMessage.error('删除失败')
+  }
 }
 
-// 初始化数据（Store + API）
 const initForm = async () => {
   await userStore.getUserInfo()
-  // 从Store赋值基础信息
   form.value = {
     realName: userStore.realName || '',
-    account: userStore.account || '',
+    username: userStore.username || '',
     phone: userStore.phone || '',
     age: userStore.age,
     gender: userStore.gender ?? 0,
@@ -149,48 +148,49 @@ const initForm = async () => {
     avatar: userStore.avatar || '',
     addresses: []
   }
-  // 从API获取地址
+
   try {
     const res = await getUserAddressList()
     if (res.code === 200) {
-      // ✅ 修复：强制转为数字类型，避免布尔值
-      form.value.addresses = res.data.map(item => ({
+      form.value.addresses = res.data.map((item: any) => ({
         ...item,
         isDefault: Number(item.isDefault)
       }))
     } else {
       form.value.addresses = [{ id: null, address: '', isDefault: 0 }]
     }
-  } catch {
+  } catch (e) {
+    console.error('获取地址失败:', e)
     form.value.addresses = [{ id: null, address: '', isDefault: 0 }]
   }
 }
 
-// 头像上传
 const handleAvatarSuccess = (res: any) => {
   if (res.code === 200) {
-    form.value.avatar = res.data
-    userStore.avatar = res.data
+    form.value.avatar = res.data.url || res.data
+    userStore.avatar = res.data.url || res.data
     ElMessage.success('上传成功')
-  } else ElMessage.error('上传失败')
+  } else {
+    ElMessage.error(res.msg || '上传失败')
+  }
 }
-const handleAvatarError = () => ElMessage.error('网络异常')
 
-// 提交保存（Store + API）
+const handleAvatarError = () => {
+  ElMessage.error('网络异常，上传失败')
+}
+
 const submitForm = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
   isSubmitting.value = true
   try {
-    // 1. 保存基础信息（Store封装）
     const { addresses, ...userData } = form.value
     await userStore.updateUserInfo(userData)
 
-    // 2. 保存地址（API）✅ 核心修复：布尔值转 0/1
     for (const addr of form.value.addresses) {
       if (!addr.address) continue
-      // 强制转换类型
+
       const isDefaultNum = addr.isDefault ? 1 : 0
 
       if (addr.id) {
@@ -206,6 +206,7 @@ const submitForm = async () => {
         })
         addr.id = res.data.id
       }
+
       if (isDefaultNum === 1) {
         await setDefaultAddress(addr.id)
       }
@@ -214,13 +215,13 @@ const submitForm = async () => {
     ElMessage.success('保存成功')
     router.push('/user/info')
   } catch (err) {
+    console.error('保存失败:', err)
     ElMessage.error('保存失败')
   } finally {
     isSubmitting.value = false
   }
 }
 
-// 返回
 const back = () => router.push('/user/info')
 
 onMounted(() => initForm())

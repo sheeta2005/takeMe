@@ -22,7 +22,11 @@ public class CartItem {
     private String serviceName;
     private Integer servicePrice;
     private Integer quantity;
-    private Integer selected; // 0=否 1=是
+    private Integer selected;
+    private Integer serviceType;
+    private String serviceDate;
+    private String serviceTime;
+    private String address;
+    private String remark;
     private LocalDateTime createTime;
-    private Integer serviceType;//0 = 代购 1 = 助洁 2 = 助餐 3 = 助医 4 = 陪伴
 }

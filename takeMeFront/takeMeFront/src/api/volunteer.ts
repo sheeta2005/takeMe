@@ -198,25 +198,9 @@ export function getVolunteerOrderDetail(orderId: number) {
   })
 }
 
-export function confirmOrder(orderId: number) {
-  return request({
-    url: '/api/volunteer/order/confirm',
-    method: 'post',
-    params: { orderId }
-  })
-}
-
 export function abandonOrder(orderId: number) {
   return request({
     url: '/api/volunteer/order/abandon',
-    method: 'post',
-    params: { orderId }
-  })
-}
-
-export function completeOrder(orderId: number) {
-  return request({
-    url: '/api/volunteer/order/complete',
     method: 'post',
     params: { orderId }
   })

@@ -17,6 +17,12 @@ public class OrderItemVO {
     private Integer servicePrice;
     private Integer quantity;
     private Integer itemPrice;
-    private LocalDateTime createTime;
     private Integer serviceType;
+    
+    private String serviceDate;
+    private String serviceTime;
+    private String address;
+    private String remark;
+    
+    private LocalDateTime createTime;
 }

@@ -16,4 +16,9 @@ public class OrderItemDTO {
     private Integer quantity;
     private Integer itemPrice;
     private Integer serviceType;
+    
+    private String serviceDate;
+    private String serviceTime;
+    private String address;
+    private String remark;
 }

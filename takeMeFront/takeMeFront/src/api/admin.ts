@@ -71,17 +71,14 @@ export const searchOrder = (
   status?: number,
   orderNo?: string,
   userId?: number,
-  userName?: string,
   volunteerId?: number,
-  volunteerName?: string,
-  serviceType?: number,
   startDate?: string,
   endDate?: string
 ) => {
   return request({
     url: '/api/admin/order/search',
     method: 'get',
-    params: { page, pageSize, status, orderNo, userId, userName, volunteerId, volunteerName, serviceType, startDate, endDate }
+    params: { page, pageSize, status, orderNo, userId, volunteerId, startDate, endDate }
   })
 }
 
@@ -89,13 +86,6 @@ export const getOrderDetail = (id: number) => {
   return request({
     url: `/api/admin/order/detail/${id}`,
     method: 'get'
-  })
-}
-
-export const cancelOrder = (id: number) => {
-  return request({
-    url: `/api/admin/order/cancel/${id}`,
-    method: 'post'
   })
 }
 
@@ -114,25 +104,17 @@ export const getOrderStatistics = () => {
 }
 
 // ========================= 志愿者管理 =========================
-export const getVolunteerPage = (page: number, pageSize: number) => {
-  return request({
-    url: '/api/admin/volunteer/page',
-    method: 'get',
-    params: { page, pageSize }
-  })
-}
-
 export const searchVolunteer = (
   page: number,
   pageSize: number,
   username?: string,
   id?: number,
-  availableRange?: string
+  serviceType?: number
 ) => {
   return request({
     url: '/api/admin/volunteer/search',
     method: 'get',
-    params: { page, pageSize, username, id, availableRange }
+    params: { page, pageSize, username, id, serviceType }
   })
 }
 
@@ -175,14 +157,6 @@ export const updateVolunteerStatus = (id: number, status: number) => {
 }
 
 // ========================= 用户（老人）管理 =========================
-export const getUserPage = (page: number, pageSize: number) => {
-  return request({
-    url: '/api/admin/user/page',
-    method: 'get',
-    params: { page, pageSize }
-  })
-}
-
 export const searchUser = (
   page: number,
   pageSize: number,
@@ -319,14 +293,20 @@ export const getApprovalPage = (
   pageSize: number,
   type?: string,
   status?: string,
-  keyword?: string,
   startDate?: string,
   endDate?: string
 ) => {
   return request({
     url: '/api/admin/approval/page',
     method: 'get',
-    params: { page, pageSize, type, status, keyword, startDate, endDate }
+    params: { page, pageSize, type, status, startDate, endDate }
+  })
+}
+
+export const getApprovalDetail = (id: number) => {
+  return request({
+    url: `/api/admin/approval/detail/${id}`,
+    method: 'get'
   })
 }
 
@@ -343,12 +323,5 @@ export const rejectApplication = (id: number, remark: string) => {
     url: `/api/admin/approval/reject/${id}`,
     method: 'post',
     data: { remark }
-  })
-}
-
-export const getApprovalDetail = (id: number) => {
-  return request({
-    url: `/api/admin/approval/detail/${id}`,
-    method: 'get'
   })
 }

@@ -3,12 +3,16 @@ package com.me.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.dto.CartItemDTO;
+import com.me.dto.OrderDTO;
+import com.me.dto.OrderItemDTO;
 import com.me.entity.Cart;
 import com.me.entity.CartItem;
 import com.me.mapper.CartItemMapper;
 import com.me.mapper.CartMapper;
 import com.me.service.CartService;
+import com.me.service.OrderService;
 import com.me.vo.CartItemVO;
+import com.me.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -23,9 +27,9 @@ import java.util.stream.Collectors;
 public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements CartService {
 
     private final CartItemMapper cartItemMapper;
+    private final OrderService orderService;
 
-    // 服务类型常量定义
-    private static final int SERVICE_TYPE_MEAL = 2; // 助餐服务（唯一可叠加数量的类型）
+    private static final int SERVICE_TYPE_MEAL = 2;
 
     @Override
     public List<CartItemVO> getCartItemList(Long userId) {
@@ -35,7 +39,6 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         List<CartItem> itemList = cartItemMapper.selectList(wrapper);
 
-        // 实体类转VO返回给前端
         return itemList.stream()
                 .map(this::convertToVO)
                 .collect(Collectors.toList());
@@ -46,35 +49,38 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     public void addItem(Long userId, CartItemDTO dto) {
         Cart cart = getOrCreateCart(userId);
 
-        // DTO转实体类
         CartItem item = convertToEntity(dto);
         item.setCartId(cart.getId());
 
-        // 检查购物车中是否已存在相同商品
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CartItem::getCartId, cart.getId())
                 .eq(CartItem::getServiceId, item.getServiceId());
+        
+        if (item.getServiceDate() != null && !item.getServiceDate().isEmpty()) {
+            wrapper.eq(CartItem::getServiceDate, item.getServiceDate());
+        }
+        if (item.getServiceTime() != null && !item.getServiceTime().isEmpty()) {
+            wrapper.eq(CartItem::getServiceTime, item.getServiceTime());
+        }
+        
         CartItem existingItem = cartItemMapper.selectOne(wrapper);
 
         if (existingItem != null) {
-            // 只有助餐服务(2)可以叠加数量
             if (existingItem.getServiceType() == SERVICE_TYPE_MEAL) {
                 existingItem.setQuantity(existingItem.getQuantity() + item.getQuantity());
                 cartItemMapper.updateById(existingItem);
             } else {
-                throw new RuntimeException("该服务只能预约1次，如需多个时间请重新下单");
+                throw new RuntimeException("该时间段的服务已存在，请选择其他时间");
             }
         } else {
-            // 非助餐服务强制数量为1，不管前端传什么
             if (item.getServiceType() != SERVICE_TYPE_MEAL) {
                 item.setQuantity(1);
             }
-            item.setSelected(1); // 默认选中
+            item.setSelected(1);
             item.setCreateTime(LocalDateTime.now());
             cartItemMapper.insert(item);
         }
 
-        // 更新购物车最后修改时间
         cart.setUpdateTime(LocalDateTime.now());
         this.updateById(cart);
     }
@@ -86,20 +92,23 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getServiceId, productId);
+                .eq(CartItem::getId, productId);
         CartItem item = cartItemMapper.selectOne(wrapper);
 
         if (item == null) {
             throw new RuntimeException("购物车商品不存在");
         }
 
-        // 只有助餐服务(2)可以修改数量
         if (item.getServiceType() != SERVICE_TYPE_MEAL) {
             throw new RuntimeException("该服务只能预约1次，无法修改数量");
         }
 
-        // 数量不能小于1
-        item.setQuantity(Math.max(1, quantity));
+        if (quantity < 1) {
+            deleteItem(userId, productId);
+            return;
+        }
+
+        item.setQuantity(quantity);
         cartItemMapper.updateById(item);
 
         cart.setUpdateTime(LocalDateTime.now());
@@ -113,7 +122,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getServiceId, productId);
+                .eq(CartItem::getId, productId);
         cartItemMapper.delete(wrapper);
 
         cart.setUpdateTime(LocalDateTime.now());
@@ -132,10 +141,43 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         cart.setUpdateTime(LocalDateTime.now());
         this.updateById(cart);
     }
+    
+    @Override
+    @Transactional
+    public OrderVO checkout(Long userId) {
+        Cart cart = getOrCreateCart(userId);
+        
+        LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CartItem::getCartId, cart.getId());
+        List<CartItem> cartItems = cartItemMapper.selectList(wrapper);
+        
+        if (cartItems == null || cartItems.isEmpty()) {
+            throw new RuntimeException("购物车为空");
+        }
+        
+        List<OrderItemDTO> itemDTOList = cartItems.stream().map(item -> {
+            OrderItemDTO dto = new OrderItemDTO();
+            dto.setServiceId(item.getServiceId());
+            dto.setServiceName(item.getServiceName());
+            dto.setServicePrice(item.getServicePrice());
+            dto.setServiceType(item.getServiceType());
+            dto.setQuantity(item.getQuantity());
+            dto.setServiceDate(item.getServiceDate());
+            dto.setServiceTime(item.getServiceTime());
+            dto.setAddress(item.getAddress());
+            dto.setRemark(item.getRemark());
+            return dto;
+        }).collect(Collectors.toList());
+        
+        OrderDTO orderDTO = new OrderDTO();
+        
+        OrderVO orderVO = orderService.createOrder(userId, orderDTO, itemDTOList);
+        
+        clearCart(userId);
+        
+        return orderVO;
+    }
 
-    /**
-     * 私有工具方法：获取用户的购物车，不存在则自动创建
-     */
     private Cart getOrCreateCart(Long userId) {
         LambdaQueryWrapper<Cart> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Cart::getUserId, userId);
@@ -152,18 +194,12 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         return cart;
     }
 
-    /**
-     * DTO转实体类
-     */
     private CartItem convertToEntity(CartItemDTO dto) {
         CartItem item = new CartItem();
         BeanUtils.copyProperties(dto, item);
         return item;
     }
 
-    /**
-     * 实体类转VO
-     */
     private CartItemVO convertToVO(CartItem item) {
         CartItemVO vo = new CartItemVO();
         BeanUtils.copyProperties(item, vo);

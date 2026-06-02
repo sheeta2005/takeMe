@@ -27,6 +27,14 @@ export function uploadAvatar(data: any) {
   })
 }
 
+export function updatePassword(data: { oldPassword: string; newPassword: string }) {
+  return request({
+    url: '/api/user/updatePassword',
+    method: 'post',
+    data
+  })
+}
+
 // ========================= 地址管理（新增，匹配Address实体） =========================
 /**
  * 获取当前用户的所有地址列表

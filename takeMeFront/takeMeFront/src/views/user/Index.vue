@@ -1,36 +1,180 @@
 <template>
   <div class="home-container">
-    <!-- 问候卡片 -->
-    <div class="greeting-card">
-      <div class="greeting-icon">👋</div>
-      <div class="greeting-text">
-        <h2>您好，{{ userName }} 老人</h2>
-        <p>欢迎使用助老服务平台，我们将竭诚为您提供便捷、安心的服务</p>
-      </div>
-    </div>
-
-    <!-- 新闻公告 -->
-    <div class="news-card">
-      <h3 class="card-title">📢 平台公告</h3>
-      <div class="news-list">
-        <div class="news-item" v-for="(item, i) in newsList" :key="i">
-          <span class="news-title">{{ item.title }}</span>
-          <span class="news-date">{{ item.date }}</span>
+    <!-- 欢迎横幅 -->
+    <el-card class="welcome-banner" shadow="hover">
+      <div class="banner-content">
+        <div class="banner-left">
+          <el-avatar :size="72" :src="userStore.avatar || defaultAvatar" class="user-avatar">
+            <el-icon :size="36"><UserFilled /></el-icon>
+          </el-avatar>
+          <div class="banner-text">
+            <h2 class="banner-title">您好，{{ userName }} 老人 👋</h2>
+            <p class="banner-subtitle">欢迎使用助老服务平台，我们将竭诚为您提供便捷、安心的服务</p>
+          </div>
+        </div>
+        <div class="banner-stats">
+          <el-statistic title="我的订单" :value="orderCount">
+            <template #prefix>
+              <el-icon color="#00a88d"><Document /></el-icon>
+            </template>
+          </el-statistic>
         </div>
       </div>
-    </div>
+    </el-card>
+
+    <!-- 快捷服务入口 -->
+    <el-card class="service-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Grid /></el-icon>
+            <span class="card-title">快捷服务</span>
+          </div>
+        </div>
+      </template>
+      <div class="service-grid">
+        <div class="service-item" @click="router.push('/user/meal')">
+          <div class="service-icon meal-icon">
+            <el-icon :size="36"><Dish /></el-icon>
+          </div>
+          <div class="service-name">助餐服务</div>
+          <div class="service-desc">营养配送</div>
+        </div>
+        <div class="service-item" @click="router.push('/user/clean')">
+          <div class="service-icon clean-icon">
+            <el-icon :size="36"><Brush /></el-icon>
+          </div>
+          <div class="service-name">助洁服务</div>
+          <div class="service-desc">居家清洁</div>
+        </div>
+        <div class="service-item" @click="router.push('/user/medical')">
+          <div class="service-icon medical-icon">
+            <el-icon :size="36"><FirstAidKit /></el-icon>
+          </div>
+          <div class="service-name">助医服务</div>
+          <div class="service-desc">陪同就医</div>
+        </div>
+        <div class="service-item" @click="router.push('/user/shop')">
+          <div class="service-icon shop-icon">
+            <el-icon :size="36"><ShoppingBag /></el-icon>
+          </div>
+          <div class="service-name">代购服务</div>
+          <div class="service-desc">生活用品</div>
+        </div>
+        <div class="service-item" @click="router.push('/user/companion')">
+          <div class="service-icon companion-icon">
+            <el-icon :size="36"><ChatLineRound /></el-icon>
+          </div>
+          <div class="service-name">陪伴服务</div>
+          <div class="service-desc">精神慰藉</div>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 平台公告 -->
+    <el-row :gutter="24">
+      <el-col :xs="24" :lg="16">
+        <el-card class="news-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="header-left">
+                <el-icon :size="20" color="#f59e0b"><Bell /></el-icon>
+                <span class="card-title">平台公告</span>
+              </div>
+              <el-badge :value="4" :max="99" class="news-badge" />
+            </div>
+          </template>
+          <div class="news-list">
+            <div class="news-item" v-for="(item, i) in newsList" :key="i">
+              <div class="news-left">
+                <el-icon :size="20" color="#00a88d"><Document /></el-icon>
+                <span class="news-title">{{ item.title }}</span>
+              </div>
+              <el-tag size="small" type="info">{{ item.date }}</el-tag>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :lg="8">
+        <el-card class="tips-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="header-left">
+                <el-icon :size="20" color="#3b82f6"><InfoFilled /></el-icon>
+                <span class="card-title">温馨提示</span>
+              </div>
+            </div>
+          </template>
+          <el-alert
+            v-for="(tip, index) in tipsList"
+            :key="index"
+            :title="tip"
+            type="success"
+            :closable="false"
+            show-icon
+            class="tip-item"
+          />
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 服务数据统计 -->
+    <el-card class="stats-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><DataAnalysis /></el-icon>
+            <span class="card-title">我的服务统计</span>
+          </div>
+        </div>
+      </template>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <el-icon :size="32" color="#00a88d"><ShoppingCart /></el-icon>
+          <div class="stat-value">{{ serviceStats.total }}</div>
+          <div class="stat-label">总服务次数</div>
+        </div>
+        <div class="stat-item">
+          <el-icon :size="32" color="#10b981"><CircleCheck /></el-icon>
+          <div class="stat-value">{{ serviceStats.completed }}</div>
+          <div class="stat-label">已完成</div>
+        </div>
+        <div class="stat-item">
+          <el-icon :size="32" color="#f59e0b"><Clock /></el-icon>
+          <div class="stat-value">{{ serviceStats.pending }}</div>
+          <div class="stat-label">进行中</div>
+        </div>
+        <div class="stat-item">
+          <el-icon :size="32" color="#3b82f6"><Star /></el-icon>
+          <div class="stat-value">{{ serviceStats.rating }}</div>
+          <div class="stat-label">平均评分</div>
+        </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import {
+  UserFilled, Document, Grid, Dish, Brush, FirstAidKit,
+  ShoppingBag, ChatLineRound, Bell, InfoFilled, DataAnalysis,
+  ShoppingCart, CircleCheck, Clock, Star
+} from '@element-plus/icons-vue'
 
+const router = useRouter()
 const userStore = useUserStore()
 const userName = ref('')
+const orderCount = ref(0)
+
+const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
 onMounted(() => {
   userName.value = userStore.username || '尊敬的用户'
+  orderCount.value = 5 // 可以从 API 获取
 })
 
 const newsList = ref([
@@ -39,92 +183,241 @@ const newsList = ref([
   { title: '助医服务可协助挂号、陪同就诊', date: '2025-01-03' },
   { title: '代购服务支持生活用品、药品代买', date: '2025-01-04' },
 ])
+
+const tipsList = ref([
+  '请提前10分钟准备好服务所需物品',
+  '服务完成后请及时评价',
+  '遇到问题可联系客服',
+  '定期更新个人信息以便我们更好地为您服务'
+])
+
+const serviceStats = ref({
+  total: 28,
+  completed: 25,
+  pending: 3,
+  rating: 4.8
+})
 </script>
 
 <style scoped>
 .home-container {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px 0;
+  padding: 24px 0;
 }
 
-.greeting-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f7fffd 100%);
-  border-radius: 20px;
-  padding: 32px;
+/* 欢迎横幅 */
+.welcome-banner {
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fffc 100%);
+  border: 1px solid rgba(0, 168, 141, 0.1);
+}
+
+.banner-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.banner-left {
   display: flex;
   align-items: center;
-  gap: 24px;
-  box-shadow: 0 8px 24px rgba(0, 184, 153, 0.12);
-  margin-bottom: 30px;
-  border: 1px solid rgba(0, 184, 153, 0.1);
-  transition: all 0.3s ease;
-}
-.greeting-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(0, 184, 153, 0.15);
+  gap: 20px;
 }
 
-.greeting-icon {
-  font-size: 56px;
+.user-avatar {
+  border: 3px solid rgba(0, 168, 141, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 168, 141, 0.15);
 }
 
-.greeting-text h2 {
-  font-size: 28px;
-  color: #006d5c;
-  margin: 0 0 8px 0;
-  font-weight: 700;
+.banner-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e293b;
+  margin: 0 0 4px 0;
 }
 
-.greeting-text p {
-  font-size: 18px;
-  color: #555;
+.banner-subtitle {
+  font-size: 14px;
+  color: #64748b;
   margin: 0;
-  line-height: 1.6;
 }
 
-.news-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 8px 24px rgba(0, 184, 153, 0.08);
-  border: 1px solid rgba(0, 184, 153, 0.07);
+/* 快捷服务 */
+.service-card {
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .card-title {
-  font-size: 24px;
-  color: #006d5c;
-  margin: 0 0 24px 0;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+}
+
+.service-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.service-item:hover {
+  background: #f8faf9;
+  transform: translateY(-4px);
+}
+
+.service-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.meal-icon { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
+.clean-icon { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); }
+.medical-icon { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+.shop-icon { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); }
+.companion-icon { background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); }
+
+.service-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.service-desc {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 公告和提示 */
+.news-card,
+.tips-card {
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.news-badge {
+  margin-left: 8px;
 }
 
 .news-list {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 
 .news-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-radius: 12px;
-  background: #fafcfb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #f8faf9;
   transition: all 0.2s ease;
 }
+
 .news-item:hover {
-  background: #f2faf8;
+  background: #f0fffc;
+}
+
+.news-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .news-title {
-  font-size: 18px;
-  color: #222;
+  font-size: 14px;
+  color: #1e293b;
   font-weight: 500;
 }
 
-.news-date {
-  font-size: 15px;
-  color: #888;
+.tip-item {
+  margin-bottom: 12px;
+  border-radius: 8px;
+}
+
+.tip-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 统计卡片 */
+.stats-card {
+  border: 1px solid #e2e8f0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #f8faf9;
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  background: #f0fffc;
+  transform: translateY(-2px);
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .service-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .banner-content {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 </style>

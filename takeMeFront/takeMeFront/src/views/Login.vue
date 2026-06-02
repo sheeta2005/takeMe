@@ -376,9 +376,11 @@ const handleRegister = async () => {
       phone: registerForm.value.phone
     }
 
-    registerForm.value.role === 1
-      ? await volunteerRegister(params)
-      : await userRegister(params)
+    if (registerForm.value.role === 1) {
+      await volunteerRegister(params)
+    } else {
+      await userRegister(params)
+    }
 
     ElMessage.success('注册成功，请登录')
     activeTab.value = 'login'
@@ -392,6 +394,7 @@ const handleRegister = async () => {
     registerLoading.value = false
   }
 }
+
 </script>
 
 <style scoped>

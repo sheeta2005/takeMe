@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { getUserInfo, updateUserInfo, logout } from '@/api/user'
 import { ElMessage } from 'element-plus'
 
-// ✅ 定义地址对象类型（匹配后端）
 interface UserAddress {
   id: number
   address: string
@@ -13,26 +12,21 @@ interface UserAddress {
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    // 基础登录信息
     token: localStorage.getItem('token') || '',
     userId: localStorage.getItem('userId') || '',
     username: '',
-    role: Number(localStorage.getItem('role')) || 2, // 0管理员 1志愿者 2普通用户
+    role: Number(localStorage.getItem('role')) || 2,
     realName: '',
-    // 完整用户详情信息
-    account: '',
     phone: '',
     age: null as number | null,
-    gender: 0, // 0男 1女
-    // ✅ 修复：改为对象数组，不再是string[]
+    gender: 0,
     addresses: [] as UserAddress[],
-    emergencyName: '', // 紧急联系人姓名
-    emergencyPhone: '', // 紧急联系人电话
+    emergencyName: '',
+    emergencyPhone: '',
     avatar: ''
   }),
 
   actions: {
-    // 登录存入基础信息
     setUserInfo(token: string, userId: string, username: string, role: number) {
       this.token = token
       this.userId = userId
@@ -44,37 +38,49 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem('role', String(role))
     },
 
-    // ✅ 新增：更新地址列表
     setAddresses(list: UserAddress[]) {
       this.addresses = list
     },
 
-    // 从后端获取完整用户详情
     async getUserInfo() {
       if (!this.token) return false
       try {
         const res = await getUserInfo()
-        this.$patch(res.data)
+        const userData = res.data
+        this.realName = userData.realName || ''
+        this.username = userData.username || ''
+        this.phone = userData.phone || ''
+        this.age = userData.age || null
+        this.gender = userData.gender ?? 0
+        this.emergencyName = userData.emergencyName || ''
+        this.emergencyPhone = userData.emergencyPhone || ''
+        this.avatar = userData.avatar || ''
         return true
       } catch (err) {
+        console.error('获取用户信息失败:', err)
         return false
       }
     },
 
-    // 更新用户信息
     async updateUserInfo(data: any) {
       try {
         await updateUserInfo(data)
-        this.$patch(data)
+        if (data.realName !== undefined) this.realName = data.realName
+        if (data.phone !== undefined) this.phone = data.phone
+        if (data.age !== undefined) this.age = data.age
+        if (data.gender !== undefined) this.gender = data.gender
+        if (data.emergencyName !== undefined) this.emergencyName = data.emergencyName
+        if (data.emergencyPhone !== undefined) this.emergencyPhone = data.emergencyPhone
+        if (data.avatar !== undefined) this.avatar = data.avatar
         ElMessage.success('信息修改成功')
         return true
       } catch (err) {
+        console.error('修改用户信息失败:', err)
         ElMessage.error('修改失败')
         return false
       }
     },
 
-    // 退出登录
     async logout() {
       try {
         await logout()
@@ -83,6 +89,14 @@ export const useUserStore = defineStore('user', {
         this.userId = ''
         this.username = ''
         this.role = 2
+        this.realName = ''
+        this.phone = ''
+        this.age = null
+        this.gender = 0
+        this.emergencyName = ''
+        this.emergencyPhone = ''
+        this.avatar = ''
+        this.addresses = []
         localStorage.removeItem('token')
         localStorage.removeItem('userId')
         localStorage.removeItem('role')

@@ -1,0 +1,102 @@
+:root {
+  /* 主题色系 */
+  --primary-color: #00a88d;
+  --primary-light: #00c4a0;
+  --primary-dark: #008c74;
+  --primary-bg: rgba(0, 168, 141, 0.08);
+
+  /* 辅助色系 */
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #3b82f6;
+
+  /* 背景色系 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8faf9;
+  --bg-tertiary: #f1f5f9;
+
+  /* 文字色系 */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+
+  /* 边框色 */
+  --border-light: #e2e8f0;
+  --border-medium: #cbd5e1;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* 通用卡片样式 */
+.enhanced-card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-light);
+}
+
+.enhanced-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* 页面容器 */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+/* 页面头部 */
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header .page-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.page-header .page-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* 统计卡片网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+/* 按钮组 */
+.action-bar {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-tertiary);
+}

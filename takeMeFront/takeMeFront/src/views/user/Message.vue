@@ -4,24 +4,23 @@
       <h2 class="page-title">消息中心</h2>
     </div>
 
-    <!-- 筛选栏 -->
     <div class="filter-bar">
       <div class="filter-item">
         <label class="filter-label">消息类型</label>
         <el-select v-model="filterType" placeholder="请选择类型" @change="fetchMsgs" clearable>
-          <el-option label="全部" value="" />
+          <el-option label="全部" :value="undefined" />
           <el-option label="系统通知" :value="0" />
-          <el-option label="服务通知" :value="1" />
-          <el-option label="温馨提醒" :value="2" />
+          <el-option label="订单通知" :value="1" />
+          <el-option label="服务通知" :value="2" />
         </el-select>
       </div>
 
       <div class="filter-item">
         <label class="filter-label">状态</label>
-        <el-select v-model="filterStatus" placeholder="请选择状态" @change="fetchMsgs" clearable>
-          <el-option label="全部" value="" />
-          <el-option label="未读" :value="false" />
-          <el-option label="已读" :value="true" />
+        <el-select v-model="filterIsRead" placeholder="请选择状态" @change="fetchMsgs" clearable>
+          <el-option label="全部" :value="undefined" />
+          <el-option label="未读" :value="0" />
+          <el-option label="已读" :value="1" />
         </el-select>
       </div>
 
@@ -29,7 +28,6 @@
       <el-button @click="resetFilter">重置</el-button>
     </div>
 
-    <!-- 消息列表卡片 -->
     <div class="list-card" v-loading="loading">
       <el-list :data="msgList" class="msg-list">
         <el-list-item
@@ -50,16 +48,16 @@
                   >
                     {{ getTypeText(msg.type) }}
                   </el-tag>
-                  <span class="msg-title" :class="{ unread: !msg.isRead }">{{ msg.title }}</span>
-                  <el-icon v-if="!msg.isRead" class="unread-icon"><Bell /></el-icon>
+                  <span class="msg-title" :class="{ unread: msg.isRead === 0 }">{{ msg.title }}</span>
+                  <el-icon v-if="msg.isRead === 0" class="unread-icon"><Bell /></el-icon>
                 </div>
-                <div class="msg-time">{{ msg.createTime }}</div>
+                <div class="msg-time">{{ formatTime(msg.createTime) }}</div>
               </div>
               <div class="msg-preview">{{ msg.content }}</div>
             </div>
             <div class="msg-actions">
               <el-button
-                v-if="!msg.isRead"
+                v-if="msg.isRead === 0"
                 type="primary"
                 link
                 @click.stop="handleMarkRead(msg)"
@@ -74,15 +72,15 @@
       <el-empty v-if="msgList.length === 0 && !loading" description="暂无消息记录" :image-size="120" />
     </div>
 
-    <!-- 分页 -->
     <div class="pagination-wrapper" v-if="total > 0">
       <el-pagination
-        v-model:currentPage="currentPage"
+        v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :total="total"
         :page-sizes="[10, 20]"
         layout="total, sizes, prev, pager, next"
-        @change="fetchMsgs"
+        @current-change="fetchMsgs"
+        @size-change="handleSizeChange"
       />
     </div>
   </div>
@@ -93,105 +91,98 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Bell } from '@element-plus/icons-vue'
-import type { Message } from '@/types/Message.ts'
+import { getUserMessages, markMessageRead } from '@/api/user'
 
 const router = useRouter()
 
-// 筛选条件
-const filterType = ref<string | number>('')
-const filterStatus = ref<boolean | string>('')
+const filterType = ref<number | undefined>(undefined)
+const filterIsRead = ref<number | undefined>(undefined)
 
-// 分页配置
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const loading = ref(false)
 
-// 列表数据
-const msgList = ref<Message[]>([])
+const msgList = ref<any[]>([])
 
 onMounted(() => {
   fetchMsgs()
 })
 
-// 获取消息列表
 const fetchMsgs = async () => {
   loading.value = true
   try {
-    // 模拟数据（保留你的原有逻辑）
-    msgList.value = [
-      {
-        id: 1,
-        userId: 2001,
-        type: 1,
-        title: '服务提醒：助餐服务',
-        content: '您的助餐服务订单ORD20260520001将于明天09:00送达，请您准备接收。',
-        createTime: '2026-05-19 10:30:00',
-        isRead: false,
-        relatedId: 'ORD20260520001',
-        relatedUrl: '/user/order/detail/ORD20260520001'
-      },
-      {
-        id: 2,
-        userId: 2001,
-        type: 0,
-        title: '平台通知：服务更新',
-        content: '平台已更新助洁服务流程，现在可以预约周末服务了，欢迎体验。',
-        createTime: '2026-05-18 14:00:00',
-        isRead: true,
-        relatedId: '',
-        relatedUrl: ''
-      },
-      {
-        id: 3,
-        userId: 2001,
-        type: 2,
-        title: '温馨提醒：天气变化',
-        content: '未来三天有降雨，您的服务可能会调整时间，请留意订单通知。',
-        createTime: '2026-05-17 11:00:00',
-        isRead: false,
-        relatedId: '',
-        relatedUrl: ''
-      }
-    ]
-    total.value = 3
+    const res = await getUserMessages({
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      type: filterType.value,
+      isRead: filterIsRead.value
+    })
+
+    if (res.code === 200 && res.data) {
+      msgList.value = res.data.records || []
+      total.value = res.data.total || 0
+    } else {
+      msgList.value = []
+      total.value = 0
+    }
   } catch (err) {
     console.error('获取消息失败', err)
     ElMessage.error('获取消息列表失败')
+    msgList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
 }
 
-// 重置筛选
 const resetFilter = () => {
-  filterType.value = ''
-  filterStatus.value = ''
+  filterType.value = undefined
+  filterIsRead.value = undefined
   currentPage.value = 1
   fetchMsgs()
 }
 
-// 跳转到消息详情
-const goToDetail = (msg: Message) => {
+const goToDetail = (msg: any) => {
   if (!msg.id) return
   router.push(`/user/message/detail/${msg.id}`)
 }
 
-// 标记已读
-const handleMarkRead = (msg: Message) => {
-  msg.isRead = true
-  ElMessage.success('标记已读成功')
+const handleMarkRead = async (msg: any) => {
+  try {
+    await markMessageRead(msg.id)
+    msg.isRead = 1
+    ElMessage.success('标记已读成功')
+  } catch (err) {
+    console.error('标记已读失败', err)
+    ElMessage.error('操作失败')
+  }
 }
 
-// 类型映射
+const handleSizeChange = () => {
+  currentPage.value = 1
+  fetchMsgs()
+}
+
 const getTypeText = (type: number): string => {
-  const map = { 0: '系统通知', 1: '服务通知', 2: '温馨提醒' }
+  const map: Record<number, string> = { 0: '系统通知', 1: '订单通知', 2: '服务通知' }
   return map[type] || '未知'
 }
 
 const getTypeTagType = (type: number): string => {
-  const map = { 0: 'primary', 1: 'warning', 2: 'success' }
+  const map: Record<number, string> = { 0: 'primary', 1: 'warning', 2: 'success' }
   return map[type] || ''
+}
+
+const formatTime = (time: string) => {
+  if (!time) return ''
+  return new Date(time).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 </script>
 

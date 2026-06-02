@@ -1,7 +1,5 @@
 import request from '@/utils/request'
 
-// ========================= 订单服务 =========================
-// 获取我的订单列表
 export function getMyOrderList(params: { page: number; pageSize: number; status?: number }) {
   return request({
     url: '/api/user/order/list',
@@ -10,7 +8,6 @@ export function getMyOrderList(params: { page: number; pageSize: number; status?
   })
 }
 
-// 下单预约
 export function createOrder(data: any) {
   return request({
     url: '/api/user/order/create',
@@ -19,7 +16,13 @@ export function createOrder(data: any) {
   })
 }
 
-// 取消订单
+export function checkoutCart() {
+  return request({
+    url: '/api/user/cart/checkout',
+    method: 'post'
+  })
+}
+
 export function cancelOrder(orderId: number) {
   return request({
     url: '/api/user/order/cancel',
@@ -28,34 +31,6 @@ export function cancelOrder(orderId: number) {
   })
 }
 
-// 评价服务
-export function evaluateOrder(data: { orderId: number; score: number; content?: string }) {
-  return request({
-    url: '/api/user/order/evaluate',
-    method: 'post',
-    data
-  })
-}
-
-// 根据类型获取服务列表
-export function getServiceList(type: number) {
-  return request({
-    url: '/api/user/service/list',
-    method: 'get',
-    params: { type }
-  })
-}
-
-// 获取订单详情 ✅【修复完成：适配后端 @RequestParam 接口】
-export function getOrderDetail(orderId: number) {
-  return request({
-    url: '/api/user/order/detail',
-    method: 'get',
-    params: { orderId }
-  })
-}
-
-// 确认订单完成
 export function confirmOrder(orderId: number) {
   return request({
     url: '/api/user/order/confirm',
@@ -64,8 +39,30 @@ export function confirmOrder(orderId: number) {
   })
 }
 
-// ========================= 购物车 =========================
-// 获取购物车列表
+export function evaluateOrder(orderId: number) {
+  return request({
+    url: '/api/user/order/evaluate',
+    method: 'post',
+    params: { orderId }
+  })
+}
+
+export function getServiceList(type: number) {
+  return request({
+    url: '/api/user/service/list',
+    method: 'get',
+    params: { type }
+  })
+}
+
+export function getUserOrderDetail(orderId: number) {
+  return request({
+    url: '/api/user/order/detail',
+    method: 'get',
+    params: { orderId }
+  })
+}
+
 export function getCartList() {
   return request({
     url: '/api/user/cart/list',
@@ -73,17 +70,13 @@ export function getCartList() {
   })
 }
 
-// 加入购物车
 export function addToCart(data: {
   serviceId: number
   serviceName: string
   servicePrice: number
   serviceType: number
-  serviceDate?: string
-  serviceTime?: string
-  address?: string
-  remark?: string
   quantity: number
+  remark?: string
 }) {
   return request({
     url: '/api/user/cart/add',
@@ -92,28 +85,22 @@ export function addToCart(data: {
   })
 }
 
-// 修改购物车商品数量
-export function updateCartItem(data: {
-  serviceId: number
-  quantity: number
-}) {
+export function updateCartItem(cartItemId: number, quantity: number) {
   return request({
     url: '/api/user/cart/update',
     method: 'post',
-    data
+    data: { cartItemId, quantity }
   })
 }
 
-// 删除购物车商品
-export function deleteCartItem(productId: number) {
+export function deleteCartItem(cartItemId: number) {
   return request({
     url: '/api/user/cart/delete',
     method: 'post',
-    params: { productId }
+    data: { cartItemId }
   })
 }
 
-// 清空购物车
 export function clearCart() {
   return request({
     url: '/api/user/cart/clear',

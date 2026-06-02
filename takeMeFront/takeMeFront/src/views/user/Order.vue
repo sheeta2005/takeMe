@@ -2,9 +2,7 @@
   <div class="order-page">
     <h2 class="page-title">我的订单</h2>
 
-    <!-- 订单状态筛选 -->
     <div class="filter-bar">
-      <!-- 修改后（消除警告） -->
       <el-radio-group v-model="filterStatus" size="large" @change="fetchOrders">
         <el-radio-button :value="''">全部</el-radio-button>
         <el-radio-button :value="0">待接单</el-radio-button>
@@ -16,9 +14,8 @@
       </el-radio-group>
     </div>
 
-    <!-- 订单列表（✅ 用v-loading控制加载状态，不再用错误的v-else） -->
     <div class="order-list" v-loading="loading">
-      <div class="order-card" v-for="order in filteredOrderList" :key="order.id">
+      <div class="order-card" v-for="order in orderList" :key="order.id">
         <div class="order-header">
           <span class="order-id">订单号：{{ order.orderNo }}</span>
           <el-tag :type="getTagType(order.status)" size="large">
@@ -43,23 +40,33 @@
       </div>
     </div>
 
-    <!-- 空状态 -->
-    <div class="empty-tip" v-if="filteredOrderList.length === 0 && !loading">
+    <div class="empty-tip" v-if="orderList.length === 0 && !loading">
       暂无订单记录
+    </div>
+
+    <div class="pagination-wrapper" v-if="total > 0">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        @current-change="fetchOrders"
+        @size-change="handleSizeChange"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { getMyOrderList } from '@/api'
+import { getMyOrderList } from '@/api/order'
 
 const router = useRouter()
 
-// 订单状态映射（和后端完全一致）
-const statusMap = {
+const statusMap: Record<number, string> = {
   0: '待接单',
   1: '已接单',
   2: '服务中',
@@ -67,51 +74,70 @@ const statusMap = {
   4: '已完成',
   5: '已取消'
 }
+
 const getTagType = (status: number) => {
   const map: Record<number, string> = {
-    0: 'warning', 1: 'primary', 2: 'primary',
-    3: 'info', 4: 'success', 5: 'danger'
+    0: 'warning',
+    1: 'primary',
+    2: 'primary',
+    3: 'info',
+    4: 'success',
+    5: 'danger'
   }
   return map[status] || 'info'
 }
+
 const getStatusText = (status: number) => statusMap[status] || '未知状态'
 
-// 时间格式化
 const formatTime = (time: string) => {
   if (!time) return ''
-  return new Date(time).toLocaleString()
+  return new Date(time).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-const filterStatus = ref('')
+const filterStatus = ref<string | number>('')
 const orderList = ref<any[]>([])
 const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
-// 订单筛选
-const filteredOrderList = computed(() => {
-  if (!filterStatus.value) return orderList.value
-  return orderList.value.filter(item => item.status === Number(filterStatus.value))
-})
-
-// 获取订单列表
 const fetchOrders = async () => {
   loading.value = true
   try {
     const res = await getMyOrderList({
-      page: 1,
-      pageSize: 100,
+      page: currentPage.value,
+      pageSize: pageSize.value,
       status: filterStatus.value ? Number(filterStatus.value) : undefined
     })
-    orderList.value = res.data.data?.records || res.data?.records || []
-    console.log('我的订单数据：', orderList.value)
+
+    if (res.code === 200 && res.data) {
+      orderList.value = res.data.records || []
+      total.value = res.data.total || 0
+    } else {
+      orderList.value = []
+      total.value = 0
+    }
   } catch (e) {
+    console.error('获取订单失败:', e)
     ElMessage.error('获取订单失败')
-    console.error(e)
+    orderList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
 }
 
-// 跳转到订单详情
+const handleSizeChange = () => {
+  currentPage.value = 1
+  fetchOrders()
+}
+
 const viewDetail = (order: any) => {
   if (!order?.id) {
     ElMessage.error('订单信息异常！')
@@ -187,9 +213,10 @@ onMounted(() => {
   color: #999;
   padding: 80px 0;
 }
-.loading-box {
-  padding: 100px 0;
-  text-align: center;
+.pagination-wrapper {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
 }
 :deep(.el-button) {
   font-size: 18px;
