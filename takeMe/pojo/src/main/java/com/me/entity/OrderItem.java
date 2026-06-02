@@ -26,4 +26,6 @@ public class OrderItem {
     private Integer itemPrice;
 
     private LocalDateTime createTime;
+    private Integer serviceType;//0 = 代购 1 = 助洁 2 = 助餐 3 = 助医 4 = 陪伴
+
 }

@@ -75,9 +75,9 @@ export function getCartList() {
 
 // 加入购物车
 export function addToCart(data: {
-  productId: number
-  productName: string
-  productPrice: number
+  serviceId: number
+  serviceName: string
+  servicePrice: number
   serviceType: number
   serviceDate?: string
   serviceTime?: string
@@ -94,7 +94,7 @@ export function addToCart(data: {
 
 // 修改购物车商品数量
 export function updateCartItem(data: {
-  productId: number
+  serviceId: number
   quantity: number
 }) {
   return request({

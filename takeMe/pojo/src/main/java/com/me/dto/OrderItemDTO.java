@@ -15,4 +15,5 @@ public class OrderItemDTO {
     private Integer servicePrice;
     private Integer quantity;
     private Integer itemPrice;
+    private Integer serviceType;
 }

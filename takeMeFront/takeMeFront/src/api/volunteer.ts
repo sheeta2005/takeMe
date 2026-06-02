@@ -1,6 +1,10 @@
 import request from '@/utils/request'
 
-export function volunteerLogin(data: { username: string; password: string }) {
+// ========================= 登录退出 =========================
+/**
+ * 志愿者登录
+ */
+export function volunteerLogin(data: { username: string; password: string; userType?: number }) {
   return request({
     url: '/api/volunteer/login',
     method: 'post',
@@ -8,15 +12,61 @@ export function volunteerLogin(data: { username: string; password: string }) {
   })
 }
 
-// 志愿者注册
+/**
+ * 志愿者注册
+ */
 export function volunteerRegister(data: {
-  username: string;
-  password: string;
-  realName: string;
-  phone: string;
+  username: string
+  password: string
+  realName: string
+  phone: string
 }) {
   return request({
     url: '/api/volunteer/register',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 志愿者退出登录
+ * ✅ 修复：补全缺失的 volunteerLogout 导出，解决当前报错
+ */
+export function volunteerLogout() {
+  return request({
+    url: '/api/volunteer/logout',
+    method: 'post'
+  })
+}
+
+// ========================= 个人信息 =========================
+/**
+ * 获取当前志愿者信息
+ */
+export function getVolunteerInfo() {
+  return request({
+    url: '/api/volunteer/info',
+    method: 'get'
+  })
+}
+
+/**
+ * 修改志愿者信息
+ */
+export function updateVolunteerInfo(data: any) {
+  return request({
+    url: '/api/volunteer/update',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 志愿者头像上传
+ */
+export function uploadVolunteerAvatar(data: any) {
+  return request({
+    url: '/api/volunteer/uploadAvatar',
     method: 'post',
     data
   })
@@ -27,90 +77,77 @@ export function volunteerRegister(data: {
  * 获取志愿者待办任务
  */
 export function getVolunteerTodo() {
-  // 真实后端接口
-  // return request({
-  //   url: '/api/volunteer/todo',
-  //   method: 'get'
-  // })
-
-  // 模拟数据
-  return Promise.resolve({
-    code: 200,
-    data: [
-      {
-        id: 'ORD20260520001',
-        serviceType: '助餐服务-营养套餐A',
-        status: '待确认',
-        serviceTime: '2026-05-21 11:30',
-        address: '西安市雁塔区科技二路66号'
-      },
-      {
-        id: 'ORD20260520002',
-        serviceType: '助洁服务-日常保洁',
-        status: '服务中',
-        serviceTime: '2026-05-21 14:00',
-        address: '西安市高新区锦业路1号'
-      }
-    ]
+  return request({
+    url: '/api/volunteer/todo',
+    method: 'get'
   })
 }
 
 /**
- * 确认接单（改名避免冲突）
- * @param orderId 订单ID
+ * 确认接单
  */
 export function volunteerConfirmOrder(orderId: string) {
-  // return request({
-  //   url: `/api/volunteer/confirm/${orderId}`,
-  //   method: 'post'
-  // })
-  return Promise.resolve({ code: 200, message: '接单成功' })
+  return request({
+    url: `/api/volunteer/confirm/${orderId}`,
+    method: 'post'
+  })
 }
 
 /**
  * 完成服务
- * @param orderId 订单ID
  */
 export function completeOrder(orderId: string) {
-  // return request({
-  //   url: `/api/volunteer/complete/${orderId}`,
-  //   method: 'post'
-  // })
-  return Promise.resolve({ code: 200, message: '服务完成' })
+  return request({
+    url: `/api/volunteer/complete/${orderId}`,
+    method: 'post'
+  })
 }
 
-// ========================= 个人中心 =========================
+// ========================= 消息中心（和user.ts完全对齐） =========================
 /**
- * 获取消息列表
+ * 获取当前志愿者消息列表（分页+筛选）
  */
-export function getMessageList() {
-  // return request({
-  //   url: '/api/volunteer/message',
-  //   method: 'get'
-  // })
-  return Promise.resolve({
-    code: 200,
-    data: [
-      { id: 1, title: '新订单提醒', content: '您有新的待接单订单', createTime: '2026-05-21 10:00' },
-      { id: 2, title: '系统通知', content: '请按时完成服务', createTime: '2026-05-21 09:30' }
-    ]
+export function getVolunteerMessages(params: {
+  page?: number
+  pageSize?: number
+  type?: number
+  isRead?: number
+}) {
+  return request({
+    url: '/api/volunteer/message/list',
+    method: 'get',
+    params
   })
 }
 
 /**
+ * 获取单条消息详情
+ */
+export function getVolunteerMessageDetail(id: number) {
+  return request({
+    url: `/api/volunteer/message/${id}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 标记消息为已读
+ */
+export function markVolunteerMessageRead(id: number) {
+  return request({
+    url: `/api/volunteer/message/read/${id}`,
+    method: 'post'
+  })
+}
+
+// ========================= 服务记录与积分 =========================
+/**
  * 获取服务记录
  */
 export function getServiceRecord() {
-  // return request({
-  //   url: '/api/volunteer/record',
-  //   method: 'get'
-  // })
-  return Promise.resolve({
-    code: 200,
-    data: [
-      { id: 1, serviceType: '助餐服务', time: '2026-05-20 11:30', status: '已完成', score: 5 },
-      { id: 2, serviceType: '助洁服务', time: '2026-05-19 14:00', status: '已完成', score: 5 }
-    ]
+  return request({
+    url: '/api/volunteer/record',
+    method: 'get'
   })
 }
 
@@ -118,77 +155,41 @@ export function getServiceRecord() {
  * 获取积分与薪酬
  */
 export function getPoints() {
-  // return request({
-  //   url: '/api/volunteer/points',
-  //   method: 'get'
-  // })
-  return Promise.resolve({
-    code: 200,
-    data: {
-      totalPoints: 1250,
-      serviceCount: 25,
-      money: 125
-    }
+  return request({
+    url: '/api/volunteer/points',
+    method: 'get'
   })
 }
 
+// ========================= 考勤请假 =========================
 /**
  * 提交请假申请
  */
 export function submitLeave(data: any) {
-  // return request({
-  //   url: '/api/volunteer/leave',
-  //   method: 'post',
-  //   data
-  // })
-  return Promise.resolve({ code: 200, message: '请假提交成功' })
+  return request({
+    url: '/api/volunteer/leave',
+    method: 'post',
+    data
+  })
 }
 
+// ========================= 学习规范 =========================
 /**
  * 获取学习规范列表
  */
 export function getStudyList() {
-  // return request({
-  //   url: '/api/volunteer/study',
-  //   method: 'get'
-  // })
-  return Promise.resolve({
-    code: 200,
-    data: [
-      { id: 1, title: '志愿者服务行为规范', createTime: '2026-01-01' },
-      { id: 2, title: '安全服务注意事项', createTime: '2026-01-05' }
-    ]
+  return request({
+    url: '/api/volunteer/study',
+    method: 'get'
   })
 }
 
 /**
- * 获取志愿者个人信息
+ * 获取学习规范详情
  */
-export function getVolunteerInfo() {
-  // return request({
-  //   url: '/api/volunteer/info',
-  //   method: 'get'
-  // })
-  return Promise.resolve({
-    code: 200,
-    data: {
-      username: 'volunteer01',
-      realName: '张三',
-      phone: '13800138000',
-      idNo: '6101111990XXXX1234',
-      avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
-    }
+export function getStudyDetail(id: number) {
+  return request({
+    url: `/api/volunteer/study/${id}`,
+    method: 'get'
   })
-}
-
-/**
- * 修改志愿者信息
- */
-export function updateVolunteerInfo(data: any) {
-  // return request({
-  //   url: '/api/volunteer/update',
-  //   method: 'post',
-  //   data
-  // })
-  return Promise.resolve({ code: 200, message: '修改成功' })
 }

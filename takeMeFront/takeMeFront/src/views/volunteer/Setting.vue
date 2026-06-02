@@ -24,20 +24,20 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { logout } from '@/api/user'
+import { useVolunteerStore } from '@/stores/volunteer'
+import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
-const userStore = useUserStore()
+const volunteerStore = useVolunteerStore()
 
 const goFontSize = () => {
   ElMessage.info('字体调节功能开发中')
 }
 
-// 退出登录：确认 → 清空 → 跳转到主页 /
+// ✅ 最终修复版：所有逻辑统一交给store，页面只负责确认和跳转
 const handleLogout = async () => {
   try {
+    // 1. 只做一件事：弹出确认框
     await ElMessageBox.confirm(
       '确定要退出登录吗？',
       '提示',
@@ -48,31 +48,25 @@ const handleLogout = async () => {
       }
     )
 
-    // 模拟阶段先注释，后期打开
-    // await logout()
+    // 2. 只调用一次store的logout，所有接口、状态、提示都在store里处理
+    await volunteerStore.logout()
 
-    // 清空用户状态
-    userStore.logout()
-
-    ElMessage.success('已安全退出')
-
-    // 跳转到主页（不是登录页）
-    const navigationResult = await router.push('/')
-    // 防止守卫拦截导致没跳走
-    if (navigationResult && navigationResult.type === 'failure') {
-      console.warn('跳转被拦截，尝试 replace')
-      await router.replace('/')
-    }
   } catch (err: any) {
-    // 取消或报错不处理
-    if (err !== 'cancel') {
-      console.error('退出异常：', err)
+    // 只有用户点击"取消"才会走到这里
+    if (err === 'cancel') {
+      return
     }
+    // 接口错误已经在store里处理了，这里不用管
   }
+
+  // ✅ 关键：跳转逻辑放在最外面，无论接口成功失败一定会执行
+  // 用window.location.href强制跳转，彻底避免路由守卫拦截
+  window.location.href = '/login'
 }
 </script>
 
 <style scoped>
+/* 所有样式完全不变，和用户端保持一致 */
 .setting-container {
   width: 100%;
   height: 100%;

@@ -11,4 +11,9 @@ public interface VolunteerService extends IService<Volunteer> {
      * @return 志愿者信息（登录成功），null（登录失败/账号禁用）
      */
     Volunteer login(LoginDTO loginDTO);
+
+    /**
+     * 根据用户名查询志愿者
+     */
+    Volunteer getByUsername(String username);
 }

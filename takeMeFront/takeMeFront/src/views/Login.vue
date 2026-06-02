@@ -173,9 +173,11 @@ import { ElMessage, ElForm } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { adminLogin, volunteerLogin, userLogin, userRegister, volunteerRegister } from '@/api'
 import { useUserStore } from '@/stores/user'
+import { useVolunteerStore } from '@/stores/volunteer'
 
 const router = useRouter()
 const userStore = useUserStore()
+const volunteerStore = useVolunteerStore()
 
 // 表单引用
 const loginFormRef = ref<InstanceType<typeof ElForm>>()
@@ -196,7 +198,7 @@ const speed = 15
 // 记住密码
 const rememberPassword = ref(false)
 
-// 登录表单（默认全部为空）
+// 登录表单
 const loginForm = ref<{
   username: string;
   password: string;
@@ -224,7 +226,7 @@ const registerForm = ref<{
   role: null
 })
 
-// 注册表单验证规则
+// 注册验证规则
 const registerRules = {
   username: [
     { required: true, message: '请输入账号', trigger: 'blur' },
@@ -259,7 +261,26 @@ const registerRules = {
   ]
 }
 
-// 鼠标移动事件
+// ===================== 核心修缮：纯本地清空状态，无网络请求 =====================
+/** 清空普通用户/管理员状态 */
+const clearUserState = () => {
+  userStore.$reset()
+  localStorage.removeItem('token')
+  localStorage.removeItem('userId')
+  localStorage.removeItem('role')
+}
+
+/** 清空志愿者状态 */
+const clearVolunteerState = () => {
+  volunteerStore.$reset()
+  localStorage.removeItem('volunteerToken')
+  localStorage.removeItem('volunteerId')
+  localStorage.removeItem('volunteerUsername')
+  localStorage.removeItem('volunteerRole')
+}
+// ============================================================================
+
+// 鼠标移动背景效果
 const handleMouseMove = (e: MouseEvent) => {
   const x = (window.innerWidth / 2 - e.clientX) / speed
   const y = (window.innerHeight / 2 - e.clientY) / speed
@@ -267,15 +288,11 @@ const handleMouseMove = (e: MouseEvent) => {
   bgY.value = y
 }
 
-// 页面加载时读取本地存储
+// 页面加载读取本地存储
 onMounted(() => {
-  // 读取上次登录的账号
   const lastUsername = localStorage.getItem('lastUsername')
-  if (lastUsername) {
-    loginForm.value.username = lastUsername
-  }
+  if (lastUsername) loginForm.value.username = lastUsername
 
-  // 读取记住的密码
   const savedPassword = localStorage.getItem('savedPassword')
   if (savedPassword) {
     loginForm.value.password = savedPassword
@@ -287,17 +304,14 @@ onMounted(() => {
 const resetForm = () => {
   if (activeTab.value === 'login') {
     loginFormRef.value?.resetFields()
-    // 保留上次登录的账号
     const lastUsername = localStorage.getItem('lastUsername')
-    if (lastUsername) {
-      loginForm.value.username = lastUsername
-    }
+    if (lastUsername) loginForm.value.username = lastUsername
   } else {
     registerFormRef.value?.resetFields()
   }
 }
 
-// 登录逻辑
+// ===================== 核心修缮：登录逻辑（删除所有 store.logout()） =====================
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password || loginForm.value.role === null) {
     ElMessage.warning('请填写完整的登录信息')
@@ -310,89 +324,79 @@ const handleLogin = async () => {
     let res
     const loginParams = {
       username: loginForm.value.username,
-      password: loginForm.value.password
+      password: loginForm.value.password,
+      userType: loginForm.value.role
     }
 
-    // 根据身份调用对应接口
+    // 根据身份登录 + 仅清空本地状态，不调用任何接口
     switch (loginForm.value.role) {
+      // 管理员
       case 0:
         res = await adminLogin(loginParams)
+        clearUserState()
+        clearVolunteerState()
+        userStore.setUserInfo(res.data.token, String(res.data.loginId), loginForm.value.username, 0)
         break
+      // 志愿者
       case 1:
         res = await volunteerLogin(loginParams)
+        clearUserState()
+        volunteerStore.setVolunteerInfo(res.data.token, String(res.data.loginId), loginForm.value.username)
         break
+      // 普通用户
       default:
         res = await userLogin(loginParams)
+        clearVolunteerState()
+        userStore.setUserInfo(res.data.token, String(res.data.loginId), loginForm.value.username, 2)
+        break
     }
 
-    const token = res.data.token
-    const userId = String(res.data.loginId)
-
-    // 存入状态管理
-    userStore.setUserInfo(token, userId, loginForm.value.username, loginForm.value.role)
-
-    // 保存上次登录的账号
+    // 记住密码逻辑
     localStorage.setItem('lastUsername', loginForm.value.username)
-
-    // 处理记住密码
-    if (rememberPassword.value) {
-      localStorage.setItem('savedPassword', loginForm.value.password)
-    } else {
-      localStorage.removeItem('savedPassword')
-    }
+    rememberPassword.value
+      ? localStorage.setItem('savedPassword', loginForm.value.password)
+      : localStorage.removeItem('savedPassword')
 
     ElMessage.success('登录成功')
 
-    // 跳转到对应页面
-    if (loginForm.value.role === 0) {
-      router.push('/admin')
-    } else if (loginForm.value.role === 1) {
-      router.push('/volunteer')
-    } else {
-      router.push('/user')
-    }
+    // 路由跳转
+    const pathMap = { 0: '/admin', 1: '/volunteer', 2: '/user' }
+    await router.push(pathMap[loginForm.value.role!])
 
   } catch (err) {
     ElMessage.error('登录失败，请检查账号密码')
-    console.error('登录错误详情：', err)
+    console.error('登录错误：', err)
   } finally {
     loginLoading.value = false
   }
 }
+// ============================================================================
 
 // 注册逻辑
 const handleRegister = async () => {
-  if (!await registerFormRef.value?.validate()) {
-    return
-  }
+  if (!await registerFormRef.value?.validate()) return
 
   registerLoading.value = true
-
   try {
-    let res
-    const registerParams = {
+    const params = {
       username: registerForm.value.username,
       password: registerForm.value.password,
       realName: registerForm.value.realName,
       phone: registerForm.value.phone
     }
 
-    // 根据身份调用对应注册接口
-    if (registerForm.value.role === 1) {
-      res = await volunteerRegister(registerParams)
-    } else {
-      res = await userRegister(registerParams)
-    }
+    registerForm.value.role === 1
+      ? await volunteerRegister(params)
+      : await userRegister(params)
 
     ElMessage.success('注册成功，请登录')
-    // 切换到登录页并自动填充账号
     activeTab.value = 'login'
     loginForm.value.username = registerForm.value.username
     loginForm.value.role = registerForm.value.role
 
   } catch (err) {
     ElMessage.error('注册失败，账号可能已存在')
-    console.error('注册错误详情：', err)
+    console.error('注册错误：', err)
   } finally {
     registerLoading.value = false
   }

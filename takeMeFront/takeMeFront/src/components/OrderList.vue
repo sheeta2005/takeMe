@@ -298,16 +298,15 @@ const confirmAddToCart = async () => {
 
   addToCartLoading.value = true
   try {
-    // 1. 助餐服务使用表单数量，其他服务固定1
     const realQuantity = currentConfig.value.title === '助餐服务' ? cartForm.value.quantity : 1
 
-    // 2. 传递后端必填的 serviceType，彻底解决类型/字段缺失报错
     await cartStore.addItem({
       serviceId: currentService.value.id,
       serviceName: currentService.value.name,
       servicePrice: currentService.value.price,
       quantity: realQuantity,
-      serviceType: currentService.value.type // 后端强制必填字段
+      serviceType: currentService.value.type,
+      remark: cartForm.value.remark // ✅ 传递备注
     })
 
     addToCartVisible.value = false

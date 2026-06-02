@@ -1,10 +1,11 @@
+<!-- src/layout/volunteer/Layout.vue 全量替换 -->
 <template>
   <el-container class="layout-container">
     <el-header class="layout-header">
       <div class="header-left">takeMe 志愿者服务平台</div>
       <div class="header-right">
         <div class="user-box">
-          <img class="user-avatar" :src="userStore.avatar" alt="头像" />
+          <img class="user-avatar" :src="volunteerStore.avatar" alt="头像" />
           <span>您好，{{ userName }} 志愿者</span>
         </div>
       </div>
@@ -26,8 +27,6 @@
             <el-icon><List /></el-icon>
             <span>我的待办</span>
           </el-menu-item>
-
-
 
           <el-menu-item index="/volunteer/record">
             <el-icon><Clock /></el-icon>
@@ -76,7 +75,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from '@/stores/user'
+// ✅ 换成志愿者 store
+import { useVolunteerStore } from '@/stores/volunteer'
 import {
   House, User, Setting, Clock, Calendar,
   ChatDotRound, Coin, Reading, List
@@ -84,14 +84,15 @@ import {
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
+const volunteerStore = useVolunteerStore()
 
 const activeMenu = computed(() => route.path)
-const userName = ref(userStore.username || '志愿者')
+const userName = ref(volunteerStore.realName || '志愿者')
 
-onMounted(() => {
-  userStore.getUserInfo()
-  userName.value = userStore.username
+onMounted(async () => {
+  // ✅ 只调用志愿者自己的信息
+  await volunteerStore.getVolunteerInfo()
+  userName.value = volunteerStore.realName || '志愿者'
 })
 
 const handleMenuSelect = (path: string) => {

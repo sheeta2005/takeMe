@@ -6,6 +6,7 @@ import com.me.result.Result;
 import com.me.service.VolunteerService;
 import com.me.utils.JwtUtil;
 import com.me.vo.LoginVO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,15 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/volunteer")
+@RequiredArgsConstructor
 public class VolunteerLoginController {
 
     private final VolunteerService volunteerService;
     private final JwtUtil jwtUtil;
-
-    public VolunteerLoginController(VolunteerService volunteerService, JwtUtil jwtUtil) {
-        this.volunteerService = volunteerService;
-        this.jwtUtil = jwtUtil;
-    }
 
     /**
      * 志愿者登录接口
@@ -32,7 +29,21 @@ public class VolunteerLoginController {
         if (volunteer == null) {
             return Result.error("账号或密码错误");
         }
-        LoginVO loginVO = jwtUtil.buildLoginVO(volunteer.getId(), 1, volunteer.getRealName(), volunteer.getAvatar());
+        // 1 = 志愿者
+        LoginVO loginVO = jwtUtil.buildLoginVO(
+                volunteer.getId(),
+                1,
+                volunteer.getRealName(),
+                volunteer.getAvatar()
+        );
         return Result.success(loginVO);
+    }
+
+    /**
+     * 退出登录（前端删 token 即可，后端无需复杂逻辑）
+     */
+    @PostMapping("/logout")
+    public Result<Void> logout() {
+        return Result.success();
     }
 }

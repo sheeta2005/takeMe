@@ -17,6 +17,7 @@ public class JwtTokenVolunteerInterceptor implements HandlerInterceptor {
         this.jwtUtil = jwtUtil;
     }
 
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (!(handler instanceof HandlerMethod)) {

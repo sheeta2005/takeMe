@@ -18,4 +18,5 @@ public class OrderItemVO {
     private Integer quantity;
     private Integer itemPrice;
     private LocalDateTime createTime;
+    private Integer serviceType;
 }

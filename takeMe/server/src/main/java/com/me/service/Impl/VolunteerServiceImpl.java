@@ -35,4 +35,11 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         // 3. 登录成功，返回志愿者信息
         return volunteer;
     }
+
+    @Override
+    public Volunteer getByUsername(String username) {
+        return lambdaQuery()
+                .eq(Volunteer::getUsername, username)
+                .one();
+    }
 }
