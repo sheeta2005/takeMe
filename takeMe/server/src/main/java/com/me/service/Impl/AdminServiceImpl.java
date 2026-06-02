@@ -20,17 +20,32 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
     @Override
     public Admin login(LoginDTO loginDTO) {
-        // 1. 根据账号查询管理员
         LambdaQueryWrapper<Admin> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Admin::getUsername, loginDTO.getUsername());
         Admin admin = this.getOne(queryWrapper);
 
-        // 2. 账号不存在或密码错误，返回null
         if (admin == null || !passwordEncoder.matches(loginDTO.getPassword(), admin.getPassword())) {
             return null;
         }
 
-        // 3. 登录成功，返回管理员信息
         return admin;
+    }
+
+    @Override
+    public Admin getAdminInfo(Long adminId) {
+        Admin admin = this.getById(adminId);
+        if (admin != null) {
+            admin.setPassword(null);
+        }
+        return admin;
+    }
+
+    @Override
+    public boolean updateAdminInfo(Admin admin) {
+        admin.setUsername(null);
+        admin.setPassword(null);
+        admin.setCreateTime(null);
+        admin.setLastLoginTime(null);
+        return this.updateById(admin);
     }
 }

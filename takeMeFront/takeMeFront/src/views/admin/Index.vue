@@ -64,33 +64,28 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-// 保留接口导入
 import { getDashboardData, getOrderTrend7d, getServiceTypeDist } from '@/api/admin'
 
 const router = useRouter()
 
-// 实时日期
 const currentDate = computed(() => {
   const now = new Date()
   const week = ['日', '一', '二', '三', '四', '五', '六']
   return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${week[now.getDay()]}`
 })
 
-// 模拟数据（前端兜底）
 const dashboardData = ref({
-  totalOrders: 128,
-  activeOrders: 12,
-  todayRevenue: 3280,
-  volunteerCount: 45,
-  elderCount: 210,
-  pointsIssued: 15600
+  totalOrders: 0,
+  activeOrders: 0,
+  todayRevenue: 0,
+  volunteerCount: 0,
+  elderCount: 0,
+  pointsIssued: 0
 })
 
-// 图表DOM
 const orderTrendChart = ref<HTMLDivElement | null>(null)
 const serviceTypeChart = ref<HTMLDivElement | null>(null)
 
-// 跳转方法
 const goToActiveOrders = () => {
   router.push({
     path: '/admin/order',
@@ -98,7 +93,6 @@ const goToActiveOrders = () => {
   })
 }
 
-// 获取近7天日期
 const getRecent7Days = () => {
   const days = []
   for (let i = 6; i >= 0; i--) {
@@ -109,14 +103,11 @@ const getRecent7Days = () => {
   return days
 }
 
-// 初始化图表
-const initCharts = () => {
-  // 订单趋势图
+const initCharts = async () => {
   if (orderTrendChart.value) {
     const chart = echarts.init(orderTrendChart.value)
-    // 保留接口调用代码，仅注释执行逻辑
-    /*
-    getOrderTrend7d().then(res => {
+    try {
+      const res = await getOrderTrend7d()
       chart.setOption({
         tooltip: {
           trigger: 'axis',
@@ -149,49 +140,15 @@ const initCharts = () => {
           }
         }]
       })
-    }).catch(err => console.error('获取订单趋势失败', err))
-    */
-    // 模拟数据渲染
-    chart.setOption({
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        textStyle: { color: '#333' }
-      },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: getRecent7Days(),
-        axisLine: { lineStyle: { color: '#eee' } }
-      },
-      yAxis: {
-        type: 'value',
-        splitLine: { lineStyle: { color: '#f5f5f5' } }
-      },
-      series: [{
-        name: '订单数',
-        type: 'line',
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 7,
-        data: [12, 19, 15, 22, 28, 18, 25],
-        color: '#00a88d',
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(0,168,141,0.25)' },
-            { offset: 1, color: 'rgba(0,168,141,0)' }
-          ])
-        }
-      }]
-    })
+    } catch (err) {
+      console.error('获取订单趋势失败', err)
+    }
   }
 
-  // 服务类型饼图
   if (serviceTypeChart.value) {
     const chart = echarts.init(serviceTypeChart.value)
-    // 保留接口调用代码，仅注释执行逻辑
-    /*
-    getServiceTypeDist().then(res => {
+    try {
+      const res = await getServiceTypeDist()
       chart.setOption({
         tooltip: { trigger: 'item' },
         legend: { orient: 'vertical', right: 20, top: 'center', textStyle: { color: '#666' } },
@@ -203,42 +160,30 @@ const initCharts = () => {
           itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
           label: { show: false },
           emphasis: { label: { show: true, fontSize: 18, fontWeight: 'bold' } },
-          data: res.data
+          data: res.data.map((item: any, index: number) => {
+            const colors = ['#00a88d', '#36b9cc', '#1cc88a', '#4e73df', '#f6c23e']
+            return {
+              value: item.value,
+              name: item.name,
+              itemStyle: { color: colors[index % colors.length] }
+            }
+          })
         }]
       })
-    }).catch(err => console.error('获取服务分布失败', err))
-    */
-    // 模拟数据渲染
-    chart.setOption({
-      tooltip: { trigger: 'item' },
-      legend: { orient: 'vertical', right: 20, top: 'center', textStyle: { color: '#666' } },
-      series: [{
-        name: '服务类型',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['40%', '50%'],
-        itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
-        label: { show: false },
-        emphasis: { label: { show: true, fontSize: 18, fontWeight: 'bold' } },
-        data: [
-          { value: 35, name: '助餐服务', itemStyle: { color: '#00a88d' } },
-          { value: 25, name: '助洁服务', itemStyle: { color: '#36b9cc' } },
-          { value: 20, name: '助医服务', itemStyle: { color: '#1cc88a' } },
-          { value: 20, name: '代购服务', itemStyle: { color: '#4e73df' } }
-        ]
-      }]
-    })
+    } catch (err) {
+      console.error('获取服务分布失败', err)
+    }
   }
 }
 
-// 页面加载
-onMounted(() => {
-  // 保留接口调用代码，仅注释执行逻辑
-  /*
-  getDashboardData().then(res => {
+onMounted(async () => {
+  try {
+    const res = await getDashboardData()
     dashboardData.value = res.data
-  }).catch(err => console.error('获取工作台数据失败', err))
-  */
+  } catch (err) {
+    console.error('获取工作台数据失败', err)
+  }
+
   initCharts()
 })
 

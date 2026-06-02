@@ -1,19 +1,34 @@
 import request from '@/utils/request'
-// 管理员订单页面
-import {
-  getMyOrderList,  // 订单列表
-  getOrderDetail,  // 订单详情
-  confirmOrder,    // 确认完成
-  cancelOrder      // 取消订单
-} from '@/api/order'
-
-// 导出order相关的函数供管理员使用
-export { getMyOrderList, getOrderDetail, confirmOrder, cancelOrder }
 
 // 管理员登录
 export function adminLogin(data: { username: string; password: string }) {
   return request({
     url: '/api/admin/login',
+    method: 'post',
+    data
+  })
+}
+
+// 管理员退出登录
+export function adminLogout() {
+  return request({
+    url: '/api/admin/logout',
+    method: 'post'
+  })
+}
+
+// 获取管理员信息
+export function getAdminInfo() {
+  return request({
+    url: '/api/admin/info',
+    method: 'get'
+  })
+}
+
+// 更新管理员信息
+export function updateAdminInfo(data: any) {
+  return request({
+    url: '/api/admin/update',
     method: 'post',
     data
   })
@@ -26,15 +41,74 @@ export const getDashboardData = () => {
     method: 'get'
   })
 }
+
 export const getOrderTrend7d = () => {
   return request({
     url: '/api/admin/order/trend7d',
     method: 'get'
   })
 }
+
 export const getServiceTypeDist = () => {
   return request({
     url: '/api/admin/service/type/dist',
+    method: 'get'
+  })
+}
+
+// ========================= 订单管理 =========================
+export const getOrderPage = (page: number, pageSize: number, status?: number) => {
+  return request({
+    url: '/api/admin/order/page',
+    method: 'get',
+    params: { page, pageSize, status }
+  })
+}
+
+export const searchOrder = (
+  page: number,
+  pageSize: number,
+  status?: number,
+  orderNo?: string,
+  userId?: number,
+  userName?: string,
+  volunteerId?: number,
+  volunteerName?: string,
+  serviceType?: number,
+  startDate?: string,
+  endDate?: string
+) => {
+  return request({
+    url: '/api/admin/order/search',
+    method: 'get',
+    params: { page, pageSize, status, orderNo, userId, userName, volunteerId, volunteerName, serviceType, startDate, endDate }
+  })
+}
+
+export const getOrderDetail = (id: number) => {
+  return request({
+    url: `/api/admin/order/detail/${id}`,
+    method: 'get'
+  })
+}
+
+export const cancelOrder = (id: number) => {
+  return request({
+    url: `/api/admin/order/cancel/${id}`,
+    method: 'post'
+  })
+}
+
+export const completeOrder = (id: number) => {
+  return request({
+    url: `/api/admin/order/complete/${id}`,
+    method: 'post'
+  })
+}
+
+export const getOrderStatistics = () => {
+  return request({
+    url: '/api/admin/order/statistics',
     method: 'get'
   })
 }
@@ -47,8 +121,13 @@ export const getVolunteerPage = (page: number, pageSize: number) => {
     params: { page, pageSize }
   })
 }
-export const volunteerSearch = (
-  page: number, pageSize: number, username: string, id: number | null, availableRange: string
+
+export const searchVolunteer = (
+  page: number,
+  pageSize: number,
+  username?: string,
+  id?: number,
+  availableRange?: string
 ) => {
   return request({
     url: '/api/admin/volunteer/search',
@@ -56,81 +135,220 @@ export const volunteerSearch = (
     params: { page, pageSize, username, id, availableRange }
   })
 }
-export const volunteerAdd = (data: {
-  username: string; phone: string; age: number; gender: number; address: string;
-  availableRange: string; freeTime: number; workDay: number; status: number
-}) => {
-  return request({ url: '/api/admin/volunteer/add', method: 'post', data })
+
+export const getVolunteerDetail = (id: number) => {
+  return request({
+    url: `/api/admin/volunteer/detail/${id}`,
+    method: 'get'
+  })
 }
-export const volunteerUpdate = (data: {
-  id: number; username: string; phone: string; age: number; gender: number; address: string;
-  availableRange: string; freeTime: number; workDay: number; status: number
-}) => {
-  return request({ url: '/api/admin/volunteer/update', method: 'post', data })
+
+export const addVolunteer = (data: any) => {
+  return request({
+    url: '/api/admin/volunteer/add',
+    method: 'post',
+    data
+  })
 }
-export const volunteerDelete = (id: number) => {
-  return request({ url: '/api/admin/volunteer/delete', method: 'get', params: { id } })
+
+export const updateVolunteer = (data: any) => {
+  return request({
+    url: '/api/admin/volunteer/update',
+    method: 'post',
+    data
+  })
+}
+
+export const deleteVolunteer = (id: number) => {
+  return request({
+    url: `/api/admin/volunteer/delete/${id}`,
+    method: 'delete'
+  })
+}
+
+export const updateVolunteerStatus = (id: number, status: number) => {
+  return request({
+    url: `/api/admin/volunteer/status/${id}`,
+    method: 'post',
+    params: { status }
+  })
 }
 
 // ========================= 用户（老人）管理 =========================
-export const getElderPage = (page: number, pageSize: number) => {
-  return request({ url: '/api/admin/elder/page', method: 'get', params: { page, pageSize } })
+export const getUserPage = (page: number, pageSize: number) => {
+  return request({
+    url: '/api/admin/user/page',
+    method: 'get',
+    params: { page, pageSize }
+  })
 }
-export const elderSearch = (params: {
-  page: number; pageSize: number; keyword?: string; gender?: string; startDate?: string; endDate?: string
-}) => {
-  return request({ url: '/api/admin/elder/search', method: 'get', params })
+
+export const searchUser = (
+  page: number,
+  pageSize: number,
+  keyword?: string,
+  gender?: number,
+  startDate?: string,
+  endDate?: string
+) => {
+  return request({
+    url: '/api/admin/user/search',
+    method: 'get',
+    params: { page, pageSize, keyword, gender, startDate, endDate }
+  })
 }
+
 export const getUserDetail = (id: number) => {
-  return request({ url: '/api/admin/elder/detail', method: 'get', params: { id } })
-}
-export const userAdd = (data: {
-  realName: string; phone: string; age: number; gender: '男' | '女'; address: string;
-  emergencyName: string; emergencyPhone: string
-}) => {
-  return request({ url: '/api/admin/elder/add', method: 'post', data })
-}
-export const userUpdate = (data: {
-  userId: number; realName: string; phone: string; age: number; gender: '男' | '女'; address: string;
-  emergencyName: string; emergencyPhone: string
-}) => {
-  return request({ url: '/api/admin/elder/update', method: 'post', data })
-}
-export const userDelete = (id: number) => {
-  return request({ url: '/api/admin/elder/delete', method: 'get', params: { id } })
+  return request({
+    url: `/api/admin/user/detail/${id}`,
+    method: 'get'
+  })
 }
 
-// ========================= 积分（工资）管理 =========================
-export const getPointsPage = (page: number, pageSize: number) => {
-  return request({ url: '/api/admin/points/page', method: 'get', params: { page, pageSize } })
-}
-export const grantPoints = (data: { volunteerId: number; points: number; remark: string }) => {
-  return request({ url: '/api/admin/points/grant', method: 'post', data })
-}
-
-// ========================= 业务审批 =========================
-export const getApprovalPage = (page: number, pageSize: number) => {
-  return request({ url: '/api/admin/approval/page', method: 'get', params: { page, pageSize } })
-}
-export const doApproval = (data: { id: number; status: number; remark?: string }) => {
-  return request({ url: '/api/admin/approval/do', method: 'post', data })
+export const addUser = (data: any) => {
+  return request({
+    url: '/api/admin/user/add',
+    method: 'post',
+    data
+  })
 }
 
-// ========================= 消息/收信箱/差评 =========================
-export const getInboxPage = (page: number, pageSize: number) => {
-  return request({ url: '/api/admin/inbox/page', method: 'get', params: { page, pageSize } })
-}
-export const getFeedbackPage = (page: number, pageSize: number) => {
-  return request({ url: '/api/admin/feedback/page', method: 'get', params: { page, pageSize } })
-}
-export const sendMessage = (data: {
-  receiverType: 'all_volunteer' | 'all_elder' | 'spec_volunteer' | 'spec_elder';
-  receiverIds?: number[]; type: 0 | 1 | 2; title: string; content: string
-}) => {
-  return request({ url: '/api/admin/message/send', method: 'post', data })
+export const updateUser = (data: any) => {
+  return request({
+    url: '/api/admin/user/update',
+    method: 'post',
+    data
+  })
 }
 
-// ========================= 今日待办 =========================
-export const getTodoCount = () => {
-  return request({ url: '/api/admin/todo/count', method: 'get' })
+export const deleteUser = (id: number) => {
+  return request({
+    url: `/api/admin/user/delete/${id}`,
+    method: 'delete'
+  })
+}
+
+export const updateUserStatus = (id: number, status: number) => {
+  return request({
+    url: `/api/admin/user/status/${id}`,
+    method: 'post',
+    params: { status }
+  })
+}
+
+// ========================= 消息管理 =========================
+export const getMessagePage = (page: number, pageSize: number, receiverType?: number, type?: number) => {
+  return request({
+    url: '/api/admin/message/page',
+    method: 'get',
+    params: { page, pageSize, receiverType, type }
+  })
+}
+
+export const getSentMessagePage = (page: number, pageSize: number, receiverType?: number, type?: number) => {
+  return request({
+    url: '/api/admin/message/sent',
+    method: 'get',
+    params: { page, pageSize, receiverType, type }
+  })
+}
+
+export const sendMessage = (data: any) => {
+  return request({
+    url: '/api/admin/message/send',
+    method: 'post',
+    data
+  })
+}
+
+export const sendBatchMessage = (data: any) => {
+  return request({
+    url: '/api/admin/message/sendBatch',
+    method: 'post',
+    data
+  })
+}
+
+export const deleteMessage = (id: number) => {
+  return request({
+    url: `/api/admin/message/delete/${id}`,
+    method: 'delete'
+  })
+}
+
+export const getMessageStatistics = () => {
+  return request({
+    url: '/api/admin/message/statistics',
+    method: 'get'
+  })
+}
+
+// ========================= 评价管理 =========================
+export const getReviewPage = (page: number, pageSize: number, rating?: number) => {
+  return request({
+    url: '/api/admin/review/page',
+    method: 'get',
+    params: { page, pageSize, rating }
+  })
+}
+
+export const getReviewDetail = (id: number) => {
+  return request({
+    url: `/api/admin/review/detail/${id}`,
+    method: 'get'
+  })
+}
+
+export const deleteReview = (id: number) => {
+  return request({
+    url: `/api/admin/review/delete/${id}`,
+    method: 'delete'
+  })
+}
+
+export const getReviewStatistics = () => {
+  return request({
+    url: '/api/admin/review/statistics',
+    method: 'get'
+  })
+}
+
+// ========================= 审批管理 =========================
+export const getApprovalPage = (
+  page: number,
+  pageSize: number,
+  type?: string,
+  status?: string,
+  keyword?: string,
+  startDate?: string,
+  endDate?: string
+) => {
+  return request({
+    url: '/api/admin/approval/page',
+    method: 'get',
+    params: { page, pageSize, type, status, keyword, startDate, endDate }
+  })
+}
+
+export const approveApplication = (id: number, remark?: string) => {
+  return request({
+    url: `/api/admin/approval/approve/${id}`,
+    method: 'post',
+    data: { remark }
+  })
+}
+
+export const rejectApplication = (id: number, remark: string) => {
+  return request({
+    url: `/api/admin/approval/reject/${id}`,
+    method: 'post',
+    data: { remark }
+  })
+}
+
+export const getApprovalDetail = (id: number) => {
+  return request({
+    url: `/api/admin/approval/detail/${id}`,
+    method: 'get'
+  })
 }

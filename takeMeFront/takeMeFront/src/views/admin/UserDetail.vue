@@ -11,11 +11,15 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">用户ID：</span>
-            <span class="value">{{ userDetail.userId }}</span>
+            <span class="value">{{ userDetail.id }}</span>
           </div>
           <div class="detail-item">
             <span class="label">姓名：</span>
             <span class="value">{{ userDetail.realName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">账号：</span>
+            <span class="value">{{ userDetail.username }}</span>
           </div>
           <div class="detail-item">
             <span class="label">年龄：</span>
@@ -23,7 +27,9 @@
           </div>
           <div class="detail-item">
             <span class="label">性别：</span>
-            <span class="value">{{ userDetail.gender }}</span>
+            <el-tag :type="userDetail.gender === 0 ? 'primary' : 'danger'" size="small">
+              {{ userDetail.gender === 0 ? '男' : '女' }}
+            </el-tag>
           </div>
           <div class="detail-item">
             <span class="label">手机号：</span>
@@ -31,7 +37,7 @@
           </div>
           <div class="detail-item">
             <span class="label">居住地址：</span>
-            <span class="value">{{ userDetail.address }}</span>
+            <span class="value">{{ userDetail.address || '-' }}</span>
           </div>
           <div class="detail-item">
             <span class="label">注册时间：</span>
@@ -39,7 +45,7 @@
           </div>
           <div class="detail-item">
             <span class="label">最后登录：</span>
-            <span class="value">{{ userDetail.lastLoginTime }}</span>
+            <span class="value">{{ userDetail.lastLoginTime || '-' }}</span>
           </div>
         </div>
       </div>
@@ -49,11 +55,11 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">姓名：</span>
-            <span class="value">{{ userDetail.emergencyName }}</span>
+            <span class="value">{{ userDetail.emergencyName || '-' }}</span>
           </div>
           <div class="detail-item">
             <span class="label">联系电话：</span>
-            <span class="value">{{ userDetail.emergencyPhone }}</span>
+            <span class="value">{{ userDetail.emergencyPhone || '-' }}</span>
           </div>
         </div>
       </div>
@@ -66,26 +72,27 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getUserDetail } from '@/api/admin'
-import type { user } from '@/types/User.ts'
+import type { User } from '@/types/User'
 
 const route = useRoute()
-const userDetail = ref<user>({
-  userId: 0,
+const userDetail = ref<User>({
+  id: 0,
   realName: '',
   username: '',
   phone: '',
   avatar: '',
-  gender: '男',
+  gender: 0,
   age: 60,
   address: '',
   emergencyName: '',
   emergencyPhone: '',
+  status: 1,
   createTime: '',
   lastLoginTime: ''
 })
 
 onMounted(() => {
-  const userId = route.query.id as number
+  const userId = Number(route.params.id)
   if (userId) {
     fetchUserDetail(userId)
   }
@@ -93,27 +100,8 @@ onMounted(() => {
 
 const fetchUserDetail = async (id: number) => {
   try {
-    // --- 接口已注释 ---
-    /*
     const res = await getUserDetail(id)
     userDetail.value = res.data
-    */
-
-    // 模拟数据
-    userDetail.value = {
-      userId: id,
-      realName: '王奶奶',
-      username: 'wang123',
-      phone: '138****1111',
-      avatar: '',
-      gender: '女',
-      age: 72,
-      address: '幸福小区1栋3单元501',
-      emergencyName: '王女士',
-      emergencyPhone: '135****2222',
-      createTime: '2026-01-01',
-      lastLoginTime: '2026-05-26'
-    }
   } catch (err) {
     console.error('获取用户详情失败', err)
     ElMessage.error('获取用户详情失败')

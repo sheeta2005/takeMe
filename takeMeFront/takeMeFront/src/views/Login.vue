@@ -174,31 +174,27 @@ import { useRouter } from 'vue-router'
 import { adminLogin, volunteerLogin, userLogin, userRegister, volunteerRegister } from '@/api'
 import { useUserStore } from '@/stores/user'
 import { useVolunteerStore } from '@/stores/volunteer'
+import { useAdminStore } from '@/stores/admin'
 
 const router = useRouter()
 const userStore = useUserStore()
 const volunteerStore = useVolunteerStore()
+const adminStore = useAdminStore()
 
-// 表单引用
 const loginFormRef = ref<InstanceType<typeof ElForm>>()
 const registerFormRef = ref<InstanceType<typeof ElForm>>()
 
-// 加载状态
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 
-// 标签页切换
 const activeTab = ref('login')
 
-// 动态背景
 const bgX = ref(0)
 const bgY = ref(0)
 const speed = 15
 
-// 记住密码
 const rememberPassword = ref(false)
 
-// 登录表单
 const loginForm = ref<{
   username: string;
   password: string;
@@ -209,7 +205,6 @@ const loginForm = ref<{
   role: null
 })
 
-// 注册表单
 const registerForm = ref<{
   username: string;
   password: string;
@@ -226,7 +221,6 @@ const registerForm = ref<{
   role: null
 })
 
-// 注册验证规则
 const registerRules = {
   username: [
     { required: true, message: '请输入账号', trigger: 'blur' },
@@ -261,8 +255,6 @@ const registerRules = {
   ]
 }
 
-// ===================== 核心修缮：纯本地清空状态，无网络请求 =====================
-/** 清空普通用户/管理员状态 */
 const clearUserState = () => {
   userStore.$reset()
   localStorage.removeItem('token')
@@ -270,7 +262,6 @@ const clearUserState = () => {
   localStorage.removeItem('role')
 }
 
-/** 清空志愿者状态 */
 const clearVolunteerState = () => {
   volunteerStore.$reset()
   localStorage.removeItem('volunteerToken')
@@ -278,9 +269,17 @@ const clearVolunteerState = () => {
   localStorage.removeItem('volunteerUsername')
   localStorage.removeItem('volunteerRole')
 }
-// ============================================================================
 
-// 鼠标移动背景效果
+const clearAdminState = () => {
+  adminStore.token = ''
+  adminStore.adminId = ''
+  adminStore.username = ''
+  adminStore.realName = ''
+  adminStore.role = 0
+  localStorage.removeItem('adminToken')
+  localStorage.removeItem('adminId')
+}
+
 const handleMouseMove = (e: MouseEvent) => {
   const x = (window.innerWidth / 2 - e.clientX) / speed
   const y = (window.innerHeight / 2 - e.clientY) / speed
@@ -288,7 +287,6 @@ const handleMouseMove = (e: MouseEvent) => {
   bgY.value = y
 }
 
-// 页面加载读取本地存储
 onMounted(() => {
   const lastUsername = localStorage.getItem('lastUsername')
   if (lastUsername) loginForm.value.username = lastUsername
@@ -300,7 +298,6 @@ onMounted(() => {
   }
 })
 
-// 重置表单
 const resetForm = () => {
   if (activeTab.value === 'login') {
     loginFormRef.value?.resetFields()
@@ -311,7 +308,6 @@ const resetForm = () => {
   }
 }
 
-// ===================== 核心修缮：登录逻辑（删除所有 store.logout()） =====================
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password || loginForm.value.role === null) {
     ElMessage.warning('请填写完整的登录信息')
@@ -328,30 +324,28 @@ const handleLogin = async () => {
       userType: loginForm.value.role
     }
 
-    // 根据身份登录 + 仅清空本地状态，不调用任何接口
     switch (loginForm.value.role) {
-      // 管理员
       case 0:
         res = await adminLogin(loginParams)
         clearUserState()
         clearVolunteerState()
-        userStore.setUserInfo(res.data.token, String(res.data.loginId), loginForm.value.username, 0)
+        clearAdminState()
+        adminStore.setAdminInfo(res.data.token, String(res.data.loginId), loginForm.value.username, res.data.realName)
         break
-      // 志愿者
       case 1:
         res = await volunteerLogin(loginParams)
         clearUserState()
+        clearAdminState()
         volunteerStore.setVolunteerInfo(res.data.token, String(res.data.loginId), loginForm.value.username)
         break
-      // 普通用户
       default:
         res = await userLogin(loginParams)
         clearVolunteerState()
+        clearAdminState()
         userStore.setUserInfo(res.data.token, String(res.data.loginId), loginForm.value.username, 2)
         break
     }
 
-    // 记住密码逻辑
     localStorage.setItem('lastUsername', loginForm.value.username)
     rememberPassword.value
       ? localStorage.setItem('savedPassword', loginForm.value.password)
@@ -359,7 +353,6 @@ const handleLogin = async () => {
 
     ElMessage.success('登录成功')
 
-    // 路由跳转
     const pathMap = { 0: '/admin', 1: '/volunteer', 2: '/user' }
     await router.push(pathMap[loginForm.value.role!])
 
@@ -370,9 +363,7 @@ const handleLogin = async () => {
     loginLoading.value = false
   }
 }
-// ============================================================================
 
-// 注册逻辑
 const handleRegister = async () => {
   if (!await registerFormRef.value?.validate()) return
 

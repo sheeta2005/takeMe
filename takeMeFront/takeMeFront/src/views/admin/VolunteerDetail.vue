@@ -11,11 +11,15 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">志愿者ID：</span>
-            <span class="value">{{ volunteerDetail.volunteerId }}</span>
+            <span class="value">{{ volunteerDetail.id }}</span>
           </div>
           <div class="detail-item">
             <span class="label">姓名：</span>
             <span class="value">{{ volunteerDetail.realName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">账号：</span>
+            <span class="value">{{ volunteerDetail.username }}</span>
           </div>
           <div class="detail-item">
             <span class="label">年龄：</span>
@@ -23,7 +27,9 @@
           </div>
           <div class="detail-item">
             <span class="label">性别：</span>
-            <span class="value">{{ volunteerDetail.gender }}</span>
+            <el-tag :type="volunteerDetail.gender === 0 ? 'primary' : 'danger'" size="small">
+              {{ volunteerDetail.gender === 0 ? '男' : '女' }}
+            </el-tag>
           </div>
           <div class="detail-item">
             <span class="label">手机号：</span>
@@ -31,7 +37,7 @@
           </div>
           <div class="detail-item">
             <span class="label">地址：</span>
-            <span class="value">{{ volunteerDetail.address }}</span>
+            <span class="value">{{ volunteerDetail.address || '-' }}</span>
           </div>
           <div class="detail-item">
             <span class="label">注册时间：</span>
@@ -39,7 +45,7 @@
           </div>
           <div class="detail-item">
             <span class="label">最后登录：</span>
-            <span class="value">{{ volunteerDetail.lastLoginTime }}</span>
+            <span class="value">{{ volunteerDetail.lastLoginTime || '-' }}</span>
           </div>
         </div>
       </div>
@@ -49,21 +55,23 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">服务类型：</span>
-            <span class="value">{{ getServiceTypeText(volunteerDetail.serviceType) }}</span>
+            <el-tag size="small" :type="getServiceTypeTagType(volunteerDetail.serviceType)">
+              {{ getServiceTypeText(volunteerDetail.serviceType) }}
+            </el-tag>
           </div>
           <div class="detail-item">
             <span class="label">可服务时间：</span>
-            <span class="value">{{ volunteerDetail.serviceDays }}</span>
+            <span class="value">{{ getServiceDaysText(volunteerDetail.serviceDays) }}</span>
           </div>
           <div class="detail-item">
-            <span class="label">状态：</span>
+            <span class="label">工作状态：</span>
             <el-tag :type="getWorkStatusTagType(volunteerDetail.workStatus)" size="small">
               {{ getWorkStatusText(volunteerDetail.workStatus) }}
             </el-tag>
           </div>
           <div class="detail-item">
             <span class="label">累计服务时长：</span>
-            <span class="value">{{ volunteerDetail.totalServiceHours }}小时</span>
+            <span class="value" style="color: #00a88d; font-weight: 600">{{ volunteerDetail.totalServiceHours }}小时</span>
           </div>
         </div>
       </div>
@@ -73,11 +81,11 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">姓名：</span>
-            <span class="value">{{ volunteerDetail.emergencyName }}</span>
+            <span class="value">{{ volunteerDetail.emergencyName || '-' }}</span>
           </div>
           <div class="detail-item">
             <span class="label">电话：</span>
-            <span class="value">{{ volunteerDetail.emergencyPhone }}</span>
+            <span class="value">{{ volunteerDetail.emergencyPhone || '-' }}</span>
           </div>
         </div>
       </div>
@@ -89,30 +97,32 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { volunteer } from '@/types/Volunteer.ts'
+import { getVolunteerDetail } from '@/api/admin'
+import type { Volunteer } from '@/types/Volunteer'
 
 const route = useRoute()
-const volunteerDetail = ref<volunteer>({
-  volunteerId: 0,
+const volunteerDetail = ref<Volunteer>({
+  id: 0,
   realName: '',
   username: '',
   phone: '',
   avatar: '',
-  serviceDays: '',
+  serviceDays: 0,
   serviceType: 0,
   workStatus: 0,
-  gender: '男',
+  gender: 0,
   age: 20,
   address: '',
   emergencyName: '',
   emergencyPhone: '',
   totalServiceHours: 0,
+  status: 1,
   createTime: '',
   lastLoginTime: ''
 })
 
 onMounted(() => {
-  const volunteerId = route.query.id as number
+  const volunteerId = Number(route.params.id)
   if (volunteerId) {
     fetchVolunteerDetail(volunteerId)
   }
@@ -120,31 +130,8 @@ onMounted(() => {
 
 const fetchVolunteerDetail = async (id: number) => {
   try {
-    // --- 接口已注释 ---
-    /*
     const res = await getVolunteerDetail(id)
     volunteerDetail.value = res.data
-    */
-
-    // 模拟数据
-    volunteerDetail.value = {
-      volunteerId: id,
-      realName: '小张',
-      username: 'zhang123',
-      phone: '135****9012',
-      avatar: '',
-      serviceDays: '周一至周五',
-      serviceType: 2,
-      workStatus: 1,
-      gender: '男',
-      age: 24,
-      address: '幸福小区1栋3单元501',
-      emergencyName: '张父',
-      emergencyPhone: '138****1111',
-      totalServiceHours: 120,
-      createTime: '2026-01-01',
-      lastLoginTime: '2026-05-26'
-    }
   } catch (err) {
     console.error('获取志愿者详情失败', err)
     ElMessage.error('获取志愿者详情失败')
@@ -152,8 +139,18 @@ const fetchVolunteerDetail = async (id: number) => {
 }
 
 const getServiceTypeText = (type: number) => {
-  const map = ['代购服务', '助洁服务', '助餐服务', '助医服务']
+  const map = ['代购服务', '助洁服务', '助餐服务', '助医服务', '陪伴服务']
   return map[type] || '未知'
+}
+
+const getServiceTypeTagType = (type: number) => {
+  const map = ['primary', 'success', 'warning', 'danger', 'info']
+  return map[type] || 'info'
+}
+
+const getServiceDaysText = (days: number) => {
+  const map = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  return map[days] || '未知'
 }
 
 const getWorkStatusText = (status: number) => {

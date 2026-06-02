@@ -1,10 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-// ✅ 新增：导入志愿者store
 import { useVolunteerStore } from '@/stores/volunteer'
+import { useAdminStore } from '@/stores/admin'
 
 const routes = [
-  // 你的所有路由配置完全不变，一个字都不用改
   {
     path: '/',
     redirect: '/login'
@@ -18,7 +17,7 @@ const routes = [
     path: '/admin',
     component: () => import('@/layout/admin/Layout.vue'),
     redirect: '/admin/index',
-    meta: { role: 0 }, // 管理员
+    meta: { role: 0 },
     children: [
       { path: 'index', component: () => import('@/views/admin/Index.vue') },
       { path: 'order', component: () => import('@/views/admin/Order.vue') },
@@ -37,7 +36,7 @@ const routes = [
   {
     path: '/volunteer',
     component: () => import('@/layout/volunteer/Layout.vue'),
-    meta: { role: 1 }, // 志愿者
+    meta: { role: 1 },
     children: [
       { path: '', component: () => import('@/views/volunteer/Index.vue') },
       { path: 'todo', component: () => import('@/views/volunteer/Todo.vue') },
@@ -67,7 +66,7 @@ const routes = [
   {
     path: '/user',
     component: () => import('@/layout/user/Layout.vue'),
-    meta: { role: 2 }, // 普通用户
+    meta: { role: 2 },
     children: [
       { path: '', component: () => import('@/views/user/Index.vue') },
       { path: 'order', component: () => import('@/views/user/Order.vue') },
@@ -98,14 +97,15 @@ const router = createRouter({
   routes
 })
 
-// ✅ 完全修复后的路由守卫：根据路由meta.role自动检测对应store
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   const volunteerStore = useVolunteerStore()
+  const adminStore = useAdminStore()
 
-  // 1. 登录页直接放行
   if (to.path === '/login') {
-    // 有token还访问登录页 → 自动跳转到对应身份的首页
+    if (adminStore.token) {
+      return next('/admin')
+    }
     if (userStore.token) {
       return userStore.role === 0 ? next('/admin') : next('/user')
     }
@@ -115,42 +115,33 @@ router.beforeEach((to, from, next) => {
     return next()
   }
 
-  // 2. 获取目标路由需要的身份
   const requiredRole = to.meta.role as number | undefined
 
-  // 3. 根据需要的身份，检查对应store的token
   let hasToken = false
   let currentRole: number | null = null
 
-  if (requiredRole === 1) {
-    // 访问志愿者页面 → 检查志愿者token
+  if (requiredRole === 0) {
+    hasToken = !!adminStore.token
+    currentRole = 0
+  } else if (requiredRole === 1) {
     hasToken = !!volunteerStore.token
     currentRole = volunteerStore.role
   } else if (requiredRole === 2) {
-    // 访问用户页面 → 检查用户token
-    hasToken = !!userStore.token
-    currentRole = userStore.role
-  } else if (requiredRole === 0) {
-    // 访问管理员页面 → 检查管理员token（你原来的逻辑不变）
     hasToken = !!userStore.token
     currentRole = userStore.role
   } else {
-    // 不需要权限的页面直接放行
     return next()
   }
 
-  // 4. 没有token → 跳登录
   if (!hasToken) {
     return next('/login')
   }
 
-  // 5. 有token但身份不匹配 → 无权限
   if (currentRole !== requiredRole) {
     alert('无权限访问')
     return next(false)
   }
 
-  // 6. 全部通过 → 放行
   next()
 })
 

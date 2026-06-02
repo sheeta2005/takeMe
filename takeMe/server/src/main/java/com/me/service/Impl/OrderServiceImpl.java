@@ -200,11 +200,11 @@ public class OrderServiceImpl implements OrderService {
         if (order == null || !order.getVolunteerId().equals(volunteerId)) {
             throw new RuntimeException("订单不存在");
         }
-        if (order.getStatus() != 1) {
-            throw new RuntimeException("仅待确认状态可接单");
+        if (order.getStatus() != 0) {
+            throw new RuntimeException("订单状态不允许接单");
         }
 
-        order.setStatus(2);
+        order.setStatus(1);
         orderMapper.updateById(order);
     }
 
@@ -214,12 +214,11 @@ public class OrderServiceImpl implements OrderService {
         if (order == null || !order.getVolunteerId().equals(volunteerId)) {
             throw new RuntimeException("订单不存在");
         }
-        if (order.getStatus() != 2) {
-            throw new RuntimeException("仅服务中状态可放弃");
+        if (order.getStatus() != 1) {
+            throw new RuntimeException("订单状态不允许放弃");
         }
 
-        order.setStatus(6);
-        order.setVolunteerId(null);
+        order.setStatus(0);
         orderMapper.updateById(order);
     }
 
@@ -229,47 +228,119 @@ public class OrderServiceImpl implements OrderService {
         if (order == null || !order.getVolunteerId().equals(volunteerId)) {
             throw new RuntimeException("订单不存在");
         }
-        if (order.getStatus() != 2) {
-            throw new RuntimeException("仅服务中状态可完成");
+        if (order.getStatus() != 1) {
+            throw new RuntimeException("订单状态不允许完成");
         }
 
-        order.setStatus(3);
-        order.setCompleteTime(LocalDateTime.now());
+        order.setStatus(2);
         orderMapper.updateById(order);
     }
 
-    // ===================== 确认服务完成 =====================
     @Override
     public void confirmOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new RuntimeException("订单不存在");
         }
-        if (order.getStatus() != 3) {
-            throw new RuntimeException("仅待确认状态可完成");
+        if (order.getStatus() != 2) {
+            throw new RuntimeException("订单状态不允许确认");
         }
 
-        order.setStatus(4);
-        order.setCompleteTime(LocalDateTime.now());
+        order.setStatus(3);
         orderMapper.updateById(order);
     }
 
-    // ===================== 评价订单 =====================
     @Override
     public void evaluateOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new RuntimeException("订单不存在");
         }
-        if (order.getStatus() != 4) {
-            throw new RuntimeException("仅已完成订单可评价");
-        }
-        if (order.getIsReviewed() == 1) {
-            throw new RuntimeException("已评价，请勿重复操作");
+        if (order.getStatus() != 3) {
+            throw new RuntimeException("订单状态不允许评价");
         }
 
         order.setIsReviewed(1);
         orderMapper.updateById(order);
+    }
+
+    // ===================== 管理员功能 =====================
+    @Override
+    public Page<Order> getAdminOrderPage(Integer page, Integer pageSize, Integer status) {
+        Page<Order> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        
+        if (status != null) {
+            wrapper.eq(Order::getStatus, status);
+        }
+        
+        wrapper.orderByDesc(Order::getCreateTime);
+        return orderMapper.selectPage(pageParam, wrapper);
+    }
+    
+    @Override
+    public Page<Order> searchAdminOrder(
+            Integer page, Integer pageSize, Integer status,
+            String orderNo, Long userId, String userName,
+            Long volunteerId, String volunteerName, Integer serviceType,
+            String startDate, String endDate
+    ) {
+        Page<Order> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        
+        if (status != null) {
+            wrapper.eq(Order::getStatus, status);
+        }
+        if (orderNo != null && !orderNo.trim().isEmpty()) {
+            wrapper.like(Order::getOrderNo, orderNo);
+        }
+        if (userId != null) {
+            wrapper.eq(Order::getUserId, userId);
+        }
+        if (volunteerId != null) {
+            wrapper.eq(Order::getVolunteerId, volunteerId);
+        }
+        if (startDate != null && !startDate.trim().isEmpty()) {
+            wrapper.ge(Order::getCreateTime, startDate + " 00:00:00");
+        }
+        if (endDate != null && !endDate.trim().isEmpty()) {
+            wrapper.le(Order::getCreateTime, endDate + " 23:59:59");
+        }
+        
+        wrapper.orderByDesc(Order::getCreateTime);
+        return orderMapper.selectPage(pageParam, wrapper);
+    }
+    
+    @Override
+    public Order getAdminOrderDetail(Long id) {
+        return orderMapper.selectById(id);
+    }
+    
+    @Override
+    public boolean adminCancelOrder(Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null) {
+            return false;
+        }
+        
+        order.setStatus(4);
+        return orderMapper.updateById(order) > 0;
+    }
+    
+    @Override
+    public boolean adminCompleteOrder(Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null) {
+            return false;
+        }
+        
+        order.setStatus(2);
+        return orderMapper.updateById(order) > 0;
+    }
+    
+    @Override
+    public Long countOrders(LambdaQueryWrapper<Order> wrapper) {
+        return orderMapper.selectCount(wrapper);
     }
 
     // 生成订单号

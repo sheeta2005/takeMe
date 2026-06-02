@@ -4,27 +4,29 @@
       <h2 class="page-title">订单管理</h2>
     </div>
 
-    <!-- 筛选栏（用户姓名/ID、志愿者ID支持） -->
+    <!-- 筛选栏 -->
     <div class="filter-bar">
       <div class="filter-item">
         <label class="filter-label">订单状态</label>
         <el-select v-model="filterStatus" placeholder="请选择状态" @change="fetchOrders">
           <el-option label="全部订单" value="" />
-          <el-option label="服务中" value="active" />
-          <el-option label="已完成" value="completed" />
-          <el-option label="已取消" value="cancelled" />
+          <el-option label="待分配" :value="0" />
+          <el-option label="服务中" :value="1" />
+          <el-option label="已完成" :value="2" />
+          <el-option label="已评价" :value="3" />
+          <el-option label="已取消" :value="4" />
+          <el-option label="已拒绝" :value="5" />
         </el-select>
       </div>
 
       <div class="filter-item">
-        <label class="filter-label">服务类型</label>
-        <el-select v-model="filterType" placeholder="请选择类型" @change="fetchOrders">
-          <el-option label="全部类型" value="" />
-          <el-option label="助餐服务" value="meal" />
-          <el-option label="助洁服务" value="clean" />
-          <el-option label="助医服务" value="medical" />
-          <el-option label="代购服务" value="buy" />
-        </el-select>
+        <label class="filter-label">订单编号</label>
+        <el-input
+          v-model="filterOrderNo"
+          placeholder="请输入订单编号"
+          clearable
+          @keyup.enter="fetchOrders"
+        />
       </div>
 
       <div class="filter-item">
@@ -65,51 +67,46 @@
       <el-button @click="resetFilter">重置</el-button>
     </div>
 
-    <!-- 订单表格（用户ID/志愿者ID列 + 跳转链接） -->
+    <!-- 订单表格 -->
     <div class="table-card">
       <el-table :data="orderList" border stripe>
-        <el-table-column prop="id" label="订单号" width="100" align="center" />
-        <el-table-column prop="type" label="服务类型" width="120" align="center">
+        <el-table-column prop="orderNo" label="订单编号" width="150" align="center" />
+        <el-table-column label="服务类型" width="120" align="center">
           <template #default="{ row }">
-            <el-tag :type="getTypeTagType(row.type)">
-              {{ getTypeText(row.type) }}
+            <el-tag :type="getTypeTagType(getOrderType(row))">
+              {{ getTypeText(getOrderType(row)) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="用户信息" width="150" align="center">
           <template #default="{ row }">
             <div class="user-info">
-              <div class="info-name">{{ row.userName }}</div>
-              <el-button type="primary" link @click="goToUserDetail(row.userId)">
-                ID: {{ row.userId }}
-              </el-button>
+              <div class="info-name">用户ID: {{ row.userId }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column label="志愿者信息" width="150" align="center">
           <template #default="{ row }">
             <div class="volunteer-info">
-              <div class="info-name">{{ row.volunteerName }}</div>
-              <el-button type="primary" link @click="goToVolunteerDetail(row.volunteerId)">
-                ID: {{ row.volunteerId }}
-              </el-button>
+              <div class="info-name">志愿者ID: {{ row.volunteerId }}</div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="address" label="服务地址" align="center" />
+        <el-table-column prop="address" label="服务地址" align="center" show-overflow-tooltip />
+        <el-table-column prop="serviceDate" label="服务日期" width="120" align="center" />
         <el-table-column prop="createTime" label="创建时间" width="180" align="center" />
-        <el-table-column prop="status" label="状态" width="120" align="center">
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusTagType(row.status)" size="large">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" align="center">
+        <el-table-column label="操作" width="220" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="goToOrderDetail(row.id)">查看详情</el-button>
             <el-button
-              v-if="row.status === 'active'"
+              v-if="row.status === 1"
               type="success"
               link
               @click="handleComplete(row)"
@@ -117,7 +114,7 @@
               标记完成
             </el-button>
             <el-button
-              v-if="row.status === 'active'"
+              v-if="row.status === 1"
               type="danger"
               link
               @click="handleCancel(row)"
@@ -147,56 +144,59 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMyOrderList, getOrderDetail, confirmOrder, cancelOrder } from '@/api'
+import { searchOrder, cancelOrder, completeOrder } from '@/api/admin'
 
 const route = useRoute()
 const router = useRouter()
 
-// 筛选状态
-const filterStatus = ref('')
-const filterType = ref('')
+const filterStatus = ref<number | ''>('')
+const filterOrderNo = ref('')
 const filterUserName = ref('')
 const filterVolunteerName = ref('')
 const filterDateRange = ref<string[]>([])
 
-// 分页状态
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 订单列表数据
 const orderList = ref<any[]>([])
 
-// 页面加载
 onMounted(() => {
   if (route.query.status) {
-    filterStatus.value = route.query.status as string
+    filterStatus.value = Number(route.query.status)
   }
   fetchOrders()
 })
 
-// 获取订单列表
 const fetchOrders = async () => {
   try {
-    const params = {
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      status: filterStatus.value || undefined
-    }
-    const res = await getMyOrderList(params)
-    orderList.value = res.data.records || res.data.list || []
+    const startDate = filterDateRange.value?.[0] || undefined
+    const endDate = filterDateRange.value?.[1] || undefined
+
+    const res = await searchOrder(
+      currentPage.value,
+      pageSize.value,
+      filterStatus.value !== '' ? filterStatus.value : undefined,
+      filterOrderNo.value || undefined,
+      undefined,
+      filterUserName.value || undefined,
+      undefined,
+      filterVolunteerName.value || undefined,
+      undefined,
+      startDate,
+      endDate
+    )
+    orderList.value = res.data.records || []
     total.value = res.data.total || 0
-    console.log('订单列表数据:', orderList.value)
   } catch (err) {
     console.error('获取订单失败', err)
     ElMessage.error('获取订单列表失败')
   }
 }
 
-// 重置筛选
 const resetFilter = () => {
   filterStatus.value = ''
-  filterType.value = ''
+  filterOrderNo.value = ''
   filterUserName.value = ''
   filterVolunteerName.value = ''
   filterDateRange.value = []
@@ -204,102 +204,64 @@ const resetFilter = () => {
   fetchOrders()
 }
 
-// 跳转详情页
-const goToOrderDetail = (orderId: number) => {
-  router.push({ path: '/admin/order/detail', query: { id: orderId } })
+const goToOrderDetail = (id: number) => {
+  router.push(`/admin/order/detail/${id}`)
 }
 
-const goToUserDetail = (userId: number) => {
-  router.push({ path: '/admin/user/detail', query: { id: userId } })
-}
-
-const goToVolunteerDetail = (volunteerId: number) => {
-  router.push({ path: '/admin/volunteer/detail', query: { id: volunteerId } })
-}
-
-// 操作按钮事件
 const handleComplete = async (row: any) => {
-  try {
-    await ElMessageBox.confirm('确定要标记为已完成吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await confirmOrder(row.id)
-    ElMessage.success(`订单 ${row.id} 已标记为已完成`)
-    fetchOrders()
-  } catch (err) {
-    if (err !== 'cancel') {
-      console.error('操作失败', err)
+  ElMessageBox.confirm('确定标记该订单为完成吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await completeOrder(row.id)
+      ElMessage.success('操作成功')
+      fetchOrders()
+    } catch (err) {
       ElMessage.error('操作失败')
     }
-  }
+  })
 }
 
 const handleCancel = async (row: any) => {
-  try {
-    await ElMessageBox.confirm('确定要取消订单吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await cancelOrder(row.id)
-    ElMessage.success(`订单 ${row.id} 已取消`)
-    fetchOrders()
-  } catch (err) {
-    if (err !== 'cancel') {
-      console.error('操作失败', err)
-      ElMessage.error('操作失败')
+  ElMessageBox.confirm('确定要取消该订单吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await cancelOrder(row.id)
+      ElMessage.success('订单已取消')
+      fetchOrders()
+    } catch (err) {
+      ElMessage.error('取消失败')
     }
-  }
+  })
 }
 
-// 状态映射
+const getOrderType = (row: any) => {
+  return row.type || 0
+}
+
+const getTypeText = (type: number) => {
+  const map = ['代购服务', '助洁服务', '助餐服务', '助医服务', '陪伴服务']
+  return map[type] || '未知'
+}
+
+const getTypeTagType = (type: number) => {
+  const map = ['info', 'success', 'primary', 'danger', 'warning']
+  return map[type] || ''
+}
+
 const getStatusText = (status: number) => {
-  const map: Record<number, string> = {
-    0: '待接单',
-    1: '已接单',
-    2: '服务中',
-    3: '待确认',
-    4: '已完成',
-    5: '已取消'
-  }
+  const map = ['待分配', '服务中', '已完成', '已评价', '已取消', '已拒绝']
   return map[status] || '未知'
 }
 
 const getStatusTagType = (status: number) => {
-  const map: Record<number, string> = {
-    0: 'warning',   // 待接单
-    1: 'primary',   // 已接单
-    2: 'primary',   // 服务中
-    3: 'success',   // 待确认
-    4: 'success',   // 已完成
-    5: 'danger'     // 已取消
-  }
+  const map = ['info', 'primary', 'success', 'success', 'danger', 'info']
   return map[status] || 'info'
-}
-
-// 服务类型映射
-const getTypeText = (type: number) => {
-  const map: Record<number, string> = {
-    0: '代购服务',
-    1: '助洁服务',
-    2: '助餐服务',
-    3: '助医服务',
-    4: '陪伴服务'
-  }
-  return map[type] || '其他'
-}
-
-const getTypeTagType = (type: number) => {
-  const map: Record<number, string> = {
-    0: 'success',   // 代购
-    1: 'info',      // 助洁
-    2: 'warning',   // 助餐
-    3: 'danger',    // 助医
-    4: 'primary'    // 陪伴
-  }
-  return map[type] || ''
 }
 </script>
 

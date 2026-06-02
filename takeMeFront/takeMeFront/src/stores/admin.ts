@@ -1,42 +1,66 @@
-import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import { getAdminInfo, updateAdminInfo, adminLogout } from '@/api'
+import { ElMessage } from 'element-plus'
 
-// 管理员信息类型
-export interface Admin {
-  id: number
-  username: string
-  realName: string
-  phone: string
-  avatar: string
-  createTime?: string
-  lastLoginTime?: string
-}
+export const useAdminStore = defineStore('admin', {
+  state: () => ({
+    token: localStorage.getItem('adminToken') || '',
+    adminId: localStorage.getItem('adminId') || '',
+    username: '',
+    role: 0,
+    realName: '',
+    createTime: '',
+    lastLoginTime: ''
+  }),
 
-export const useAdminStore = defineStore('admin', () => {
-  // 管理员信息
-  const adminInfo = ref<Admin>({
-    id: 1,
-    username: 'admin',
-    realName: '系统管理员',
-    phone: '13800138000',
-    avatar: 'https://picsum.photos/200/200', // 默认头像
-    createTime: '2025-01-01 00:00:00',
-    lastLoginTime: new Date().toLocaleString()
-  })
+  actions: {
+    setAdminInfo(token: string, adminId: string, username: string, realName: string) {
+      this.token = token
+      this.adminId = adminId
+      this.username = username
+      this.realName = realName
+      this.role = 0
 
-  // 获取管理员信息（模拟接口）
-  const getAdminInfo = () => {
-    // 这里后期替换成真实接口请求
-    console.log('获取管理员信息成功')
-  }
+      localStorage.setItem('adminToken', token)
+      localStorage.setItem('adminId', adminId)
+    },
 
-  return {
-    adminInfo,
-    getAdminInfo,
+    async fetchAdminInfo() {
+      if (!this.token) return false
+      try {
+        const res = await getAdminInfo()
+        this.$patch(res.data)
+        return true
+      } catch (err) {
+        return false
+      }
+    },
 
-    // 方便页面直接使用
-    username: adminInfo.value.username,
-    avatar: adminInfo.value.avatar,
-    realName: adminInfo.value.realName
+    async updateAdminInfo(data: any) {
+      try {
+        await updateAdminInfo(data)
+        this.$patch(data)
+        ElMessage.success('信息修改成功')
+        return true
+      } catch (err) {
+        ElMessage.error('修改失败')
+        return false
+      }
+    },
+
+    async logout() {
+      try {
+        await adminLogout()
+      } catch (err) {} finally {
+        this.token = ''
+        this.adminId = ''
+        this.username = ''
+        this.realName = ''
+        this.role = 0
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminId')
+        ElMessage.success('已退出登录')
+      }
+    }
   }
 })

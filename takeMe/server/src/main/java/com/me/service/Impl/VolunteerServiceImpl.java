@@ -1,10 +1,11 @@
 package com.me.service.Impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.LoginDTO;
 import com.me.entity.Volunteer;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,5 +42,30 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         return lambdaQuery()
                 .eq(Volunteer::getUsername, username)
                 .one();
+    }
+    
+    @Override
+    public Page<Volunteer> searchVolunteer(
+            Integer page,
+            Integer pageSize,
+            String username,
+            Long id,
+            Integer serviceType
+    ) {
+        Page<Volunteer> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
+        
+        if (username != null && !username.trim().isEmpty()) {
+            wrapper.like(Volunteer::getUsername, username);
+        }
+        if (id != null) {
+            wrapper.eq(Volunteer::getId, id);
+        }
+        if (serviceType != null) {
+            wrapper.eq(Volunteer::getServiceType, serviceType);
+        }
+        
+        wrapper.orderByDesc(Volunteer::getCreateTime);
+        return this.page(pageParam, wrapper);
     }
 }

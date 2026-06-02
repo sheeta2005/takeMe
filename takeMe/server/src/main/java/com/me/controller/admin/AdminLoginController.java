@@ -23,17 +23,18 @@ public class AdminLoginController {
         this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * 管理员登录接口
-     */
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
         Admin admin = adminService.login(loginDTO);
         if (admin == null) {
             return Result.error("账号或密码错误");
         }
-        // 调用JwtUtil的通用方法构建返回结果
         LoginVO loginVO = jwtUtil.buildLoginVO(admin.getId(), 0, admin.getRealName(), null);
         return Result.success(loginVO);
+    }
+
+    @PostMapping("/logout")
+    public Result<Void> logout() {
+        return Result.success();
     }
 }

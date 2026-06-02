@@ -73,20 +73,15 @@ const router = useRouter()
 const route = useRoute()
 const adminStore = useAdminStore()
 
-// 🔥 模拟用户信息（不请求后端）
 const adminName = ref('管理员')
 
-// 🔥 暂时注释掉后端获取逻辑，避免报错
-// onMounted(() => {
-//   下面是原本要调用的接口，已注释
-//   adminStore.fetchUserInfo()
-//   adminName.value = adminStore.username || '管理员'
-// })
+onMounted(() => {
+  adminStore.fetchAdminInfo()
+  adminName.value = adminStore.realName || '管理员'
+})
 
-// 菜单高亮
 const activeMenu = computed(() => route.path)
 
-// 菜单跳转
 const handleMenuSelect = (path: string) => {
   router.push(path)
 }

@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -82,6 +83,76 @@ public class MessageServiceImpl implements MessageService {
 
         message.setIsRead(1);
         messageMapper.updateById(message);
+    }
+    
+    @Override
+    public Page<Message> getAdminMessagePage(Integer page, Integer pageSize, Integer receiverType, Integer type) {
+        Page<Message> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
+        
+        if (receiverType != null) {
+            wrapper.eq(Message::getReceiverType, receiverType);
+        }
+        if (type != null) {
+            wrapper.eq(Message::getType, type);
+        }
+        
+        wrapper.orderByDesc(Message::getCreateTime);
+        return messageMapper.selectPage(pageParam, wrapper);
+    }
+    
+    @Override
+    public boolean sendMessage(Message message) {
+        message.setIsRead(0);
+        message.setCreateTime(LocalDateTime.now());
+        
+        if (message.getReceiverType() == 2) {
+            message.setReceiverId(null);
+        }
+        
+        return messageMapper.insert(message) > 0;
+    }
+    
+    @Override
+    public int sendBatchMessage(Message message, List<Long> receiverIds) {
+        if (receiverIds == null || receiverIds.isEmpty()) {
+            return 0;
+        }
+        
+        int count = 0;
+        for (Long receiverId : receiverIds) {
+            Message msg = new Message();
+            msg.setReceiverId(receiverId);
+            msg.setReceiverType(message.getReceiverType());
+            msg.setType(message.getType());
+            msg.setTitle(message.getTitle());
+            msg.setContent(message.getContent());
+            msg.setIsRead(0);
+            msg.setRelatedOrderId(message.getRelatedOrderId());
+            msg.setRelatedUserId(message.getRelatedUserId());
+            msg.setRelatedVolunteerId(message.getRelatedVolunteerId());
+            msg.setRelatedUrl(message.getRelatedUrl());
+            msg.setCreateTime(LocalDateTime.now());
+            
+            if (messageMapper.insert(msg) > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    @Override
+    public boolean deleteMessage(Long id) {
+        Message message = messageMapper.selectById(id);
+        if (message == null) {
+            return false;
+        }
+        return messageMapper.deleteById(id) > 0;
+    }
+    
+    @Override
+    public Long countMessages(LambdaQueryWrapper<Message> wrapper) {
+        return messageMapper.selectCount(wrapper);
     }
 
     // 实体转VO

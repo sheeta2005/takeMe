@@ -4,7 +4,7 @@
       <h2 class="page-title">业务审批</h2>
     </div>
 
-    <!-- 筛选栏（和其他页面完全统一） -->
+    <!-- 筛选栏 -->
     <div class="filter-bar">
       <div class="filter-item">
         <label class="filter-label">申请类型</label>
@@ -55,18 +55,18 @@
       <el-button @click="resetFilter">重置</el-button>
     </div>
 
-    <!-- 表格（自适应填满） -->
+    <!-- 表格 -->
     <div class="table-card">
       <el-table :data="approvalList" border stripe style="width: 100%">
-        <el-table-column prop="id" label="申请ID" min-width="100" align="center" />
-        <el-table-column label="申请类型" min-width="120" align="center">
+        <el-table-column prop="id" label="申请ID" width="100" align="center" />
+        <el-table-column label="申请类型" width="140" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="getTypeTagType(row.type)">
               {{ getTypeText(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="申请人信息" min-width="140" align="center">
+        <el-table-column label="申请人信息" min-width="160" align="center">
           <template #default="{ row }">
             <div class="user-info">
               <div class="info-name">{{ row.applicantName }}</div>
@@ -74,15 +74,15 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="申请时间" min-width="160" align="center" />
-        <el-table-column label="状态" min-width="100" align="center">
+        <el-table-column prop="createTime" label="申请时间" width="180" align="center" />
+        <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="getStatusTagType(row.status)">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="200" align="center">
+        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="openDetailDialog(row)">查看详情</el-button>
             <el-button
@@ -127,7 +127,9 @@
         </div>
         <div class="detail-row">
           <span class="label">申请类型：</span>
-          <span class="value">{{ getTypeText(currentApproval.type) }}</span>
+          <el-tag :type="getTypeTagType(currentApproval.type)" size="small">
+            {{ getTypeText(currentApproval.type) }}
+          </el-tag>
         </div>
         <div class="detail-row">
           <span class="label">申请人：</span>
@@ -188,24 +190,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-// 完全使用你提供的API
-import { getApprovalPage, doApproval } from '@/api/admin'
+import { getApprovalPage, approveApplication, rejectApplication } from '@/api/admin'
 
-// 筛选
 const filterType = ref('')
 const filterStatus = ref('')
 const filterKeyword = ref('')
 const filterDateRange = ref<string[]>([])
 
-// 分页
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 列表数据
 const approvalList = ref<any[]>([])
 
-// 详情弹窗
 const detailDialogVisible = ref(false)
 const currentApproval = ref<any>({})
 const approvalRemark = ref('')
@@ -214,35 +211,28 @@ onMounted(() => {
   fetchApprovals()
 })
 
-// 获取审批列表（API已注释，使用精简模拟数据）
 const fetchApprovals = async () => {
   try {
-    // --- 接口调用已注释，对接后端直接取消注释即可 ---
-    /*
-    const params = {
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      type: filterType.value || undefined,
-      status: filterStatus.value || undefined,
-      keyword: filterKeyword.value || undefined,
-      startDate: filterDateRange.value?.[0] || undefined,
-      endDate: filterDateRange.value?.[1] || undefined
-    }
-    const res = await getApprovalPage(params)
-    approvalList.value = res.data.list
-    total.value = res.data.total
-    */
+    const startDate = filterDateRange.value?.[0] || undefined
+    const endDate = filterDateRange.value?.[1] || undefined
 
-    // --- 精简模拟数据（仅5条，覆盖4种业务类型） ---
-    approvalList.value = generateMockData()
-    total.value = 32
+    const res = await getApprovalPage(
+      currentPage.value,
+      pageSize.value,
+      filterType.value || undefined,
+      filterStatus.value || undefined,
+      filterKeyword.value || undefined,
+      startDate,
+      endDate
+    )
+    approvalList.value = res.data.records || []
+    total.value = res.data.total || 0
   } catch (err) {
     console.error('获取审批列表失败', err)
     ElMessage.error('获取审批列表失败')
   }
 }
 
-// 重置筛选
 const resetFilter = () => {
   filterType.value = ''
   filterStatus.value = ''
@@ -252,72 +242,28 @@ const resetFilter = () => {
   fetchApprovals()
 }
 
-// 打开详情弹窗
 const openDetailDialog = (row: any) => {
   currentApproval.value = { ...row }
   approvalRemark.value = ''
   detailDialogVisible.value = true
 }
 
-// 快速通过
 const handleApprove = (row: any) => {
-  ElMessageBox.confirm('确定要通过该申请吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(async () => {
-    try {
-      // --- 接口调用已注释 ---
-      /*
-      await doApproval({
-        id: row.id,
-        status: 1,
-        remark: ''
-      })
-      */
-      ElMessage.success('审批通过')
-      fetchApprovals()
-    } catch (err) {
-      ElMessage.error('操作失败')
-    }
-  })
+  currentApproval.value = { ...row }
+  approvalRemark.value = ''
+  confirmApprove()
 }
 
-// 快速驳回
 const handleReject = (row: any) => {
-  ElMessageBox.prompt('请输入驳回原因', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消'
-  }).then(async ({ value }) => {
-    try {
-      // --- 接口调用已注释 ---
-      /*
-      await doApproval({
-        id: row.id,
-        status: 2,
-        remark: value
-      })
-      */
-      ElMessage.success('已驳回')
-      fetchApprovals()
-    } catch (err) {
-      ElMessage.error('操作失败')
-    }
-  })
+  currentApproval.value = { ...row }
+  approvalRemark.value = ''
+  confirmReject()
 }
 
-// 详情页确认通过
 const confirmApprove = async () => {
   try {
-    // --- 接口调用已注释 ---
-    /*
-    await doApproval({
-      id: currentApproval.value.id,
-      status: 1,
-      remark: approvalRemark.value
-    })
-    */
-    ElMessage.success('审批通过')
+    await approveApplication(currentApproval.value.id, approvalRemark.value || undefined)
+    ElMessage.success('已通过')
     detailDialogVisible.value = false
     fetchApprovals()
   } catch (err) {
@@ -325,21 +271,14 @@ const confirmApprove = async () => {
   }
 }
 
-// 详情页确认驳回
 const confirmReject = async () => {
-  if (!approvalRemark.value) {
-    ElMessage.warning('请输入驳回原因')
+  if (!approvalRemark.value || !approvalRemark.value.trim()) {
+    ElMessage.warning('请填写驳回原因')
     return
   }
+
   try {
-    // --- 接口调用已注释 ---
-    /*
-    await doApproval({
-      id: currentApproval.value.id,
-      status: 2,
-      remark: approvalRemark.value
-    })
-    */
+    await rejectApplication(currentApproval.value.id, approvalRemark.value)
     ElMessage.success('已驳回')
     detailDialogVisible.value = false
     fetchApprovals()
@@ -348,7 +287,6 @@ const confirmReject = async () => {
   }
 }
 
-// 类型/状态映射（已去掉不需要的类型）
 const getTypeText = (type: string) => {
   const map: Record<string, string> = {
     register: '志愿者注册',
@@ -361,12 +299,12 @@ const getTypeText = (type: string) => {
 
 const getTypeTagType = (type: string) => {
   const map: Record<string, string> = {
-    register: 'primary',
+    register: 'success',
     leave: 'warning',
-    service_change: 'info',
-    points_appeal: 'success'
+    service_change: 'primary',
+    points_appeal: 'danger'
   }
-  return map[type] || ''
+  return map[type] || 'info'
 }
 
 const getStatusText = (status: string) => {
@@ -385,62 +323,6 @@ const getStatusTagType = (status: string) => {
     rejected: 'danger'
   }
   return map[status] || 'info'
-}
-
-// 生成精简模拟数据（仅5条）
-const generateMockData = () => {
-  return [
-    {
-      id: 'APR0001',
-      type: 'register',
-      applicantId: 3001,
-      applicantName: '张志愿者',
-      createTime: '2026-05-26 10:30:00',
-      status: 'pending',
-      content: '申请成为平台志愿者，已完成实名认证和培训',
-      remark: ''
-    },
-    {
-      id: 'APR0002',
-      type: 'leave',
-      applicantId: 3002,
-      applicantName: '王志愿者',
-      createTime: '2026-05-25 14:20:00',
-      status: 'pending',
-      content: '因个人身体原因，申请5月27日-5月29日请假3天',
-      remark: ''
-    },
-    {
-      id: 'APR0003',
-      type: 'service_change',
-      applicantId: 3003,
-      applicantName: '李志愿者',
-      createTime: '2026-05-24 09:15:00',
-      status: 'approved',
-      content: '申请将服务范围从幸福小区扩展到阳光花园和和平社区',
-      remark: '同意扩展服务范围'
-    },
-    {
-      id: 'APR0004',
-      type: 'points_appeal',
-      applicantId: 3004,
-      applicantName: '赵志愿者',
-      createTime: '2026-05-23 16:40:00',
-      status: 'rejected',
-      content: '申请补加5月22日助餐服务积分15分，系统未自动发放',
-      remark: '经核实，该服务已取消，不予补加'
-    },
-    {
-      id: 'APR0005',
-      type: 'register',
-      applicantId: 3005,
-      applicantName: '孙志愿者',
-      createTime: '2026-05-22 11:00:00',
-      status: 'approved',
-      content: '申请成为平台志愿者，有相关护理经验',
-      remark: '同意注册'
-    }
-  ]
 }
 </script>
 

@@ -17,8 +17,8 @@
 
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
-// import { useUserStore } from '@/stores/user'
-// import { logout } from '@/api/user'
+import { useAdminStore } from '@/stores/admin'
+import { adminLogout } from '@/api/admin'
 
 const handleLogout = () => {
   ElMessageBox.confirm(
@@ -31,21 +31,15 @@ const handleLogout = () => {
     }
   ).then(async () => {
     try {
-      // --- 接口调用已注释 ---
-      // await logout()
-      // const userStore = useUserStore()
-      // userStore.logout()
-
-      // ✅ 强制清空本地所有存储，彻底退出
-      localStorage.clear()
-      sessionStorage.clear()
+      await adminLogout()
+      const adminStore = useAdminStore()
+      adminStore.logout()
 
       ElMessage.success('已安全退出登录')
     } catch (err) {
       console.error('退出接口异常，继续本地退出', err)
       ElMessage.warning('网络异常，已本地退出')
     } finally {
-      // ✅ 终极方案：强制刷新跳转到登录页，100%能退出
       window.location.href = '/login'
     }
   })
