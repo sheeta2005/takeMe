@@ -49,11 +49,65 @@
           <div class="section-title">服务项目</div>
           <div class="service-items">
             <div class="service-item" v-for="item in orderInfo.items" :key="item.id">
-              <div class="item-info">
-                <span class="item-name">{{ item.serviceName || '' }}</span>
-                <span class="item-price">¥{{ item.servicePrice ?? 0 }} × {{ item.quantity ?? 0 }}</span>
+              <div class="item-main" @click="toggleItemDetail(item.id)">
+                <div class="item-info">
+                  <span class="item-name">{{ item.serviceName || '' }}</span>
+                  <span class="item-price">¥{{ item.servicePrice ?? 0 }} × {{ item.quantity ?? 0 }}</span>
+                </div>
+                <div class="item-actions">
+                  <span class="item-total">¥{{ item.itemPrice ?? 0 }}</span>
+                  <el-icon class="expand-icon" :class="{ expanded: expandedItems.includes(item.id) }">
+                    <ArrowDown />
+                  </el-icon>
+                </div>
               </div>
-              <span class="item-total">¥{{ item.itemPrice ?? 0 }}</span>
+
+              <!-- 服务项目详情面板 -->
+              <transition name="expand">
+                <div v-show="expandedItems.includes(item.id)" class="item-detail-panel">
+                  <div class="detail-divider"></div>
+                  <div class="item-detail-grid">
+                    <div class="detail-item">
+                      <span class="detail-label">服务类型：</span>
+                      <el-tag :type="getServiceTypeTagType(item.serviceType)" size="small">
+                        {{ getServiceTypeText(item.serviceType) }}
+                      </el-tag>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">服务日期：</span>
+                      <span class="detail-value">{{ item.serviceDate || '-' }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">服务时间：</span>
+                      <span class="detail-value">{{ item.serviceTime || '-' }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">服务单价：</span>
+                      <span class="detail-value price">¥{{ item.servicePrice ?? 0 }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">数量：</span>
+                      <span class="detail-value">{{ item.quantity ?? 0 }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">小计：</span>
+                      <span class="detail-value price-bold">¥{{ item.itemPrice ?? 0 }}</span>
+                    </div>
+                    <div class="detail-item full-width" v-if="item.address">
+                      <span class="detail-label">服务地址：</span>
+                      <span class="detail-value">{{ item.address }}</span>
+                    </div>
+                    <div class="detail-item full-width" v-if="item.remark">
+                      <span class="detail-label">备注：</span>
+                      <span class="detail-value remark">{{ item.remark }}</span>
+                    </div>
+                    <div class="detail-item full-width">
+                      <span class="detail-label">创建时间：</span>
+                      <span class="detail-value">{{ formatTime(item.createTime) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </transition>
             </div>
           </div>
         </div>
@@ -96,8 +150,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getUserOrderDetail, cancelOrder, confirmOrder } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrderDetail, cancelOrder, confirmOrder } from '@/api'
+import { ArrowDown } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -118,6 +173,7 @@ const orderId = getValidOrderId()
 const loading = ref(true)
 const cancelLoading = ref(false)
 const confirmLoading = ref(false)
+const expandedItems = ref<number[]>([])
 
 // 初始化时确保orderInfo是对象，不会undefined
 const orderInfo = ref<any>({
@@ -141,10 +197,52 @@ const getStatusTagType = (s: number) => {
   return m[s] || 'info'
 }
 
+// 服务类型映射
+const getServiceTypeText = (type: number | undefined) => {
+  if (type === undefined || type === null) return '未知'
+  const map: Record<number, string> = {
+    0: '代购服务',
+    1: '助洁服务',
+    2: '助餐服务',
+    3: '助医服务',
+    4: '陪伴服务'
+  }
+  return map[type] || '未知'
+}
+
+const getServiceTypeTagType = (type: number | undefined) => {
+  if (type === undefined || type === null) return 'info'
+  const map: Record<number, any> = {
+    0: 'primary',
+    1: 'success',
+    2: 'warning',
+    3: 'danger',
+    4: 'info'
+  }
+  return map[type] || 'info'
+}
+
+// 切换服务项目详情展开/收起
+const toggleItemDetail = (itemId: number) => {
+  const index = expandedItems.value.indexOf(itemId)
+  if (index > -1) {
+    expandedItems.value.splice(index, 1)
+  } else {
+    expandedItems.value.push(itemId)
+  }
+}
+
 // 时间格式化
-const formatTime = (time: string) => {
-  if (!time) return ''
-  return new Date(time).toLocaleString()
+const formatTime = (time: string | undefined) => {
+  if (!time) return '-'
+  return new Date(time).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
 // ✅ 修复：数据赋值逻辑，兼容所有后端返回结构
@@ -155,7 +253,7 @@ const fetchOrderDetail = async () => {
   }
 
   try {
-    const res = await getOrderDetail(orderId)
+    const res = await getUserOrderDetail(orderId)
     console.log('订单详情接口返回:', res)
 
     // 关键：兼容两种返回结构（你的request封装可能剥了一层data）
@@ -246,6 +344,11 @@ interface OrderItem {
   servicePrice: number
   quantity: number
   itemPrice: number
+  serviceType?: number
+  serviceDate?: string
+  serviceTime?: string
+  address?: string
+  remark?: string
   createTime: string
 }
 </script>
@@ -277,13 +380,71 @@ interface OrderItem {
 
 .service-items { display: flex; flex-direction: column; gap: 12px; }
 .service-item {
-  padding: 16px; background: #f8faf9; border-radius: 8px;
-  display: flex; justify-content: space-between; align-items: center;
+  background: #f8faf9; border-radius: 8px; overflow: hidden;
 }
-.item-info { display: flex; flex-direction: column; }
+.item-main {
+  padding: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; transition: background-color 0.3s;
+}
+.item-main:hover {
+  background-color: #eef5f3;
+}
+.item-info { display: flex; flex-direction: column; gap: 4px; }
 .item-name { font-size: 18px; font-weight: 500; }
 .item-price { font-size: 16px; color: #666; }
+.item-actions { display: flex; align-items: center; gap: 12px; }
 .item-total { font-size: 18px; color: #f56c6c; font-weight: bold; }
+.expand-icon {
+  font-size: 20px;
+  color: #999;
+  transition: transform 0.3s;
+}
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+/* 详情面板动画 */
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  max-height: 500px;
+  opacity: 1;
+}
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+.item-detail-panel {
+  padding: 0 16px 16px 16px;
+}
+.detail-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #ddd, transparent);
+  margin-bottom: 16px;
+}
+.item-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.detail-item { display: flex; align-items: center; }
+.detail-item.full-width { grid-column: 1/-1; }
+.detail-label {
+  width: 100px;
+  font-size: 16px;
+  color: #666;
+  flex-shrink: 0;
+}
+.detail-value { font-size: 16px; color: #333; }
+.detail-value.price { color: #f5222d; font-weight: 500; }
+.detail-value.price-bold { color: #f5222d; font-weight: bold; font-size: 18px; }
+.detail-value.remark {
+  line-height: 1.6;
+  word-break: break-word;
+}
 
 .remark-text {
   padding: 16px; background: #f8faf9; border-radius: 8px;
