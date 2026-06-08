@@ -23,13 +23,18 @@
             <span>志愿首页</span>
           </el-menu-item>
 
-          <el-menu-item index="/volunteer/todo">
+          <el-menu-item index="/volunteer/getTodo">
             <el-icon><List /></el-icon>
+            <span>接取服务</span>
+          </el-menu-item>
+
+          <el-menu-item index="/volunteer/todo">
+            <el-icon><Clock /></el-icon>
             <span>我的待办</span>
           </el-menu-item>
 
           <el-menu-item index="/volunteer/record">
-            <el-icon><Clock /></el-icon>
+            <el-icon><DocumentChecked /></el-icon>
             <span>服务记录</span>
           </el-menu-item>
 
@@ -75,11 +80,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-// ✅ 换成志愿者 store
 import { useVolunteerStore } from '@/stores/volunteer'
 import {
   House, User, Setting, Clock, Calendar,
-  ChatDotRound, Coin, Reading, List
+  ChatDotRound, Coin, Reading, List, DocumentChecked
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -90,7 +94,6 @@ const activeMenu = computed(() => route.path)
 const userName = ref(volunteerStore.realName || '志愿者')
 
 onMounted(async () => {
-  // ✅ 只调用志愿者自己的信息
   await volunteerStore.fetchVolunteerInfo()
   userName.value = volunteerStore.realName || '志愿者'
 })

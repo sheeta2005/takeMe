@@ -96,6 +96,13 @@ export const completeOrder = (id: number) => {
   })
 }
 
+export const cancelOrder = (id: number) => {
+  return request({
+    url: `/api/admin/order/cancel/${id}`,
+    method: 'post'
+  })
+}
+
 export const getOrderStatistics = () => {
   return request({
     url: '/api/admin/order/statistics',
@@ -108,13 +115,12 @@ export const searchVolunteer = (
   page: number,
   pageSize: number,
   username?: string,
-  id?: number,
-  serviceType?: number
+  id?: number
 ) => {
   return request({
     url: '/api/admin/volunteer/search',
     method: 'get',
-    params: { page, pageSize, username, id, serviceType }
+    params: { page, pageSize, username, id }
   })
 }
 

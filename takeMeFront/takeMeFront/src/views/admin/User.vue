@@ -1,12 +1,26 @@
 <template>
-  <div class="user-container">
-    <el-card class="filter-card">
+  <div class="page-container">
+    <div class="page-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 class="page-title">老人管理</h2>
+          <p class="page-subtitle">管理系统中的老人用户信息</p>
+        </div>
+        <el-button type="primary" size="large" @click="handleAdd">
+          <el-icon><Plus /></el-icon>
+          添加老人
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <el-card class="filter-card" shadow="hover">
       <el-form :inline="true" :model="filterForm" class="filter-form">
         <el-form-item label="关键词">
-          <el-input v-model="filterForm.keyword" placeholder="姓名/手机号" clearable @clear="handleFilter" />
+          <el-input v-model="filterForm.keyword" placeholder="姓名/手机号" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item label="性别">
-          <el-select v-model="filterForm.gender" placeholder="全部" clearable @change="handleFilter" style="width: 120px">
+          <el-select v-model="filterForm.gender" placeholder="全部" clearable style="width: 120px">
             <el-option label="男" :value="0" />
             <el-option label="女" :value="1" />
           </el-select>
@@ -19,11 +33,10 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
-            @change="handleFilter"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleFilter">
+          <el-button type="primary" @click="fetchUsers">
             <el-icon><Search /></el-icon>
             搜索
           </el-button>
@@ -35,46 +48,60 @@
       </el-form>
     </el-card>
 
-    <el-card class="table-card">
+    <!-- 用户列表 -->
+    <el-card class="table-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="card-title">用户列表</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            添加用户
-          </el-button>
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><User /></el-icon>
+            <span class="card-title">用户列表</span>
+          </div>
+          <span class="total-count">共 {{ total }} 人</span>
         </div>
       </template>
 
-      <el-table :data="userList" v-loading="loading" stripe border style="width: 100%">
+      <el-table :data="userList" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column label="头像" width="80">
+          <template #default="{ row }">
+            <el-avatar :size="40" :src="row.avatar || defaultAvatar">
+              <el-icon :size="24"><UserFilled /></el-icon>
+            </el-avatar>
+          </template>
+        </el-table-column>
         <el-table-column prop="realName" label="姓名" width="120" />
-        <el-table-column prop="username" label="账号" width="120" />
-        <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column label="性别" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.gender === 0 ? 'success' : 'danger'">
+            <el-tag :type="row.gender === 0 ? '' : 'danger'" size="small">
               {{ row.gender === 0 ? '男' : '女' }}
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column prop="age" label="年龄" width="80" />
+        <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-switch
-              v-model="row.status"
-              :active-value="1"
-              :inactive-value="0"
-              @change="handleStatusChange(row)"
-            />
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '正常' : '禁用' }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="注册时间" width="180" />
-        <el-table-column label="操作" fixed="right" width="200">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleDetail(row)">详情</el-button>
-            <el-button type="warning" link size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link size="small" @click="handleDetail(row)">
+              <el-icon><View /></el-icon>
+              详情
+            </el-button>
+            <el-button type="warning" link size="small" @click="handleEdit(row)">
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
+            <el-button type="success" link size="small" @click="handleToggleStatus(row)">
+              <el-icon><Switch /></el-icon>
+              {{ row.status === 1 ? '禁用' : '启用' }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -87,41 +114,46 @@
         layout="total, sizes, prev, pager, next, jumper"
         @size-change="fetchUsers"
         @current-change="fetchUsers"
-        style="margin-top: 20px; justify-content: flex-end"
+        style="margin-top: 24px; justify-content: flex-end"
       />
     </el-card>
 
     <!-- 添加/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '添加用户'" width="600px">
-      <el-form :model="formData" :rules="rules" ref="formRef" label-width="100px">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="700px"
+      :close-on-click-modal="false"
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="真实姓名" prop="realName">
-          <el-input v-model="formData.realName" placeholder="请输入真实姓名" />
-        </el-form-item>
-        <el-form-item label="登录账号" prop="username" v-if="!isEdit">
-          <el-input v-model="formData.username" placeholder="请输入登录账号" />
+          <el-input v-model="form.realName" placeholder="请输入真实姓名" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
-          <el-input v-model="formData.phone" placeholder="请输入手机号" />
+          <el-input v-model="form.phone" placeholder="请输入手机号" />
         </el-form-item>
         <el-form-item label="性别" prop="gender">
-          <el-radio-group v-model="formData.gender">
+          <el-radio-group v-model="form.gender">
             <el-radio :value="0">男</el-radio>
             <el-radio :value="1">女</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="年龄" prop="age">
-          <el-input-number v-model="formData.age" :min="1" :max="150" />
+          <el-input-number v-model="form.age" :min="0" :max="150" />
         </el-form-item>
-        <el-form-item label="紧急联系人" prop="emergencyName">
-          <el-input v-model="formData.emergencyName" placeholder="请输入紧急联系人" />
+        <el-form-item label="居住地址" prop="address">
+          <el-input v-model="form.address" placeholder="请输入居住地址" type="textarea" :rows="2" />
+        </el-form-item>
+        <el-form-item label="紧急联系人" prop="emergencyContact">
+          <el-input v-model="form.emergencyContact" placeholder="请输入紧急联系人" />
         </el-form-item>
         <el-form-item label="紧急电话" prop="emergencyPhone">
-          <el-input v-model="formData.emergencyPhone" placeholder="请输入紧急电话" />
+          <el-input v-model="form.emergencyPhone" placeholder="请输入紧急联系电话" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -129,18 +161,21 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { searchUser, addUser, updateUser, deleteUser, updateUserStatus } from '@/api/admin'
-
-const router = useRouter()
+import { ElMessage, ElMessageBox, FormInstance } from 'element-plus'
+import { Plus, Search, Refresh, User, UserFilled, View, Edit, Switch } from '@element-plus/icons-vue'
+import { searchUser, getUserDetail, addUser, updateUser, updateUserStatus, deleteUser } from '@/api/admin'
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const loading = ref(false)
+const submitLoading = ref(false)
 const userList = ref<any[]>([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const dialogVisible = ref(false)
+const dialogTitle = ref('添加老人')
+const isEdit = ref(false)
+const formRef = ref<FormInstance>()
 
 const filterForm = reactive({
   keyword: '',
@@ -148,28 +183,36 @@ const filterForm = reactive({
   dateRange: [] as string[]
 })
 
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const formData = ref({
+const form = reactive({
   id: undefined as number | undefined,
   realName: '',
-  username: '',
   phone: '',
   gender: 0,
   age: undefined as number | undefined,
-  emergencyName: '',
+  address: '',
+  emergencyContact: '',
   emergencyPhone: ''
 })
-const formRef = ref()
 
 const rules = {
   realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
-  username: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
+  age: [{ required: true, message: '请输入年龄', trigger: 'blur' }],
+  address: [{ required: true, message: '请输入居住地址', trigger: 'blur' }],
+  emergencyContact: [{ required: true, message: '请输入紧急联系人', trigger: 'blur' }],
+  emergencyPhone: [
+    { required: true, message: '请输入紧急联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ]
 }
+
+onMounted(() => {
+  fetchUsers()
+})
 
 const fetchUsers = async () => {
   loading.value = true
@@ -186,111 +229,95 @@ const fetchUsers = async () => {
     userList.value = res.data.records || []
     total.value = res.data.total || 0
   } catch (err) {
-    console.error('获取用户列表失败', err)
     ElMessage.error('获取用户列表失败')
   } finally {
     loading.value = false
   }
 }
 
-const handleFilter = () => {
-  currentPage.value = 1
-  fetchUsers()
-}
-
 const handleReset = () => {
   filterForm.keyword = ''
   filterForm.gender = undefined
   filterForm.dateRange = []
-  handleFilter()
+  currentPage.value = 1
+  fetchUsers()
 }
 
 const handleAdd = () => {
   isEdit.value = false
-  formData.value = {
-    id: undefined,
-    realName: '',
-    username: '',
-    phone: '',
-    gender: 0,
-    age: undefined,
-    emergencyName: '',
-    emergencyPhone: ''
-  }
+  dialogTitle.value = '添加老人'
+  resetForm()
   dialogVisible.value = true
 }
 
-const handleEdit = (row: any) => {
+const handleEdit = async (row: any) => {
   isEdit.value = true
-  formData.value = {
-    id: row.id,
-    realName: row.realName,
-    username: row.username,
-    phone: row.phone,
-    gender: row.gender,
-    age: row.age,
-    emergencyName: row.emergencyName,
-    emergencyPhone: row.emergencyPhone
+  dialogTitle.value = '编辑老人信息'
+  try {
+    const res = await getUserDetail(row.id)
+    Object.assign(form, res.data)
+    dialogVisible.value = true
+  } catch (err) {
+    ElMessage.error('获取用户详情失败')
   }
-  dialogVisible.value = true
+}
+
+const handleDetail = (row: any) => {
+  // 跳转到详情页
+}
+
+const handleToggleStatus = async (row: any) => {
+  const newStatus = row.status === 1 ? 0 : 1
+  const action = newStatus === 1 ? '启用' : '禁用'
+  try {
+    await ElMessageBox.confirm(`确定要${action}该用户吗？`, '提示', { type: 'warning' })
+    await updateUserStatus(row.id, newStatus)
+    ElMessage.success(`${action}成功`)
+    fetchUsers()
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(`${action}失败`)
+    }
+  }
 }
 
 const handleSubmit = async () => {
   await formRef.value?.validate()
+  submitLoading.value = true
   try {
     if (isEdit.value) {
-      await updateUser(formData.value)
-      ElMessage.success('更新成功')
+      await updateUser(form)
+      ElMessage.success('修改成功')
     } else {
-      await addUser(formData.value)
+      await addUser(form)
       ElMessage.success('添加成功')
     }
     dialogVisible.value = false
     fetchUsers()
   } catch (err) {
-    ElMessage.error(isEdit.value ? '更新失败' : '添加失败')
+    ElMessage.error(isEdit.value ? '修改失败' : '添加失败')
+  } finally {
+    submitLoading.value = false
   }
 }
 
-const handleDetail = (row: any) => {
-  router.push({ name: 'UserDetail', params: { id: row.id } })
+const resetForm = () => {
+  form.id = undefined
+  form.realName = ''
+  form.phone = ''
+  form.gender = 0
+  form.age = undefined
+  form.address = ''
+  form.emergencyContact = ''
+  form.emergencyPhone = ''
+  formRef.value?.resetFields()
 }
-
-const handleDelete = async (row: any) => {
-  try {
-    await ElMessageBox.confirm('确定删除该用户吗？', '提示', { type: 'warning' })
-    await deleteUser(row.id)
-    ElMessage.success('删除成功')
-    fetchUsers()
-  } catch (err) {
-    if (err !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
-  }
-}
-
-const handleStatusChange = async (row: any) => {
-  try {
-    await updateUserStatus(row.id, row.status)
-    ElMessage.success('状态更新成功')
-  } catch (err) {
-    row.status = row.status === 1 ? 0 : 1
-    ElMessage.error('状态更新失败')
-  }
-}
-
-onMounted(() => {
-  fetchUsers()
-})
 </script>
 
 <style scoped>
-.user-container {
-  padding: 20px;
-}
-
 .filter-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
 }
 
 .filter-form {
@@ -298,7 +325,7 @@ onMounted(() => {
 }
 
 .table-card {
-  min-height: calc(100vh - 260px);
+  border: 1px solid var(--border-light);
 }
 
 .card-header {
@@ -307,9 +334,20 @@ onMounted(() => {
   align-items: center;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-primary);
+}
+
+.total-count {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 </style>

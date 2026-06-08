@@ -1,6 +1,13 @@
 <template>
   <div class="page-container">
-    <h2 class="page-title">发送消息</h2>
+    <div class="page-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 class="page-title">发送消息</h2>
+          <p class="page-subtitle">向用户或志愿者发送系统通知</p>
+        </div>
+      </div>
+    </div>
 
     <el-card class="form-card" shadow="hover">
       <el-form
@@ -36,7 +43,7 @@
             <el-option
               v-for="item in volunteerList"
               :key="item.id"
-              :label="`${item.username}（ID：${item.id}）`"
+              :label="`${item.realName || item.username}（ID：${item.id}）`"
               :value="item.id"
             />
           </el-select>
@@ -104,6 +111,7 @@
             @click="handleSend"
             style="width: 140px; height: 42px"
           >
+            <el-icon><Promotion /></el-icon>
             确认发送
           </el-button>
           <el-button
@@ -111,6 +119,7 @@
             @click="handleReset"
             style="width: 100px; height: 42px; margin-left: 12px"
           >
+            <el-icon><Refresh /></el-icon>
             重置
           </el-button>
         </el-form-item>
@@ -120,26 +129,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElForm } from 'element-plus'
-// import { sendMessage } from '@/api/admin'
+import { Promotion, Refresh } from '@element-plus/icons-vue'
+import { sendMessage, sendBatchMessage, searchVolunteer, searchUser } from '@/api/admin'
 
 const formRef = ref<InstanceType<typeof ElForm>>()
 const loading = ref(false)
 
-// 模拟志愿者
-const volunteerList = ref([
-  { id: 3001, username: '张志愿者' },
-  { id: 3002, username: '王志愿者' },
-  { id: 3003, username: '李志愿者' }
-])
-
-// 模拟老人
-const elderList = ref([
-  { id: 2001, realName: '王奶奶' },
-  { id: 2002, realName: '李爷爷' },
-  { id: 2003, realName: '张婆婆' }
-])
+const volunteerList = ref<any[]>([])
+const elderList = ref<any[]>([])
 
 const form = reactive({
   receiverType: 'all_volunteer',
@@ -159,36 +158,83 @@ const rules = {
   content: [{ required: true, message: '请输入内容', trigger: 'blur' }]
 }
 
-// 切换接收方时清空选择
+onMounted(async () => {
+  await loadVolunteerList()
+  await loadElderList()
+})
+
+const loadVolunteerList = async () => {
+  try {
+    const res = await searchVolunteer(1, 100)
+    volunteerList.value = res.data.records || []
+  } catch (err) {
+    console.error('加载志愿者列表失败', err)
+  }
+}
+
+const loadElderList = async () => {
+  try {
+    const res = await searchUser(1, 100)
+    elderList.value = res.data.records || []
+  } catch (err) {
+    console.error('加载老人列表失败', err)
+  }
+}
+
 const handleReceiverChange = () => {
   form.volunteerIds = []
   form.elderIds = []
 }
 
-// 发送
 const handleSend = async () => {
   await formRef.value?.validate()
   loading.value = true
 
   try {
-    // ===== 后端接口已注释，对接时打开 =====
-    // await sendMessage({
-    //   userId: xxx,
-    //   title: form.title,
-    //   content: form.content
-    // })
+    if (form.receiverType === 'spec_volunteer' && form.volunteerIds.length > 0) {
+      await sendBatchMessage({
+        receiverIds: form.volunteerIds,
+        message: {
+          receiverType: 1,
+          type: form.type,
+          title: form.title,
+          content: form.content
+        }
+      })
+    } else if (form.receiverType === 'spec_elder' && form.elderIds.length > 0) {
+      await sendBatchMessage({
+        receiverIds: form.elderIds,
+        message: {
+          receiverType: 0,
+          type: form.type,
+          title: form.title,
+          content: form.content
+        }
+      })
+    } else {
+      let receiverType = 2
+      if (form.receiverType === 'all_volunteer') {
+        receiverType = 1
+      } else if (form.receiverType === 'all_elder') {
+        receiverType = 0
+      }
+      await sendMessage({
+        receiverType,
+        type: form.type,
+        title: form.title,
+        content: form.content
+      })
+    }
 
-    await new Promise(r => setTimeout(r, 600))
     ElMessage.success('消息发送成功！')
     handleReset()
-  } catch (e) {
-    ElMessage.error('发送失败')
+  } catch (e: any) {
+    ElMessage.error(e.message || '发送失败')
   } finally {
     loading.value = false
   }
 }
 
-// 重置
 const handleReset = () => {
   formRef.value?.resetFields()
   form.receiverType = 'all_volunteer'
@@ -199,21 +245,8 @@ const handleReset = () => {
 </script>
 
 <style scoped>
-.page-container {
-  width: 100%;
-  padding: 10px 0;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #222;
-  margin: 0 0 24px 0;
-}
-
 .form-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-light);
   padding: 40px 30px;
 }
 

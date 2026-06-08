@@ -164,3 +164,16 @@ export function markMessageRead(id: number) {
     method: 'post'
   })
 }
+
+// ========================= 订单相关 =========================
+/**
+ * 确认开始服务
+ * @param orderItemId 服务项目ID
+ */
+export function startService(orderItemId: number) {
+  return request({
+    url: '/api/user/order/startService',
+    method: 'post',
+    params: { orderItemId }
+  })
+}

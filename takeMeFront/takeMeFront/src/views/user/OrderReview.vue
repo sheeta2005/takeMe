@@ -56,7 +56,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getUserOrderDetail, evaluateOrder } from '@/api/order'
+import { getUserOrderDetail } from '@/api/order'
+import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -92,7 +93,7 @@ const fetchOrderDetail = async () => {
 
   loading.value = true
   try {
-    const res = await getOrderDetail(orderId)
+    const res = await getUserOrderDetail(orderId)
     if (res.code === 200 && res.data) {
       orderInfo.value = res.data
     }
@@ -116,12 +117,20 @@ const submitReview = async () => {
 
   submitting.value = true
   try {
-    await evaluateOrder(orderId)
+    await request({
+      url: '/api/user/order/evaluate',
+      method: 'post',
+      params: {
+        orderId,
+        rating: form.value.score,
+        comment: form.value.content || ''
+      }
+    })
     ElMessage.success('评价成功')
     router.replace('/user/order')
-  } catch (e) {
+  } catch (e: any) {
     console.error('评价失败:', e)
-    ElMessage.error('评价失败')
+    ElMessage.error(e.message || '评价失败')
   } finally {
     submitting.value = false
   }

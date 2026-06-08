@@ -39,6 +39,7 @@ const routes = [
     meta: { role: 1 },
     children: [
       { path: '', component: () => import('@/views/volunteer/Index.vue') },
+      { path: 'getTodo', component: () => import('@/views/volunteer/GetTodo.vue') },
       { path: 'todo', component: () => import('@/views/volunteer/Todo.vue') },
       {
         path: 'order/:id',

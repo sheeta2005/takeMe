@@ -1,88 +1,101 @@
 <template>
   <div class="page-container">
-    <div class="header-row">
-      <h2 class="page-title">消息中心</h2>
-      <el-button type="primary" @click="$router.push('/admin/message/send')">发送消息</el-button>
+    <div class="page-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 class="page-title">消息中心</h2>
+          <p class="page-subtitle">管理系统消息通知</p>
+        </div>
+        <el-button type="primary" size="large" @click="$router.push('/admin/sendMsg')">
+          <el-icon><ChatDotRound /></el-icon>
+          发送消息
+        </el-button>
+      </div>
     </div>
 
     <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <div class="filter-item">
-        <label class="filter-label">消息类型</label>
-        <el-select v-model="filterType" placeholder="请选择类型" @change="fetchMsgs">
-          <el-option label="全部" value="" />
-          <el-option label="系统通知" :value="0" />
-          <el-option label="任务通知" :value="1" />
-          <el-option label="温馨提醒" :value="2" />
-        </el-select>
-      </div>
+    <el-card class="filter-card" shadow="hover">
+      <el-form :inline="true" class="filter-form">
+        <el-form-item label="消息类型">
+          <el-select v-model="filterType" placeholder="请选择类型" @change="fetchMsgs" style="width: 140px">
+            <el-option label="全部" value="" />
+            <el-option label="系统通知" :value="0" />
+            <el-option label="任务通知" :value="1" />
+            <el-option label="温馨提醒" :value="2" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="接收者类型">
+          <el-select v-model="filterReceiverType" placeholder="请选择" @change="fetchMsgs" style="width: 140px">
+            <el-option label="全部" value="" />
+            <el-option label="老人用户" :value="0" />
+            <el-option label="志愿者" :value="1" />
+            <el-option label="全部广播" :value="2" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="fetchMsgs">
+            <el-icon><Search /></el-icon>
+            查询
+          </el-button>
+          <el-button @click="resetFilter">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
-      <div class="filter-item">
-        <label class="filter-label">接收者类型</label>
-        <el-select v-model="filterReceiverType" placeholder="请选择" @change="fetchMsgs">
-          <el-option label="全部" value="" />
-          <el-option label="老人用户" :value="0" />
-          <el-option label="志愿者" :value="1" />
-          <el-option label="全部广播" :value="2" />
-        </el-select>
-      </div>
+    <!-- 消息列表 -->
+    <el-card class="table-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Bell /></el-icon>
+            <span class="card-title">已发送消息</span>
+          </div>
+          <span class="total-count">共 {{ total }} 条</span>
+        </div>
+      </template>
 
-      <div class="filter-item">
-        <label class="filter-label">时间范围</label>
-        <el-date-picker
-          v-model="filterDateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          format="YYYY-MM-DD"
-          value-format="YYYY-MM-DD"
-          @change="fetchMsgs"
-        />
-      </div>
-
-      <el-button type="primary" @click="fetchMsgs">查询</el-button>
-      <el-button @click="resetFilter">重置</el-button>
-    </div>
-
-    <!-- 消息列表卡片 -->
-    <div class="list-card">
-      <el-list :data="msgList" class="msg-list">
-        <el-list-item v-for="msg in msgList" :key="msg.id" class="msg-item">
-          <template #default>
-            <div class="msg-content">
-              <div class="msg-header">
-                <div class="msg-title-wrapper">
-                  <el-tag
-                    v-if="msg.type !== undefined"
-                    :type="getTypeTagType(msg.type)"
-                    size="small"
-                    class="type-tag"
-                  >
-                    {{ getTypeText(msg.type) }}
-                  </el-tag>
-                  <span class="msg-title">{{ msg.title }}</span>
-                </div>
-                <div class="msg-meta">
-                  <span class="receiver-type">{{ getReceiverTypeText(msg.receiverType) }}</span>
-                  <span class="msg-time">{{ msg.createTime }}</span>
-                </div>
-              </div>
-              <div class="msg-preview">{{ msg.content }}</div>
-            </div>
-            <div class="msg-actions">
-              <el-button type="danger" link @click="handleDelete(msg)">删除</el-button>
+      <el-table :data="msgList" v-loading="loading" stripe style="width: 100%">
+        <el-table-column prop="title" label="标题" min-width="200">
+          <template #default="{ row }">
+            <div class="msg-title-cell">
+              <el-tag :type="getTypeTagType(row.type)" size="small" class="type-tag">
+                {{ getTypeText(row.type) }}
+              </el-tag>
+              <span class="msg-title">{{ row.title }}</span>
             </div>
           </template>
-        </el-list-item>
-      </el-list>
+        </el-table-column>
+        <el-table-column prop="content" label="内容" min-width="250" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="content-text">{{ row.content }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="接收者类型" width="120">
+          <template #default="{ row }">
+            <el-tag size="small" type="info">
+              {{ getReceiverTypeText(row.receiverType) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="发送时间" width="180">
+          <template #default="{ row }">
+            <span class="time-text">{{ row.createTime }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button type="danger" link size="small" @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-      <!-- 空状态 -->
-      <el-empty v-if="msgList.length === 0" description="暂无消息" />
-    </div>
-
-    <!-- 分页 -->
-    <div class="pagination-wrapper">
+      <!-- 分页 -->
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
@@ -90,19 +103,21 @@
         :page-sizes="[10, 20, 50]"
         layout="total, sizes, prev, pager, next, jumper"
         @change="fetchMsgs"
+        style="margin-top: 24px; justify-content: flex-end"
       />
-    </div>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Bell, ChatDotRound, Delete } from '@element-plus/icons-vue'
 import { getSentMessagePage, deleteMessage } from '@/api/admin'
 
+const loading = ref(false)
 const filterType = ref<number | ''>('')
 const filterReceiverType = ref<number | ''>('')
-const filterDateRange = ref<string[]>([])
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -115,6 +130,7 @@ onMounted(() => {
 })
 
 const fetchMsgs = async () => {
+  loading.value = true
   try {
     const res = await getSentMessagePage(
       currentPage.value,
@@ -127,13 +143,14 @@ const fetchMsgs = async () => {
   } catch (err) {
     console.error('获取消息列表失败', err)
     ElMessage.error('获取消息列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
 const resetFilter = () => {
   filterType.value = ''
   filterReceiverType.value = ''
-  filterDateRange.value = []
   currentPage.value = 1
   fetchMsgs()
 }
@@ -171,85 +188,43 @@ const getReceiverTypeText = (type: number) => {
 </script>
 
 <style scoped>
-.page-container {
-  width: 100%;
-  padding: 10px 0;
+.filter-card {
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
 }
 
-.header-row {
+.filter-form {
+  margin-bottom: 0;
+}
+
+.table-card {
+  border: 1px solid var(--border-light);
+}
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #222;
-  margin: 0;
-}
-
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 20px;
-}
-
-.filter-item {
+.header-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.filter-label {
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.total-count {
   font-size: 14px;
-  color: #666;
-  white-space: nowrap;
+  color: var(--text-secondary);
 }
 
-.list-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.msg-list {
-  width: 100%;
-}
-
-.msg-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.msg-item:last-child {
-  border-bottom: none;
-}
-
-.msg-content {
-  flex: 1;
-}
-
-.msg-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.msg-title-wrapper {
+.msg-title-cell {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -260,51 +235,18 @@ const getReceiverTypeText = (type: number) => {
 }
 
 .msg-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
 }
 
-.msg-meta {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.receiver-type {
-  font-size: 12px;
-  color: #999;
-  padding: 2px 8px;
-  background: #f5f5f5;
-  border-radius: 4px;
-}
-
-.msg-time {
+.content-text {
+  color: var(--text-secondary);
   font-size: 14px;
-  color: #999;
 }
 
-.msg-preview {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.msg-actions {
-  display: flex;
-  gap: 16px;
-  flex-shrink: 0;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  background: #fff;
-  padding: 16px 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+.time-text {
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 </style>

@@ -39,10 +39,9 @@ public class AdminVolunteerController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String username,
-            @RequestParam(required = false) Long id,
-            @RequestParam(required = false) Integer serviceType
+            @RequestParam(required = false) Long id
     ) {
-        Page<Volunteer> mpPage = volunteerService.searchVolunteer(page, pageSize, username, id, serviceType);
+        Page<Volunteer> mpPage = volunteerService.searchVolunteer(page, pageSize, username, id);
         mpPage.getRecords().forEach(v -> v.setPassword(null));
         
         PageResultVO<Volunteer> result = new PageResultVO<>(mpPage.getTotal(), mpPage.getRecords());

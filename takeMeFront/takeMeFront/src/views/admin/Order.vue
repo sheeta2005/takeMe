@@ -1,15 +1,16 @@
 <template>
-  <div class="order-container">
-    <el-card class="filter-card">
+  <div class="page-container">
+    <el-card class="filter-card" shadow="hover">
       <el-form :inline="true" :model="filterForm" class="filter-form">
         <el-form-item label="订单状态">
           <el-select v-model="filterForm.status" placeholder="全部" clearable @change="handleFilter" style="width: 140px">
-            <el-option label="待分配" :value="0" />
-            <el-option label="服务中" :value="1" />
-            <el-option label="已完成" :value="2" />
-            <el-option label="已评价" :value="3" />
-            <el-option label="已取消" :value="4" />
-            <el-option label="已拒绝" :value="5" />
+            <el-option label="待接单" :value="0" />
+            <el-option label="已接单" :value="1" />
+            <el-option label="服务中" :value="2" />
+            <el-option label="待确认" :value="3" />
+            <el-option label="已完成" :value="4" />
+            <el-option label="已取消" :value="5" />
+            <el-option label="已放弃" :value="6" />
           </el-select>
         </el-form-item>
         <el-form-item label="订单编号">
@@ -39,36 +40,52 @@
       </el-form>
     </el-card>
 
-    <el-card class="table-card">
+    <el-card class="table-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="card-title">订单列表</span>
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Document /></el-icon>
+            <span class="card-title">订单列表</span>
+          </div>
         </div>
       </template>
 
-      <el-table :data="orderList" v-loading="loading" stripe border style="width: 100%">
+      <el-table :data="orderList" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="orderNo" label="订单编号" width="180" />
+        <el-table-column prop="orderNo" label="订单编号" width="180">
+          <template #default="{ row }">
+            <span class="order-no">{{ row.orderNo }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="userId" label="用户ID" width="100" />
         <el-table-column prop="volunteerId" label="志愿者ID" width="120" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
+            <el-tag :type="getStatusType(row.status)" size="default">
               {{ getStatusName(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="总金额" width="100">
+        <el-table-column label="总金额" width="120">
           <template #default="{ row }">
-            ¥{{ row.totalAmount?.toFixed(2) }}
+            <span class="amount">¥{{ row.totalAmount?.toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column label="操作" fixed="right" width="200">
+        <el-table-column label="操作" fixed="right" width="220">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleDetail(row)">详情</el-button>
-            <el-button v-if="row.status === 0 || row.status === 1" type="warning" link size="small" @click="handleComplete(row)">完成</el-button>
-            <el-button v-if="row.status !== 4 && row.status !== 5" type="danger" link size="small" @click="handleCancel(row)">取消</el-button>
+            <el-button type="primary" link size="small" @click="handleDetail(row)">
+              <el-icon><View /></el-icon>
+              详情
+            </el-button>
+            <el-button v-if="row.status === 0 || row.status === 1 || row.status === 2" type="success" link size="small" @click="handleComplete(row)">
+              <el-icon><CircleCheck /></el-icon>
+              完成
+            </el-button>
+            <el-button v-if="row.status !== 4 && row.status !== 5 && row.status !== 6" type="danger" link size="small" @click="handleCancel(row)">
+              <el-icon><Close /></el-icon>
+              取消
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -81,7 +98,7 @@
         layout="total, sizes, prev, pager, next, jumper"
         @size-change="fetchOrders"
         @current-change="fetchOrders"
-        style="margin-top: 20px; justify-content: flex-end"
+        style="margin-top: 24px; justify-content: flex-end"
       />
     </el-card>
   </div>
@@ -91,7 +108,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, Document, View, CircleCheck, Close } from '@element-plus/icons-vue'
 import { searchOrder, getOrderDetail, cancelOrder, completeOrder } from '@/api/admin'
 
 const router = useRouter()
@@ -109,12 +126,12 @@ const filterForm = reactive({
 })
 
 const getStatusName = (status: number) => {
-  const names = ['待分配', '服务中', '已完成', '已评价', '已取消', '已拒绝']
+  const names = ['待接单', '已接单', '服务中', '待确认', '已完成', '已取消', '已放弃']
   return names[status] || '未知'
 }
 
 const getStatusType = (status: number) => {
-  const types = ['warning', 'primary', 'success', 'success', 'info', 'danger']
+  const types = ['info', 'primary', 'warning', 'warning', 'success', 'danger', 'danger']
   return types[status] || ''
 }
 
@@ -190,12 +207,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.order-container {
-  padding: 20px;
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 0;
 }
 
 .filter-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
 }
 
 .filter-form {
@@ -203,7 +223,7 @@ onMounted(() => {
 }
 
 .table-card {
-  min-height: calc(100vh - 260px);
+  border: 1px solid #e2e8f0;
 }
 
 .card-header {
@@ -212,9 +232,26 @@ onMounted(() => {
   align-items: center;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: #1e293b;
+}
+
+.order-no {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.amount {
+  font-weight: 600;
+  color: #f5222d;
 }
 </style>

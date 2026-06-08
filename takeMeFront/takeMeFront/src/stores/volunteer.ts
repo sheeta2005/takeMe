@@ -19,7 +19,7 @@ export interface VolunteerInfo {
   address: string
 
   serviceDays: string
-  serviceType: number
+
   workStatus: number
   totalServiceHours: number
 
@@ -41,7 +41,7 @@ export const useVolunteerStore = defineStore('volunteer', {
     age: null as number | null,
     address: '',
     serviceDays: '',
-    serviceType: 0,
+
     workStatus: 0,
     totalServiceHours: 0,
     emergencyName: '',
@@ -63,10 +63,6 @@ export const useVolunteerStore = defineStore('volunteer', {
       return state.serviceDays.split(',').map(d => dayMap[parseInt(d.trim())]).join('、')
     },
 
-    serviceTypeText: (state) => {
-      const typeMap = ['代购服务', '助洁服务', '助餐服务', '助医服务', '陪伴服务']
-      return typeMap[state.serviceType] || '未设置'
-    },
 
     workStatusText: (state) => {
       const statusMap = ['空闲', '服务中', '请假中']

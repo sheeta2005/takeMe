@@ -190,6 +190,14 @@ export function getVolunteerOrderList(params: { page: number; pageSize: number; 
   })
 }
 
+export function getAvailableOrderList(params: { page: number; pageSize: number }) {
+  return request({
+    url: '/api/volunteer/order/available',
+    method: 'get',
+    params
+  })
+}
+
 export function getVolunteerOrderDetail(orderId: number) {
   return request({
     url: '/api/volunteer/order/detail',
@@ -198,11 +206,35 @@ export function getVolunteerOrderDetail(orderId: number) {
   })
 }
 
-export function abandonOrder(orderId: number) {
+export function confirmOrder(orderItemId: number) {
+  return request({
+    url: '/api/volunteer/order/confirm',
+    method: 'post',
+    params: { orderItemId }
+  })
+}
+
+export function startService(orderItemId: number) {
+  return request({
+    url: '/api/user/order/startService',
+    method: 'post',
+    params: { orderItemId }
+  })
+}
+
+export function completeOrder(orderItemId: number) {
+  return request({
+    url: '/api/volunteer/order/complete',
+    method: 'post',
+    params: { orderItemId }
+  })
+}
+
+export function abandonOrder(orderItemId: number) {
   return request({
     url: '/api/volunteer/order/abandon',
     method: 'post',
-    params: { orderId }
+    params: { orderItemId }
   })
 }
 

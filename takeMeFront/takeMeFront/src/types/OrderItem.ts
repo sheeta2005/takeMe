@@ -10,5 +10,10 @@ export interface OrderItem {
   servicePrice: number      // 购买时的价格（快照）
   quantity: number          // 数量
   itemPrice: number         // 该项目小计 = price * quantity
+  serviceType?: number      // 服务类型 0=代购 1=助洁 2=助餐 3=助医 4=陪伴
+  serviceDate?: string      // 服务日期
+  serviceTime?: string      // 服务时间
+  address?: string          // 服务地址
+  remark?: string           // 备注
   createTime: string
 }

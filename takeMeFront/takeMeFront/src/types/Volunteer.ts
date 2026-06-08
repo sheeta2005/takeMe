@@ -21,8 +21,8 @@ export interface Volunteer {
   address: string                     // 居住地址
 
   // 服务信息
-  serviceDays: number                 // 服务日期  每周的周天：0 周一：1周二：2周三：3周四：4周五：5周六：6七选一分别对应
-  serviceType: 0 | 1 | 2 | 3         // 0=代购 1=助洁 2=助餐 3=助医
+  serviceDays: string                 // 服务日期  每周的周天：0 周一：1周二：2周三：3周四：4周五：5周六：6七选一分别对应
+
   workStatus: 0 | 1 | 2              // 0=休息中 1=待命中 2=服务中
   totalServiceHours: number           // 累计服务时长
 

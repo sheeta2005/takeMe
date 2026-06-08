@@ -107,7 +107,8 @@ const currentYear = ref(currentDate.getFullYear())
 const currentMonthIndex = ref(currentDate.getMonth())
 
 const workDaysArray = computed(() => {
-  return volunteerStore.workDaysArray
+  if (!volunteerStore.serviceDays) return []
+  return volunteerStore.serviceDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d))
 })
 
 const workDaysText = computed(() => {
@@ -141,10 +142,11 @@ const calendarDays = computed(() => {
   }
 
   const today = new Date()
+  const workDays = workDaysArray.value
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month, day)
     const dayOfWeek = date.getDay()
-    const isWorkDay = workDaysArray.value.includes(dayOfWeek)
+    const isWorkDay = workDays.includes(dayOfWeek)
     const isToday = date.toDateString() === today.toDateString()
     result.push({
       day,
@@ -224,7 +226,8 @@ const loadLeaveList = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await volunteerStore.fetchVolunteerInfo()
   loadLeaveList()
 })
 </script>

@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-export function getMyOrderList(params: { page: number; pageSize: number; status?: number }) {
+export function getMyOrderList(params: { page: number; pageSize: number; status?: number; orderNo?: string }) {
   return request({
     url: '/api/user/order/list',
     method: 'get',
@@ -76,6 +76,9 @@ export function addToCart(data: {
   servicePrice: number
   serviceType: number
   quantity: number
+  serviceDate?: string
+  serviceTime?: string
+  address?: string
   remark?: string
 }) {
   return request({

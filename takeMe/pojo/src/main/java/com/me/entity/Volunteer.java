@@ -33,7 +33,7 @@ public class Volunteer {
     private String address;
 
     private String serviceDays;//0 周天 1周一....6 周六
-    private Integer serviceType;//0 = 代购 1 = 助洁 2 = 助餐 3 = 助医 4 = 陪伴
+    
     private Integer workStatus;
     private Integer totalServiceHours;
 

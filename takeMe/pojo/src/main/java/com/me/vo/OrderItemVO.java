@@ -24,5 +24,8 @@ public class OrderItemVO {
     private String address;
     private String remark;
     
+    private Long volunteerId;
+    private Integer itemStatus;
+    
     private LocalDateTime createTime;
 }

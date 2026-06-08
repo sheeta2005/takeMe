@@ -1,95 +1,136 @@
 <template>
-  <div class="detail-container">
-    <div class="header-row">
-      <h2 class="page-title">订单详情</h2>
-      <el-button @click="$router.back()">返回列表</el-button>
-    </div>
-
-    <div class="detail-card">
-      <!-- 订单基础信息 -->
-      <div class="detail-section">
-        <h3 class="section-title">订单信息</h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="label">订单号：</span>
-            <span class="value">{{ orderDetail.orderNo }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">服务类型：</span>
-            <el-tag v-if="orderItems.length > 0" :type="getServiceTypeTagType(orderItems[0].serviceType)">
-              {{ getServiceTypeText(orderItems[0].serviceType) }}
-            </el-tag>
-            <el-tag v-else>未知</el-tag>
-          </div>
-          <div class="info-item">
-            <span class="label">订单状态：</span>
-            <el-tag :type="getOrderStatusTagType(orderDetail.status)" size="large">
-              {{ getOrderStatusText(orderDetail.status) }}
-            </el-tag>
-          </div>
-          <div class="info-item">
-            <span class="label">下单时间：</span>
-            <span class="value">{{ formatDateTime(orderDetail.createTime) }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">服务时间：</span>
-            <span class="value">{{ orderDetail.serviceDate }} {{ orderDetail.serviceTime }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">订单金额：</span>
-            <span class="value price">¥{{ orderDetail.totalPrice }}</span>
-          </div>
+  <div class="page-container">
+    <div class="page-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 class="page-title">订单详情</h2>
+          <p class="page-subtitle">查看订单详细信息</p>
         </div>
-      </div>
-
-      <!-- 服务地址信息 -->
-      <div class="detail-section">
-        <h3 class="section-title">服务地址</h3>
-        <div class="address-info">
-          <el-icon><Location /></el-icon>
-          <span>{{ orderDetail.address }}</span>
-        </div>
-      </div>
-
-      <!-- 服务项列表 -->
-      <div class="detail-section" v-if="orderItems.length > 0">
-        <h3 class="section-title">服务项目</h3>
-        <div class="service-items">
-          <div class="service-item" v-for="item in orderItems" :key="item.id">
-            <div class="item-info">
-              <span class="item-name">{{ item.serviceName }}</span>
-              <span class="item-price">¥{{ item.servicePrice }} × {{ item.quantity }}</span>
-            </div>
-            <span class="item-total">¥{{ item.itemPrice }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 备注信息 -->
-      <div class="detail-section" v-if="orderDetail.remark">
-        <h3 class="section-title">订单备注</h3>
-        <div class="remark-info">
-          {{ orderDetail.remark }}
-        </div>
-      </div>
-
-      <!-- 完成时间（仅已完成订单显示） -->
-      <div class="detail-section" v-if="orderDetail.completeTime">
-        <h3 class="section-title">完成信息</h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="label">完成时间：</span>
-            <span class="value">{{ formatDateTime(orderDetail.completeTime) }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">评价状态：</span>
-            <el-tag :type="orderDetail.isReviewed === 1 ? 'success' : 'info'">
-              {{ orderDetail.isReviewed === 1 ? '已评价' : '未评价' }}
-            </el-tag>
-          </div>
-        </div>
+        <el-button size="large" @click="$router.back()">
+          <el-icon><Back /></el-icon>
+          返回列表
+        </el-button>
       </div>
     </div>
+
+    <!-- 订单基础信息 -->
+    <el-card class="detail-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Document /></el-icon>
+            <span class="card-title">订单信息</span>
+          </div>
+          <el-tag :type="getOrderStatusTagType(orderDetail.status)" size="large">
+            {{ getOrderStatusText(orderDetail.status) }}
+          </el-tag>
+        </div>
+      </template>
+
+      <el-descriptions :column="3" border size="large">
+        <el-descriptions-item label="订单号">
+          <span class="value-text">{{ orderDetail.orderNo }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="服务类型">
+          <el-tag v-if="orderItems.length > 0" :type="getServiceTypeTagType(orderItems[0].serviceType)">
+            {{ getServiceTypeText(orderItems[0].serviceType) }}
+          </el-tag>
+          <el-tag v-else>未知</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="下单时间">
+          <span class="time-text">{{ formatDateTime(orderDetail.createTime) }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="服务时间">
+          <span class="value-text">{{ orderDetail.serviceDate }} {{ orderDetail.serviceTime }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="订单金额">
+          <span class="price-text">¥{{ orderDetail.totalPrice }}</span>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <!-- 服务地址 -->
+    <el-card class="detail-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Location /></el-icon>
+            <span class="card-title">服务地址</span>
+          </div>
+        </div>
+      </template>
+
+      <div class="address-box">
+        <el-icon :size="18" color="#00a88d"><Location /></el-icon>
+        <span class="address-text">{{ orderDetail.address }}</span>
+      </div>
+    </el-card>
+
+    <!-- 服务项目列表 -->
+    <el-card class="detail-card" shadow="hover" v-if="orderItems.length > 0">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><List /></el-icon>
+            <span class="card-title">服务项目</span>
+          </div>
+        </div>
+      </template>
+
+      <el-table :data="orderItems" stripe style="width: 100%">
+        <el-table-column prop="serviceName" label="服务名称" min-width="200" />
+        <el-table-column prop="servicePrice" label="单价" width="120">
+          <template #default="{ row }">
+            <span class="price-text">¥{{ row.servicePrice }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="quantity" label="数量" width="100" />
+        <el-table-column label="小计" width="120">
+          <template #default="{ row }">
+            <span class="price-text">¥{{ row.itemPrice }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 备注信息 -->
+    <el-card class="detail-card" shadow="hover" v-if="orderDetail.remark">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><ChatLineRound /></el-icon>
+            <span class="card-title">订单备注</span>
+          </div>
+        </div>
+      </template>
+
+      <div class="remark-box">
+        {{ orderDetail.remark }}
+      </div>
+    </el-card>
+
+    <!-- 完成信息 -->
+    <el-card class="detail-card" shadow="hover" v-if="orderDetail.completeTime">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><CircleCheck /></el-icon>
+            <span class="card-title">完成信息</span>
+          </div>
+        </div>
+      </template>
+
+      <el-descriptions :column="2" border size="large">
+        <el-descriptions-item label="完成时间">
+          <span class="time-text">{{ formatDateTime(orderDetail.completeTime) }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="评价状态">
+          <el-tag :type="orderDetail.isReviewed === 1 ? 'success' : 'info'">
+            {{ orderDetail.isReviewed === 1 ? '已评价' : '未评价' }}
+          </el-tag>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-card>
   </div>
 </template>
 
@@ -97,7 +138,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Location } from '@element-plus/icons-vue'
+import { Back, Document, Location, List, ChatLineRound, CircleCheck } from '@element-plus/icons-vue'
 import { getOrderDetail } from '@/api'
 
 const route = useRoute()
@@ -118,7 +159,6 @@ const orderDetail = ref<any>({})
 const orderItems = ref<OrderItem[]>([])
 
 onMounted(() => {
-  // ✅ 修复1：用 params 取路由参数
   const orderId = route.params.id as string
   if (orderId) {
     fetchOrderDetail(Number(orderId))
@@ -131,7 +171,6 @@ onMounted(() => {
 const fetchOrderDetail = async (id: number) => {
   try {
     const res = await getOrderDetail(id)
-    // ✅ 修复2：取后端返回的 data 字段
     orderDetail.value = res.data.data
     orderItems.value = res.data.data.items || []
   } catch (err) {
@@ -140,7 +179,6 @@ const fetchOrderDetail = async (id: number) => {
   }
 }
 
-// 格式化日期时间
 const formatDateTime = (dateTime: string | null) => {
   if (!dateTime) return '-'
   return new Date(dateTime).toLocaleString('zh-CN', {
@@ -153,7 +191,6 @@ const formatDateTime = (dateTime: string | null) => {
   })
 }
 
-// 服务类型映射（对应ServicePackage的type字段）
 const getServiceTypeText = (type: number) => {
   const map: Record<number, string> = {
     0: '代购服务',
@@ -167,19 +204,18 @@ const getServiceTypeText = (type: number) => {
 
 const getServiceTypeTagType = (type: number) => {
   const map: Record<number, string> = {
-    0: 'success',    // 代购
-    1: 'info',       // 助洁
-    2: 'warning',    // 助餐
-    3: 'danger',     // 助医
-    4: 'primary'     // 陪伴
+    0: 'success',
+    1: 'info',
+    2: 'warning',
+    3: 'danger',
+    4: 'primary'
   }
   return map[type] || 'info'
 }
 
-// 订单状态映射（需要根据您的业务逻辑调整）
 const getOrderStatusText = (status: number) => {
   const map: Record<number, string> = {
-    0: '待接单',
+    0: '待接取',
     1: '服务中',
     2: '已完成',
     3: '已取消'
@@ -189,141 +225,77 @@ const getOrderStatusText = (status: number) => {
 
 const getOrderStatusTagType = (status: number) => {
   const map: Record<number, string> = {
-    0: 'warning',   // 待接单
-    1: 'primary',   // 服务中
-    2: 'success',   // 已完成
-    3: 'danger'     // 已取消
+    0: 'warning',
+    1: 'primary',
+    2: 'success',
+    3: 'danger'
   }
   return map[status] || 'info'
 }
 </script>
 
 <style scoped>
-/* 样式部分无需修改 */
-.detail-container {
-  width: 100%;
-  padding: 10px 0;
+.detail-card {
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
 }
 
-.header-row {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #222;
-  margin: 0;
-}
-
-.detail-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  padding: 30px;
-}
-
-.detail-section {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.info-item {
+.header-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.label {
-  font-size: 14px;
-  color: #666;
-  white-space: nowrap;
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.value {
-  font-size: 14px;
-  color: #333;
+.value-text {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
-.price {
-  color: #f56c6c;
+.time-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.price-text {
+  color: var(--danger-color);
   font-weight: 600;
   font-size: 16px;
 }
 
-.address-info {
+.address-box {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #333;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-}
-
-.service-items {
-  display: flex;
-  flex-direction: column;
   gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
 }
 
-.service-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-}
-
-.item-info {
-  display: flex;
-  justify-content: space-between;
-  flex: 1;
-  margin-right: 20px;
-}
-
-.item-name {
-  font-size: 14px;
-  color: #333;
-}
-
-.item-price {
-  font-size: 14px;
-  color: #909399;
-}
-
-.item-total {
-  font-size: 14px;
-  color: #f56c6c;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.remark-info {
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #333;
+.address-text {
+  font-size: 15px;
+  color: var(--text-primary);
   line-height: 1.6;
+}
+
+.remark-box {
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.8;
 }
 </style>

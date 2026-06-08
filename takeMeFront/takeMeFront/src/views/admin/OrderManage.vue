@@ -1,43 +1,66 @@
 <template>
-  <div class="order-manage-page">
+  <div class="page-container">
     <div class="page-header">
-      <h2>服务项目管理</h2>
-      <el-button type="primary" size="large" @click="openAddModal">
-        <el-icon><Plus /></el-icon>
-        添加服务项目
-      </el-button>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 class="page-title">服务项目管理</h2>
+          <p class="page-subtitle">管理系统中的服务项目信息</p>
+        </div>
+        <el-button type="primary" size="large" @click="openAddModal">
+          <el-icon><Plus /></el-icon>
+          添加服务项目
+        </el-button>
+      </div>
     </div>
 
     <!-- 服务列表 -->
-    <div class="table-box">
-      <el-table :data="serviceList" border stripe>
-        <el-table-column label="ID" prop="id" align="center" />
-        <el-table-column label="服务大类" align="center">
+    <el-card class="table-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><List /></el-icon>
+            <span class="card-title">服务项目列表</span>
+          </div>
+          <span class="total-count">共 {{ serviceList.length }} 项</span>
+        </div>
+      </template>
+
+      <el-table :data="serviceList" v-loading="loading" stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="100" />
+        <el-table-column label="服务大类" width="140">
           <template #default="scope">
-            {{ getServiceTypeName(scope.row.type) }}
+            <el-tag :type="getServiceTypeTag(scope.row.type)">
+              {{ getServiceTypeName(scope.row.type) }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="服务名称" prop="name" />
-        <el-table-column label="服务描述" prop="desc" min-width="260" />
-        <el-table-column label="价格（元）" prop="price" align="center" />
-        <el-table-column label="操作" align="center" width="200">
+        <el-table-column prop="name" label="服务名称" min-width="150" />
+        <el-table-column prop="desc" label="服务描述" min-width="260" show-overflow-tooltip />
+        <el-table-column prop="price" label="价格（元）" width="120">
+          <template #default="scope">
+            <span class="price-text">¥{{ scope.row.price }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <el-button type="primary" link size="small" @click="openEditModal(scope.row)">
+              <el-icon><Edit /></el-icon>
               编辑
             </el-button>
             <el-button type="danger" link size="small" @click="handleDelete(scope.row)">
+              <el-icon><Delete /></el-icon>
               删除
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-    </div>
+    </el-card>
 
     <!-- 添加 / 编辑 弹窗 -->
-    <el-dialog v-model="dialogVisible" title="服务信息" width="600px" append-to-body>
+    <el-dialog v-model="dialogVisible" title="服务信息" width="600px" :close-on-click-modal="false">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="服务大类" prop="type">
-          <el-select v-model="form.type" placeholder="请选择服务类型" size="large">
+          <el-select v-model="form.type" placeholder="请选择服务类型" style="width: 100%">
             <el-option label="助餐服务" value="meal" />
             <el-option label="助洁服务" value="clean" />
             <el-option label="助医服务" value="medical" />
@@ -47,7 +70,7 @@
         </el-form-item>
 
         <el-form-item label="服务名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入服务名称" size="large" />
+          <el-input v-model="form.name" placeholder="请输入服务名称" />
         </el-form-item>
 
         <el-form-item label="服务描述" prop="desc">
@@ -56,7 +79,6 @@
             type="textarea"
             :rows="3"
             placeholder="请输入服务描述"
-            size="large"
           />
         </el-form-item>
 
@@ -64,8 +86,8 @@
           <el-input-number
             v-model="form.price"
             :min="0"
+            :precision="2"
             placeholder="请输入价格"
-            size="large"
             style="width: 100%"
           />
         </el-form-item>
@@ -86,7 +108,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, List, Edit, Delete } from '@element-plus/icons-vue'
 
 const formRef = ref(null)
 const dialogVisible = ref(false)
@@ -123,6 +145,17 @@ const serviceTypeMap = {
 
 const getServiceTypeName = (type) => {
   return serviceTypeMap[type] || '未知'
+}
+
+const getServiceTypeTag = (type) => {
+  const map = {
+    meal: 'warning',
+    clean: 'success',
+    medical: 'danger',
+    shop: 'primary',
+    companion: 'info'
+  }
+  return map[type] || 'info'
 }
 
 // 获取服务列表
@@ -200,30 +233,37 @@ const handleDelete = async (row) => {
 </script>
 
 <style scoped>
-.order-manage-page {
-  padding: 20px 30px;
-  background: #f5f7fa;
-  min-height: calc(100vh - 80px);
+.table-card {
+  border: 1px solid var(--border-light);
 }
 
-.page-header {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 }
 
-.page-header h2 {
-  font-size: 24px;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title {
+  font-size: 16px;
   font-weight: 600;
-  margin: 0;
+  color: var(--text-primary);
 }
 
-.table-box {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+.total-count {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.price-text {
+  color: var(--danger-color);
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .dialog-footer {

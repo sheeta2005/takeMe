@@ -15,7 +15,7 @@ public class OrderVO {
     private Long id;
     private String orderNo;
     private Long userId;
-    private Long volunteerId;
+    private String volunteerIds;
 
     private Integer totalPrice;
     private String serviceDate;

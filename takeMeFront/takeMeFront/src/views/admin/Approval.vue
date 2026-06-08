@@ -1,72 +1,91 @@
 <template>
   <div class="page-container">
-    <div class="header-row">
-      <h2 class="page-title">业务审批</h2>
+    <div class="page-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 class="page-title">业务审批</h2>
+          <p class="page-subtitle">处理各类业务申请审批</p>
+        </div>
+      </div>
     </div>
 
     <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <div class="filter-item">
-        <label class="filter-label">申请类型</label>
-        <el-select v-model="filterType" placeholder="请选择" @change="fetchApprovals">
-          <el-option label="全部" value="" />
-          <el-option label="志愿者注册" value="register" />
-          <el-option label="志愿者请假" value="leave" />
-          <el-option label="服务变更" value="service_change" />
-          <el-option label="积分申诉" value="points_appeal" />
-        </el-select>
-      </div>
-
-      <div class="filter-item">
-        <label class="filter-label">审批状态</label>
-        <el-select v-model="filterStatus" placeholder="请选择" @change="fetchApprovals">
-          <el-option label="全部" value="" />
-          <el-option label="待审核" value="pending" />
-          <el-option label="已通过" value="approved" />
-          <el-option label="已驳回" value="rejected" />
-        </el-select>
-      </div>
-
-      <div class="filter-item">
-        <label class="filter-label">申请人/ID</label>
-        <el-input
-          v-model="filterKeyword"
-          placeholder="请输入申请人姓名或ID"
-          clearable
-          @keyup.enter="fetchApprovals"
-        />
-      </div>
-
-      <div class="filter-item">
-        <label class="filter-label">申请时间</label>
-        <el-date-picker
-          v-model="filterDateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          format="YYYY-MM-DD"
-          value-format="YYYY-MM-DD"
-          @change="fetchApprovals"
-        />
-      </div>
-
-      <el-button type="primary" @click="fetchApprovals">查询</el-button>
-      <el-button @click="resetFilter">重置</el-button>
-    </div>
+    <el-card class="filter-card" shadow="hover">
+      <el-form :inline="true" class="filter-form">
+        <el-form-item label="申请类型">
+          <el-select v-model="filterType" placeholder="请选择" @change="fetchApprovals" style="width: 140px">
+            <el-option label="全部" value="" />
+            <el-option label="志愿者注册" value="register" />
+            <el-option label="志愿者请假" value="leave" />
+            <el-option label="服务变更" value="service_change" />
+            <el-option label="积分申诉" value="points_appeal" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="审批状态">
+          <el-select v-model="filterStatus" placeholder="请选择" @change="fetchApprovals" style="width: 120px">
+            <el-option label="全部" value="" />
+            <el-option label="待审核" value="pending" />
+            <el-option label="已通过" value="approved" />
+            <el-option label="已驳回" value="rejected" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="申请人/ID">
+          <el-input
+            v-model="filterKeyword"
+            placeholder="请输入申请人姓名或ID"
+            clearable
+            style="width: 180px"
+            @keyup.enter="fetchApprovals"
+          />
+        </el-form-item>
+        <el-form-item label="申请时间">
+          <el-date-picker
+            v-model="filterDateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            @change="fetchApprovals"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="fetchApprovals">
+            <el-icon><Search /></el-icon>
+            查询
+          </el-button>
+          <el-button @click="resetFilter">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
     <!-- 表格 -->
-    <div class="table-card">
-      <el-table :data="approvalList" border stripe style="width: 100%">
-        <el-table-column prop="id" label="申请ID" width="100" align="center" />
-        <el-table-column label="申请类型" width="140" align="center">
+    <el-card class="table-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Stamp /></el-icon>
+            <span class="card-title">审批列表</span>
+          </div>
+          <span class="total-count">共 {{ total }} 条</span>
+        </div>
+      </template>
+
+      <el-table :data="approvalList" v-loading="loading" stripe style="width: 100%">
+        <el-table-column prop="id" label="申请ID" width="100" />
+        <el-table-column label="申请类型" width="140">
           <template #default="{ row }">
             <el-tag size="small" :type="getTypeTagType(row.type)">
               {{ getTypeText(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="申请人信息" min-width="160" align="center">
+        <el-table-column label="申请人信息" min-width="160">
           <template #default="{ row }">
             <div class="user-info">
               <div class="info-name">{{ row.applicantName }}</div>
@@ -74,40 +93,45 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="申请时间" width="180" align="center" />
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column prop="createTime" label="申请时间" width="180" />
+        <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag size="small" :type="getStatusTagType(row.status)">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" align="center" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="openDetailDialog(row)">查看详情</el-button>
+            <el-button type="primary" link size="small" @click="openDetailDialog(row)">
+              <el-icon><View /></el-icon>
+              查看详情
+            </el-button>
             <el-button
               v-if="row.status === 'pending'"
               type="success"
               link
+              size="small"
               @click="handleApprove(row)"
             >
+              <el-icon><Check /></el-icon>
               通过
             </el-button>
             <el-button
               v-if="row.status === 'pending'"
               type="danger"
               link
+              size="small"
               @click="handleReject(row)"
             >
+              <el-icon><Close /></el-icon>
               驳回
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-    </div>
 
-    <!-- 分页 -->
-    <div class="pagination-wrapper">
+      <!-- 分页 -->
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
@@ -115,48 +139,44 @@
         :page-sizes="[10, 20, 50]"
         layout="total, sizes, prev, pager, next, jumper"
         @change="fetchApprovals"
+        style="margin-top: 24px; justify-content: flex-end"
       />
-    </div>
+    </el-card>
 
     <!-- 审批详情弹窗 -->
     <el-dialog v-model="detailDialogVisible" title="审批详情" width="650">
       <div class="detail-content">
-        <div class="detail-row">
-          <span class="label">申请ID：</span>
-          <span class="value">{{ currentApproval.id }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">申请类型：</span>
-          <el-tag :type="getTypeTagType(currentApproval.type)" size="small">
-            {{ getTypeText(currentApproval.type) }}
-          </el-tag>
-        </div>
-        <div class="detail-row">
-          <span class="label">申请人：</span>
-          <span class="value">{{ currentApproval.applicantName }} (ID: {{ currentApproval.applicantId }})</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">申请时间：</span>
-          <span class="value">{{ currentApproval.createTime }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">申请内容：</span>
-          <div class="value content">{{ currentApproval.content }}</div>
-        </div>
-        <div class="detail-row" v-if="currentApproval.status !== 'pending'">
-          <span class="label">审批结果：</span>
-          <el-tag :type="getStatusTagType(currentApproval.status)">
-            {{ getStatusText(currentApproval.status) }}
-          </el-tag>
-        </div>
-        <div class="detail-row" v-if="currentApproval.remark">
-          <span class="label">审批意见：</span>
-          <span class="value">{{ currentApproval.remark }}</span>
-        </div>
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="申请ID">
+            <span class="value-text">{{ currentApproval.id }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="申请类型">
+            <el-tag :type="getTypeTagType(currentApproval.type)" size="small">
+              {{ getTypeText(currentApproval.type) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="申请人">
+            <span class="value-text">{{ currentApproval.applicantName }} (ID: {{ currentApproval.applicantId }})</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="申请时间">
+            <span class="time-text">{{ currentApproval.createTime }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="申请内容">
+            <div class="content-text">{{ currentApproval.content }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="审批结果" v-if="currentApproval.status !== 'pending'">
+            <el-tag :type="getStatusTagType(currentApproval.status)">
+              {{ getStatusText(currentApproval.status) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="审批意见" v-if="currentApproval.remark">
+            <span class="value-text">{{ currentApproval.remark }}</span>
+          </el-descriptions-item>
+        </el-descriptions>
 
         <!-- 待审核时显示审批意见输入框 -->
-        <div class="detail-row" v-if="currentApproval.status === 'pending'">
-          <span class="label">审批意见：</span>
+        <div v-if="currentApproval.status === 'pending'" style="margin-top: 20px">
+          <div class="remark-label">审批意见：</div>
           <el-input
             v-model="approvalRemark"
             type="textarea"
@@ -173,6 +193,7 @@
           type="success"
           @click="confirmApprove"
         >
+          <el-icon><Check /></el-icon>
           确认通过
         </el-button>
         <el-button
@@ -180,6 +201,7 @@
           type="danger"
           @click="confirmReject"
         >
+          <el-icon><Close /></el-icon>
           确认驳回
         </el-button>
       </template>
@@ -190,8 +212,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Stamp, View, Check, Close } from '@element-plus/icons-vue'
 import { getApprovalPage, approveApplication, rejectApplication } from '@/api/admin'
 
+const loading = ref(false)
 const filterType = ref('')
 const filterStatus = ref('')
 const filterKeyword = ref('')
@@ -212,6 +236,7 @@ onMounted(() => {
 })
 
 const fetchApprovals = async () => {
+  loading.value = true
   try {
     const startDate = filterDateRange.value?.[0] || undefined
     const endDate = filterDateRange.value?.[1] || undefined
@@ -230,6 +255,8 @@ const fetchApprovals = async () => {
   } catch (err) {
     console.error('获取审批列表失败', err)
     ElMessage.error('获取审批列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -327,109 +354,84 @@ const getStatusTagType = (status: string) => {
 </script>
 
 <style scoped>
-.page-container {
-  width: 100%;
-  padding: 10px 0;
+.filter-card {
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
 }
 
-.header-row {
+.filter-form {
+  margin-bottom: 0;
+}
+
+.table-card {
+  border: 1px solid var(--border-light);
+}
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #222;
-  margin: 0;
-}
-
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 20px;
-}
-
-.filter-item {
+.header-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.filter-label {
-  font-size: 14px;
-  color: #666;
-  white-space: nowrap;
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.table-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  padding: 20px;
-  margin-bottom: 20px;
+.total-count {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .info-name {
   font-size: 14px;
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .info-id {
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  background: #fff;
-  padding: 16px 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-
-/* 详情弹窗样式 */
 .detail-content {
   padding: 10px 0;
 }
 
-.detail-row {
-  display: flex;
-  margin-bottom: 16px;
-  align-items: flex-start;
+.value-text {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
-.label {
-  width: 100px;
+.time-text {
+  color: var(--text-secondary);
   font-size: 14px;
-  color: #666;
-  flex-shrink: 0;
 }
 
-.value {
-  font-size: 14px;
-  color: #333;
-  flex: 1;
-}
-
-.value.content {
+.content-text {
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: 1.8;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.remark-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
 }
 </style>

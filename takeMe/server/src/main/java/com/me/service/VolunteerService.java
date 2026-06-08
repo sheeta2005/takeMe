@@ -26,14 +26,12 @@ public interface VolunteerService extends IService<Volunteer> {
      * @param pageSize 每页数量
      * @param username 用户名
      * @param id ID
-     * @param serviceType 服务类型
      * @return 分页结果
      */
     Page<Volunteer> searchVolunteer(
         Integer page,
         Integer pageSize,
         String username,
-        Long id,
-        Integer serviceType
+        Long id
     );
 }

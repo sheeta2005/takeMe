@@ -51,6 +51,9 @@ export const useCartStore = defineStore('cart', {
       servicePrice: number
       quantity: number
       serviceType: number
+      serviceDate?: string
+      serviceTime?: string
+      address?: string
       remark?: string
     }) {
       if (item.serviceType !== 2) {
@@ -64,6 +67,9 @@ export const useCartStore = defineStore('cart', {
           servicePrice: item.servicePrice,
           quantity: item.quantity,
           serviceType: item.serviceType,
+          serviceDate: item.serviceDate || '',
+          serviceTime: item.serviceTime || '',
+          address: item.address || '',
           remark: item.remark || ''
         })
 

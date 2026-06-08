@@ -6,8 +6,10 @@ import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
 import com.me.entity.Order;
 import com.me.entity.OrderItem;
+import com.me.entity.Review;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
+import com.me.mapper.ReviewMapper;
 import com.me.service.OrderService;
 import com.me.vo.OrderItemVO;
 import com.me.vo.OrderVO;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,53 +29,17 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
+    private final ReviewMapper reviewMapper;
 
-    // ===================== 订单列表 =====================
     @Override
-    public Page<OrderVO> getMyOrderList(Long userId, Integer page, Integer pageSize, Integer status) {
+    public Page<OrderVO> getMyOrderList(Long userId, Integer page, Integer pageSize, Integer status, String orderNo) {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getUserId, userId);
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
         }
-        wrapper.orderByDesc(Order::getCreateTime);
-
-        Page<Order> orderPage = orderMapper.selectPage(new Page<>(page, pageSize), wrapper);
-        Page<OrderVO> voPage = new Page<>();
-        BeanUtils.copyProperties(orderPage, voPage);
-
-        // ===================== 🔥 核心修改：查询订单明细并赋值 =====================
-        List<OrderVO> records = orderPage.getRecords().stream().map(order -> {
-            OrderVO vo = new OrderVO();
-            BeanUtils.copyProperties(order, vo);
-
-            // 查询当前订单的明细
-            LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
-            itemWrapper.eq(OrderItem::getOrderId, order.getId());
-            List<OrderItem> orderItems = orderItemMapper.selectList(itemWrapper);
-
-            // 转换为VO并设置
-            List<OrderItemVO> itemVOList = orderItems.stream().map(item -> {
-                OrderItemVO itemVO = new OrderItemVO();
-                BeanUtils.copyProperties(item, itemVO);
-                return itemVO;
-            }).collect(Collectors.toList());
-            vo.setItems(itemVOList);
-
-            return vo;
-        }).collect(Collectors.toList());
-        // ===================== 🔥 修改结束 =====================
-
-        voPage.setRecords(records);
-        return voPage;
-    }
-
-    @Override
-    public Page<OrderVO> getVolunteerOrderList(Long volunteerId, Integer page, Integer pageSize, Integer status) {
-        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Order::getVolunteerId, volunteerId);
-        if (status != null) {
-            wrapper.eq(Order::getStatus, status);
+        if (orderNo != null && !orderNo.trim().isEmpty()) {
+            wrapper.like(Order::getOrderNo, orderNo);
         }
         wrapper.orderByDesc(Order::getCreateTime);
 
@@ -102,7 +69,87 @@ public class OrderServiceImpl implements OrderService {
         return voPage;
     }
 
-    // ===================== 订单详情（含明细） =====================
+    @Override
+    public Page<OrderVO> getVolunteerOrderList(Long volunteerId, Integer page, Integer pageSize, Integer status, String orderNo) {
+        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+        itemWrapper.eq(OrderItem::getVolunteerId, volunteerId);
+        if (status != null) {
+            itemWrapper.eq(OrderItem::getItemStatus, status);
+        }
+        itemWrapper.orderByDesc(OrderItem::getCreateTime);
+
+        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(page, pageSize), itemWrapper);
+        
+        Page<OrderVO> voPage = new Page<>();
+        BeanUtils.copyProperties(itemPage, voPage, "records");
+        
+        List<OrderVO> records = itemPage.getRecords().stream()
+            .map(item -> {
+                Order order = orderMapper.selectById(item.getOrderId());
+                if (order == null) return null;
+                
+                OrderVO vo = new OrderVO();
+                BeanUtils.copyProperties(order, vo);
+                
+                LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(OrderItem::getOrderId, order.getId());
+                List<OrderItem> items = orderItemMapper.selectList(wrapper);
+                
+                List<OrderItemVO> itemVOList = items.stream().map(i -> {
+                    OrderItemVO itemVO = new OrderItemVO();
+                    BeanUtils.copyProperties(i, itemVO);
+                    return itemVO;
+                }).collect(Collectors.toList());
+                
+                vo.setItems(itemVOList);
+                return vo;
+            })
+            .filter(vo -> vo != null)
+            .collect(Collectors.toList());
+        
+        voPage.setRecords(records);
+        return voPage;
+    }
+
+    @Override
+    public Page<OrderVO> getAvailableOrderList(Integer page, Integer pageSize) {
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.isNull(OrderItem::getVolunteerId);
+        wrapper.eq(OrderItem::getItemStatus, 0);
+        wrapper.orderByDesc(OrderItem::getCreateTime);
+
+        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        Page<OrderVO> voPage = new Page<>();
+        BeanUtils.copyProperties(itemPage, voPage, "records");
+
+        List<OrderVO> records = itemPage.getRecords().stream()
+            .map(item -> {
+                Order order = orderMapper.selectById(item.getOrderId());
+                if (order == null) return null;
+                
+                OrderVO vo = new OrderVO();
+                BeanUtils.copyProperties(order, vo);
+                
+                LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+                itemWrapper.eq(OrderItem::getOrderId, order.getId());
+                List<OrderItem> items = orderItemMapper.selectList(itemWrapper);
+                
+                List<OrderItemVO> itemVOList = items.stream().map(i -> {
+                    OrderItemVO itemVO = new OrderItemVO();
+                    BeanUtils.copyProperties(i, itemVO);
+                    return itemVO;
+                }).collect(Collectors.toList());
+                
+                vo.setItems(itemVOList);
+                return vo;
+            })
+            .filter(vo -> vo != null)
+            .collect(Collectors.toList());
+        
+        voPage.setRecords(records);
+        return voPage;
+    }
+
     @Override
     public OrderVO getOrderDetail(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
@@ -113,7 +160,6 @@ public class OrderServiceImpl implements OrderService {
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
 
-        // 封装订单明细
         List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
@@ -121,7 +167,6 @@ public class OrderServiceImpl implements OrderService {
             return vo;
         }).collect(Collectors.toList());
 
-        // 前端展示需要，手动塞入明细
         orderVO.setItems(itemVOList);
         return orderVO;
     }
@@ -129,7 +174,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderVO getVolunteerOrderDetail(Long volunteerId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
-        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
+        if (order == null) {
             throw new RuntimeException("订单不存在");
         }
 
@@ -147,39 +192,69 @@ public class OrderServiceImpl implements OrderService {
         return orderVO;
     }
 
-    // ===================== 创建订单（事务） =====================
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderVO createOrder(Long userId, OrderDTO orderDTO, List<OrderItemDTO> itemDTOList) {
-        // 1. 构建主订单实体
+        if (itemDTOList == null || itemDTOList.isEmpty()) {
+            throw new RuntimeException("订单商品不能为空");
+        }
+
+        int totalPrice = itemDTOList.stream()
+                .mapToInt(item -> item.getItemPrice() != null ? item.getItemPrice() : 0)
+                .sum();
+
+        OrderItemDTO firstItem = itemDTOList.get(0);
+        
         Order order = new Order();
         BeanUtils.copyProperties(orderDTO, order);
         order.setUserId(userId);
         order.setOrderNo(generateOrderNo());
+        order.setTotalPrice(totalPrice);
+        
+        order.setServiceDate(firstItem.getServiceDate());
+        order.setServiceTime(firstItem.getServiceTime());
+        order.setAddress(firstItem.getAddress());
+        order.setRemark(firstItem.getRemark());
+        
         order.setStatus(0);
         order.setIsReviewed(0);
         order.setCreateTime(LocalDateTime.now());
         orderMapper.insert(order);
 
-        // 2. 构建订单明细
         List<OrderItem> itemList = itemDTOList.stream().map(dto -> {
             OrderItem item = new OrderItem();
             BeanUtils.copyProperties(dto, item);
             item.setOrderId(order.getId());
             item.setCreateTime(LocalDateTime.now());
+            item.setItemStatus(0);
+            
+            if (item.getItemPrice() == null && item.getServicePrice() != null && item.getQuantity() != null) {
+                item.setItemPrice(item.getServicePrice() * item.getQuantity());
+            }
+            
             return item;
         }).collect(Collectors.toList());
 
-        // 批量插入明细
         itemList.forEach(orderItemMapper::insert);
 
-        // 3. 返回VO
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
+        
+        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+        itemWrapper.eq(OrderItem::getOrderId, order.getId());
+        List<OrderItem> orderItems = orderItemMapper.selectList(itemWrapper);
+        
+        List<OrderItemVO> itemVOList = orderItems.stream().map(item -> {
+            OrderItemVO itemVO = new OrderItemVO();
+            BeanUtils.copyProperties(item, itemVO);
+            return itemVO;
+        }).collect(Collectors.toList());
+        
+        orderVO.setItems(itemVOList);
+        
         return orderVO;
     }
 
-    // ===================== 取消订单 =====================
     @Override
     public void cancelOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
@@ -195,48 +270,162 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void volunteerConfirmOrder(Long volunteerId, Long orderId) {
-        Order order = orderMapper.selectById(orderId);
-        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
-            throw new RuntimeException("订单不存在");
+    @Transactional(rollbackFor = Exception.class)
+    public void volunteerConfirmOrder(Long volunteerId, Long orderItemId) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            throw new RuntimeException("服务项目不存在");
         }
-        if (order.getStatus() != 0) {
-            throw new RuntimeException("订单状态不允许接单");
+        if (item.getVolunteerId() != null || item.getItemStatus() != 0) {
+            throw new RuntimeException("该服务项目已被接取");
         }
 
-        order.setStatus(1);
-        orderMapper.updateById(order);
+        item.setVolunteerId(volunteerId);
+        item.setItemStatus(1);
+        orderItemMapper.updateById(item);
+        
+        updateOrderVolunteerIds(item.getOrderId());
+        updateOrderStatus(item.getOrderId());
     }
 
     @Override
-    public void volunteerAbandonOrder(Long volunteerId, Long orderId) {
-        Order order = orderMapper.selectById(orderId);
-        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
-            throw new RuntimeException("订单不存在");
+    @Transactional(rollbackFor = Exception.class)
+    public void volunteerAbandonOrder(Long volunteerId, Long orderItemId) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            throw new RuntimeException("服务项目不存在");
         }
-        if (order.getStatus() != 1) {
-            throw new RuntimeException("订单状态不允许放弃");
+        if (!item.getVolunteerId().equals(volunteerId)) {
+            throw new RuntimeException("无权操作此服务项目");
+        }
+        if (item.getItemStatus() != 1) {
+            throw new RuntimeException("当前状态不允许放弃");
         }
 
-        order.setStatus(0);
-        orderMapper.updateById(order);
+        item.setVolunteerId(null);
+        item.setItemStatus(0);
+        orderItemMapper.updateById(item);
+        
+        updateOrderVolunteerIds(item.getOrderId());
+        updateOrderStatus(item.getOrderId());
     }
 
     @Override
-    public void volunteerCompleteOrder(Long volunteerId, Long orderId) {
-        Order order = orderMapper.selectById(orderId);
-        if (order == null || !order.getVolunteerId().equals(volunteerId)) {
-            throw new RuntimeException("订单不存在");
+    @Transactional(rollbackFor = Exception.class)
+    public void volunteerCompleteOrder(Long volunteerId, Long orderItemId) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            throw new RuntimeException("服务项目不存在");
         }
-        if (order.getStatus() != 1) {
-            throw new RuntimeException("订单状态不允许完成");
+        if (!item.getVolunteerId().equals(volunteerId)) {
+            throw new RuntimeException("无权操作此服务项目");
+        }
+        if (item.getItemStatus() != 1) {
+            throw new RuntimeException("当前状态不允许完成");
         }
 
-        order.setStatus(2);
-        orderMapper.updateById(order);
+        item.setItemStatus(2);
+        orderItemMapper.updateById(item);
+        
+        checkAndCompleteOrder(item.getOrderId());
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void userStartService(Long userId, Long orderItemId) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            throw new RuntimeException("服务项目不存在");
+        }
+        
+        Order order = orderMapper.selectById(item.getOrderId());
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此服务");
+        }
+        
+        if (item.getItemStatus() != 1) {
+            throw new RuntimeException("当前状态不允许开始服务");
+        }
+
+        item.setItemStatus(1);
+        orderItemMapper.updateById(item);
+        
+        updateOrderStatus(item.getOrderId());
+    }
+
+    private void updateOrderVolunteerIds(Long orderId) {
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderItem::getOrderId, orderId);
+        wrapper.isNotNull(OrderItem::getVolunteerId);
+        List<OrderItem> items = orderItemMapper.selectList(wrapper);
+        
+        Set<Long> volunteerIdSet = items.stream()
+            .map(OrderItem::getVolunteerId)
+            .filter(id -> id != null)
+            .collect(Collectors.toSet());
+        
+        Order order = orderMapper.selectById(orderId);
+        if (order != null) {
+            if (volunteerIdSet.isEmpty()) {
+                order.setVolunteerIds(null);
+            } else {
+                order.setVolunteerIds(volunteerIdSet.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(",")));
+            }
+            orderMapper.updateById(order);
+        }
+    }
+
+    private void updateOrderStatus(Long orderId) {
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderItem::getOrderId, orderId);
+        List<OrderItem> items = orderItemMapper.selectList(wrapper);
+        
+        if (items.isEmpty()) return;
+        
+        boolean allCompleted = items.stream().allMatch(item -> 
+            item.getItemStatus() == 3
+        );
+        
+        if (allCompleted) {
+            Order order = orderMapper.selectById(orderId);
+            if (order != null && order.getStatus() != 3) {
+                order.setStatus(3);
+                order.setCompleteTime(LocalDateTime.now());
+                orderMapper.updateById(order);
+                return;
+            }
+        }
+        
+        boolean anyPendingConfirm = items.stream().anyMatch(item -> 
+            item.getItemStatus() == 2
+        );
+        
+        boolean anyInProgress = items.stream().anyMatch(item -> 
+            item.getItemStatus() == 1
+        );
+        
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) return;
+        
+        if (anyPendingConfirm) {
+            order.setStatus(2);
+        } else if (anyInProgress) {
+            order.setStatus(1);
+        } else {
+            order.setStatus(0);
+        }
+        
+        orderMapper.updateById(order);
+    }
+
+    private void checkAndCompleteOrder(Long orderId) {
+        updateOrderStatus(orderId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void confirmOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -246,25 +435,54 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("订单状态不允许确认");
         }
 
-        order.setStatus(3);
-        orderMapper.updateById(order);
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderItem::getOrderId, orderId);
+        wrapper.eq(OrderItem::getItemStatus, 2);
+        List<OrderItem> items = orderItemMapper.selectList(wrapper);
+        
+        for (OrderItem item : items) {
+            item.setItemStatus(3);
+            orderItemMapper.updateById(item);
+        }
+        
+        updateOrderStatus(orderId);
     }
 
     @Override
-    public void evaluateOrder(Long userId, Long orderId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void evaluateOrder(Long userId, Long orderId, Integer rating, String comment) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new RuntimeException("订单不存在");
         }
-        if (order.getStatus() != 3) {
+        if (order.getStatus() != 2 && order.getStatus() != 3) {
             throw new RuntimeException("订单状态不允许评价");
         }
 
-        order.setIsReviewed(1);
-        orderMapper.updateById(order);
+        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
+        reviewWrapper.eq(Review::getOrderId, orderId);
+        Review existingReview = reviewMapper.selectOne(reviewWrapper);
+        
+        if (existingReview != null) {
+            existingReview.setRating(rating);
+            existingReview.setComment(comment);
+            reviewMapper.updateById(existingReview);
+        } else {
+            Review review = new Review();
+            review.setOrderId(orderId);
+            review.setUserId(userId);
+            review.setVolunteerId(order.getVolunteerIds() != null ? 
+                Long.parseLong(order.getVolunteerIds().split(",")[0]) : null);
+            review.setRating(rating);
+            review.setComment(comment);
+            review.setCreateTime(LocalDateTime.now());
+            reviewMapper.insert(review);
+            
+            order.setIsReviewed(1);
+            orderMapper.updateById(order);
+        }
     }
 
-    // ===================== 管理员功能 =====================
     @Override
     public Page<Order> getAdminOrderPage(Integer page, Integer pageSize, Integer status) {
         Page<Order> pageParam = new Page<>(page, pageSize);
@@ -298,7 +516,7 @@ public class OrderServiceImpl implements OrderService {
             wrapper.eq(Order::getUserId, userId);
         }
         if (volunteerId != null) {
-            wrapper.eq(Order::getVolunteerId, volunteerId);
+            wrapper.apply("FIND_IN_SET({0}, volunteer_ids)", volunteerId);
         }
         if (startDate != null && !startDate.trim().isEmpty()) {
             wrapper.ge(Order::getCreateTime, startDate + " 00:00:00");
@@ -323,7 +541,7 @@ public class OrderServiceImpl implements OrderService {
             return false;
         }
         
-        order.setStatus(4);
+        order.setStatus(5);
         return orderMapper.updateById(order) > 0;
     }
     
@@ -334,7 +552,7 @@ public class OrderServiceImpl implements OrderService {
             return false;
         }
         
-        order.setStatus(2);
+        order.setStatus(3);
         return orderMapper.updateById(order) > 0;
     }
     
@@ -343,7 +561,6 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.selectCount(wrapper);
     }
 
-    // 生成订单号
     private String generateOrderNo() {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
     }

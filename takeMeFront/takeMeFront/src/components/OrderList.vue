@@ -306,7 +306,10 @@ const confirmAddToCart = async () => {
       servicePrice: currentService.value.price,
       quantity: realQuantity,
       serviceType: currentService.value.type,
-      remark: cartForm.value.remark // ✅ 传递备注
+      serviceDate: cartForm.value.serviceDate,
+      serviceTime: cartForm.value.serviceTime,
+      address: cartForm.value.address,
+      remark: cartForm.value.remark
     })
 
     addToCartVisible.value = false

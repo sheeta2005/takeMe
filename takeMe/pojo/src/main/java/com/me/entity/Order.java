@@ -18,18 +18,18 @@ public class Order {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String orderNo;        // 订单编号
-    private Long userId;           // 老人ID
-    private Long volunteerId;      // 志愿者ID
+    private String orderNo;
+    private Long userId;
+    private String volunteerIds;
 
-    private Integer totalPrice;    // 总金额
-    private String serviceDate;    // 服务日期
-    private String serviceTime;    // 服务时间
-    private String address;        // 服务地址
-    private String remark;         // 备注
+    private Integer totalPrice;
+    private String serviceDate;
+    private String serviceTime;
+    private String address;
+    private String remark;
 
-    private Integer status;        // 订单状态
+    private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime completeTime;
-    private Integer isReviewed;    // 是否评价 0/1
+    private Integer isReviewed;
 }

@@ -166,6 +166,9 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
             dto.setServiceTime(item.getServiceTime());
             dto.setAddress(item.getAddress());
             dto.setRemark(item.getRemark());
+            
+            dto.setItemPrice(item.getServicePrice() * item.getQuantity());
+            
             return dto;
         }).collect(Collectors.toList());
         

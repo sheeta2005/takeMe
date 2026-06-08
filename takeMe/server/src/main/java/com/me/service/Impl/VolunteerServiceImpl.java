@@ -49,8 +49,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
             Integer page,
             Integer pageSize,
             String username,
-            Long id,
-            Integer serviceType
+            Long id
     ) {
         Page<Volunteer> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
@@ -60,9 +59,6 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         }
         if (id != null) {
             wrapper.eq(Volunteer::getId, id);
-        }
-        if (serviceType != null) {
-            wrapper.eq(Volunteer::getServiceType, serviceType);
         }
         
         wrapper.orderByDesc(Volunteer::getCreateTime);

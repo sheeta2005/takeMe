@@ -2,13 +2,13 @@
   <div class="page-container">
     <div class="page-header">
       <h2 class="page-title">我的待办</h2>
-      <p class="page-subtitle">管理您的服务订单</p>
+      <p class="page-subtitle">查看和管理您已接取的服务</p>
     </div>
 
     <el-skeleton :rows="3" animated v-if="loading" />
 
     <template v-else>
-      <el-empty v-if="!currentOrder && availableOrders.length === 0" description="暂无待办任务" :image-size="200">
+      <el-empty v-if="myServices.length === 0" description="暂无待办服务" :image-size="200">
         <el-button type="primary" @click="refreshData">
           <el-icon><Refresh /></el-icon>
           刷新
@@ -16,147 +16,90 @@
       </el-empty>
 
       <template v-else>
-        <el-alert
-          v-if="currentOrder"
-          title="您有一个进行中的订单，请先完成该订单"
-          type="warning"
-          :closable="false"
-          show-icon
-          class="notice-alert"
-        />
-
-        <div v-if="currentOrder" class="current-order-section">
-          <h3 class="section-title">
-            <el-icon><Clock /></el-icon>
-            进行中的订单
-          </h3>
-          <el-card class="order-card current-order-card" shadow="hover">
-            <div class="order-card-header">
+        <div class="service-list">
+          <el-card
+            v-for="service in myServices"
+            :key="service.id"
+            class="service-card"
+            shadow="hover"
+          >
+            <div class="service-card-header">
               <div class="order-info">
                 <span class="order-label">订单编号</span>
-                <span class="order-no">{{ currentOrder.orderNo }}</span>
+                <span class="order-no">{{ service.orderNo }}</span>
               </div>
-              <el-tag type="primary" size="large" effect="dark">
-                <el-icon><Loading /></el-icon>
-                服务中
+              <el-tag :type="getStatusType(service.itemStatus)" size="large" effect="dark">
+                {{ getStatusText(service.itemStatus) }}
               </el-tag>
             </div>
 
             <el-divider />
 
-            <div class="order-card-body">
+            <div class="service-card-body">
               <el-descriptions :column="1" border>
-                <el-descriptions-item label="服务类型">
-                  <el-tag :type="getServiceTypeTag(currentOrder.serviceType)">
-                    {{ getServiceTypeName(currentOrder.serviceType) }}
-                  </el-tag>
+                <el-descriptions-item label="服务项目">
+                  <div class="service-item-info">
+                    <el-tag :type="getServiceTypeTag(service.serviceType)">
+                      {{ getServiceTypeName(service.serviceType) }}
+                    </el-tag>
+                    <span class="service-name">{{ service.serviceName }}</span>
+                    <span class="service-detail">×{{ service.quantity }}</span>
+                  </div>
                 </el-descriptions-item>
                 <el-descriptions-item label="服务时间">
                   <div class="time-info">
                     <el-icon><Calendar /></el-icon>
-                    <span>{{ currentOrder.serviceDate }} {{ currentOrder.serviceTime }}</span>
+                    <span>{{ service.serviceDate }} {{ service.serviceTime }}</span>
                   </div>
                 </el-descriptions-item>
                 <el-descriptions-item label="服务地址">
                   <div class="address-info">
                     <el-icon><Location /></el-icon>
-                    <span>{{ currentOrder.address }}</span>
+                    <span>{{ service.address }}</span>
                   </div>
                 </el-descriptions-item>
-                <el-descriptions-item label="备注" v-if="currentOrder.remark">
-                  <el-alert :title="currentOrder.remark" type="info" :closable="false" show-icon />
+                <el-descriptions-item label="备注" v-if="service.remark">
+                  <el-alert :title="service.remark" type="info" :closable="false" show-icon />
                 </el-descriptions-item>
               </el-descriptions>
             </div>
 
-            <div class="order-card-footer">
+            <div class="service-card-footer">
               <div class="price-info">
-                <span class="price-label">订单金额：</span>
-                <span class="price-value">¥{{ currentOrder.totalPrice }}</span>
+                <span class="price-label">服务金额：</span>
+                <span class="price-value">¥{{ service.itemPrice }}</span>
               </div>
               <div class="action-buttons">
-                <el-button type="primary" size="large" @click="goToOrderDetail(currentOrder.id)">
-                  <el-icon><View /></el-icon>
-                  查看详情
+                <el-button
+                  v-if="service.itemStatus === 1"
+                  type="success"
+                  size="large"
+                  @click="startService(service)"
+                >
+                  <el-icon><VideoPlay /></el-icon>
+                  开始服务
                 </el-button>
-                <el-button type="success" size="large" @click="completeOrder(currentOrder)">
+                <el-button
+                  v-if="service.itemStatus === 1 || service.itemStatus === 2"
+                  type="primary"
+                  size="large"
+                  @click="completeService(service)"
+                >
                   <el-icon><CircleCheck /></el-icon>
                   完成服务
                 </el-button>
-                <el-button type="danger" size="large" @click="abandonOrder(currentOrder)">
+                <el-button
+                  v-if="service.itemStatus === 1 || service.itemStatus === 2"
+                  type="danger"
+                  size="large"
+                  @click="abandonService(service)"
+                >
                   <el-icon><CloseBold /></el-icon>
-                  放弃订单
+                  放弃服务
                 </el-button>
               </div>
             </div>
           </el-card>
-        </div>
-
-        <div v-if="availableOrders.length > 0" class="available-orders-section">
-          <h3 class="section-title">
-            <el-icon><List /></el-icon>
-            待接单任务
-            <el-badge :value="availableOrders.length" :max="99" class="badge" />
-          </h3>
-          <div class="order-grid">
-            <el-card
-              v-for="order in availableOrders"
-              :key="order.id"
-              class="order-card available-order-card"
-              shadow="hover"
-            >
-              <div class="order-card-header">
-                <div class="order-info">
-                  <span class="order-label">订单编号</span>
-                  <span class="order-no">{{ order.orderNo }}</span>
-                </div>
-                <el-tag type="warning" size="large">
-                  <el-icon><Bell /></el-icon>
-                  待确认
-                </el-tag>
-              </div>
-
-              <el-divider />
-
-              <div class="order-card-body">
-                <div class="info-item">
-                  <el-icon class="info-icon"><Ticket /></el-icon>
-                  <span class="info-label">服务类型：</span>
-                  <el-tag :type="getServiceTypeTag(order.serviceType)" size="small">
-                    {{ getServiceTypeName(order.serviceType) }}
-                  </el-tag>
-                </div>
-                <div class="info-item">
-                  <el-icon class="info-icon"><Calendar /></el-icon>
-                  <span class="info-label">服务时间：</span>
-                  <span class="info-value">{{ order.serviceDate }} {{ order.serviceTime }}</span>
-                </div>
-                <div class="info-item">
-                  <el-icon class="info-icon"><Location /></el-icon>
-                  <span class="info-label">服务地址：</span>
-                  <span class="info-value">{{ order.address }}</span>
-                </div>
-                <div class="info-item" v-if="order.remark">
-                  <el-icon class="info-icon"><Document /></el-icon>
-                  <span class="info-label">备注：</span>
-                  <span class="info-value">{{ order.remark }}</span>
-                </div>
-              </div>
-
-              <div class="order-card-footer">
-                <div class="price-info">
-                  <span class="price-label">订单金额：</span>
-                  <span class="price-value">¥{{ order.totalPrice }}</span>
-                </div>
-                <div class="action-buttons">
-                  <el-button type="primary" size="large" @click="confirmOrder(order)">
-                    <el-icon><Check /></el-icon>
-                    确认接单
-                  </el-button>
-                </div>
-              </div>
-            </el-card>
-          </div>
         </div>
       </template>
     </template>
@@ -164,32 +107,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Refresh, Clock, Loading, Calendar, Location, Document, View,
-  CircleCheck, CloseBold, List, Bell, Ticket, Check
+  Refresh, Calendar, Location, VideoPlay, CircleCheck, CloseBold
 } from '@element-plus/icons-vue'
 import {
   getVolunteerOrderList,
-  confirmOrder as apiConfirmOrder,
   completeOrder as apiCompleteOrder,
-  abandonOrder as apiAbandonOrder
+  abandonOrder as apiAbandonOrder,
+  startService as apiStartService
 } from '@/api/volunteer'
 
 const router = useRouter()
 
 const loading = ref(true)
-const orderList = ref<any[]>([])
+const myServices = ref<any[]>([])
 
-const currentOrder = computed(() => {
-  return orderList.value.find(o => o.status === 2) || null
-})
+const statusMap: Record<number, string> = {
+  0: '待接单',
+  1: '进行中',
+  2: '待确认',
+  3: '已完成',
+  4: '已放弃'
+}
 
-const availableOrders = computed(() => {
-  return orderList.value.filter(o => o.status === 1).slice(0, 3)
-})
+const statusTypeMap: Record<number, string> = {
+  0: 'info',
+  1: 'primary',
+  2: 'warning',
+  3: 'success',
+  4: 'info'
+}
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',
@@ -207,6 +157,14 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'danger'
 }
 
+const getStatusText = (status: number) => {
+  return statusMap[status] || '未知'
+}
+
+const getStatusType = (status: number) => {
+  return statusTypeMap[status] || 'info'
+}
+
 const getServiceTypeName = (type: number) => {
   return serviceTypeMap[type] || '未知'
 }
@@ -215,57 +173,65 @@ const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
-const loadOrders = async () => {
+const loadMyServices = async () => {
   loading.value = true
   try {
     const res = await getVolunteerOrderList({
       page: 1,
-      pageSize: 20
+      pageSize: 50
     })
     if (res.code === 200) {
-      orderList.value = res.data?.records || []
+      const services: any[] = []
+      res.data?.records?.forEach((order: any) => {
+        order.items?.forEach((item: any) => {
+          if (item.volunteerId && [1, 2].includes(item.itemStatus)) {
+            services.push({
+              ...item,
+              orderNo: order.orderNo,
+              orderId: order.id
+            })
+          }
+        })
+      })
+      myServices.value = services
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '加载订单列表失败')
+    ElMessage.error(error.message || '加载服务列表失败')
   } finally {
     loading.value = false
   }
 }
 
 const refreshData = () => {
-  loadOrders()
+  loadMyServices()
 }
 
-const goToOrderDetail = (orderId: number) => {
-  router.push(`/volunteer/order/${orderId}`)
-}
-
-const confirmOrder = async (order: any) => {
+const startService = async (service: any) => {
   try {
     await ElMessageBox.confirm(
-      `确认接取订单 ${order.orderNo}？接单后请及时完成服务。`,
-      '确认接单',
+      `确认开始服务 ${service.serviceName}？`,
+      '开始服务',
       {
-        confirmButtonText: '确认接单',
+        confirmButtonText: '确认开始',
         cancelButtonText: '取消',
         type: 'info'
       }
     )
 
-    await apiConfirmOrder(order.id)
-    ElMessage.success('接单成功')
-    await loadOrders()
+    await apiStartService(service.id)
+    ElMessage.success('服务已开始')
+    await loadMyServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '接单失败')
+      ElMessage.error(error.message || '开始服务失败')
     }
   }
 }
 
-const completeOrder = async (order: any) => {
+const completeService = async (service: any) => {
   try {
     await ElMessageBox.confirm(
-      `确认已完成订单 ${order.orderNo} 的服务？完成后将获得相应积分。`,
+      `确认已完成服务 ${service.serviceName}？`,
       '完成服务',
       {
         confirmButtonText: '确认完成',
@@ -274,21 +240,21 @@ const completeOrder = async (order: any) => {
       }
     )
 
-    await apiCompleteOrder(order.id)
-    ElMessage.success('订单已完成，积分已发放')
-    await loadOrders()
+    await apiCompleteOrder(service.id)
+    ElMessage.success('服务已完成，等待用户确认')
+    await loadMyServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '完成订单失败')
+      ElMessage.error(error.message || '完成服务失败')
     }
   }
 }
 
-const abandonOrder = async (order: any) => {
+const abandonService = async (service: any) => {
   try {
     await ElMessageBox.confirm(
-      `确定要放弃订单 ${order.orderNo} 吗？放弃订单可能会影响您的信用评分。`,
-      '放弃订单',
+      `确定要放弃服务 ${service.serviceName} 吗？放弃后可由其他志愿者接取。`,
+      '放弃服务',
       {
         confirmButtonText: '确定放弃',
         cancelButtonText: '取消',
@@ -296,24 +262,24 @@ const abandonOrder = async (order: any) => {
       }
     )
 
-    await apiAbandonOrder(order.id)
-    ElMessage.warning('订单已放弃')
-    await loadOrders()
+    await apiAbandonOrder(service.id)
+    ElMessage.warning('服务已放弃')
+    await loadMyServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '放弃订单失败')
+      ElMessage.error(error.message || '放弃服务失败')
     }
   }
 }
 
 onMounted(() => {
-  loadOrders()
+  loadMyServices()
 })
 </script>
 
 <style scoped>
 .page-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 24px 0;
 }
@@ -336,51 +302,23 @@ onMounted(() => {
   margin: 0;
 }
 
-.notice-alert {
-  margin-bottom: 24px;
-  border-radius: 8px;
-}
-
-.current-order-section,
-.available-orders-section {
-  margin-bottom: 40px;
-}
-
-.section-title {
+.service-list {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.badge {
-  margin-left: 8px;
-}
-
-.order-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  flex-direction: column;
   gap: 20px;
 }
 
-.order-card {
+.service-card {
   border-radius: 12px;
   transition: all 0.3s ease;
 }
 
-.order-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 184, 153, 0.15);
+.service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 184, 153, 0.15);
 }
 
-.current-order-card {
-  border: 2px solid #00b899;
-}
-
-.order-card-header {
+.service-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -404,32 +342,24 @@ onMounted(() => {
   font-family: 'Courier New', monospace;
 }
 
-.order-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.service-card-body {
+  margin: 16px 0;
 }
 
-.info-item {
+.service-item-info {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.info-icon {
-  color: #00b899;
-  font-size: 18px;
+.service-name {
+  font-weight: 500;
+  flex: 1;
 }
 
-.info-label {
-  font-size: 14px;
+.service-detail {
   color: #666;
-  min-width: 80px;
-}
-
-.info-value {
   font-size: 14px;
-  color: #333;
 }
 
 .time-info,
@@ -444,7 +374,7 @@ onMounted(() => {
   color: #00b899;
 }
 
-.order-card-footer {
+.service-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -27,10 +27,11 @@ public class OrderController {
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) Integer status
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String orderNo
     ) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
-        Page<OrderVO> pageResult = orderService.getMyOrderList(userId, page, pageSize, status);
+        Page<OrderVO> pageResult = orderService.getMyOrderList(userId, page, pageSize, status, orderNo);
         return Result.success(pageResult);
     }
 
@@ -85,14 +86,27 @@ public class OrderController {
         return Result.success();
     }
 
+    // ===================== 确认开始服务 =====================
+    @PostMapping("/startService")
+    public Result<Void> startService(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam Long orderItemId
+    ) {
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
+        orderService.userStartService(userId, orderItemId);
+        return Result.success();
+    }
+
     // ===================== 评价订单 =====================
     @PostMapping("/evaluate")
     public Result<Void> evaluate(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam Long orderId
+            @RequestParam Long orderId,
+            @RequestParam Integer rating,
+            @RequestParam(required = false) String comment
     ) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
-        orderService.evaluateOrder(userId, orderId);
+        orderService.evaluateOrder(userId, orderId, rating, comment);
         return Result.success();
     }
 }

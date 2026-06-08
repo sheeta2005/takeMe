@@ -1,69 +1,82 @@
 <template>
-  <div class="detail-container">
-    <div class="header-row">
-      <h2 class="page-title">用户详情</h2>
-      <el-button @click="$router.back()">返回</el-button>
-    </div>
-
-    <div class="detail-card">
-      <div class="detail-section">
-        <h3 class="section-title">基础信息</h3>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <span class="label">用户ID：</span>
-            <span class="value">{{ userDetail.id }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">姓名：</span>
-            <span class="value">{{ userDetail.realName }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">账号：</span>
-            <span class="value">{{ userDetail.username }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">年龄：</span>
-            <span class="value">{{ userDetail.age }}岁</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">性别：</span>
-            <el-tag :type="userDetail.gender === 0 ? 'primary' : 'danger'" size="small">
-              {{ userDetail.gender === 0 ? '男' : '女' }}
-            </el-tag>
-          </div>
-          <div class="detail-item">
-            <span class="label">手机号：</span>
-            <span class="value">{{ userDetail.phone }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">居住地址：</span>
-            <span class="value">{{ userDetail.address || '-' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">注册时间：</span>
-            <span class="value">{{ userDetail.createTime }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">最后登录：</span>
-            <span class="value">{{ userDetail.lastLoginTime || '-' }}</span>
-          </div>
+  <div class="page-container">
+    <div class="page-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 class="page-title">用户详情</h2>
+          <p class="page-subtitle">查看老人用户详细信息</p>
         </div>
-      </div>
-
-      <div class="detail-section">
-        <h3 class="section-title">紧急联系人</h3>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <span class="label">姓名：</span>
-            <span class="value">{{ userDetail.emergencyName || '-' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label">联系电话：</span>
-            <span class="value">{{ userDetail.emergencyPhone || '-' }}</span>
-          </div>
-        </div>
+        <el-button size="large" @click="$router.back()">
+          <el-icon><Back /></el-icon>
+          返回列表
+        </el-button>
       </div>
     </div>
+
+    <!-- 基础信息 -->
+    <el-card class="detail-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><User /></el-icon>
+            <span class="card-title">基础信息</span>
+          </div>
+        </div>
+      </template>
+
+      <el-descriptions :column="3" border size="large">
+        <el-descriptions-item label="用户ID">
+          <span class="value-text">{{ userDetail.id }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="姓名">
+          <span class="value-text">{{ userDetail.realName }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="账号">
+          <span class="value-text">{{ userDetail.username }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="年龄">
+          <span class="value-text">{{ userDetail.age }}岁</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="性别">
+          <el-tag :type="userDetail.gender === 0 ? '' : 'danger'" size="small">
+            {{ userDetail.gender === 0 ? '男' : '女' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="手机号">
+          <span class="value-text">{{ userDetail.phone }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="居住地址" :span="2">
+          <span class="value-text">{{ userDetail.address || '-' }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="注册时间">
+          <span class="time-text">{{ userDetail.createTime }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="最后登录">
+          <span class="time-text">{{ userDetail.lastLoginTime || '-' }}</span>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <!-- 紧急联系人 -->
+    <el-card class="detail-card emergency-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Phone /></el-icon>
+            <span class="card-title">紧急联系人</span>
+          </div>
+        </div>
+      </template>
+
+      <el-descriptions :column="2" border size="large">
+        <el-descriptions-item label="姓名">
+          <span class="value-text">{{ userDetail.emergencyName || '-' }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="联系电话">
+          <span class="value-text">{{ userDetail.emergencyPhone || '-' }}</span>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-card>
   </div>
 </template>
 
@@ -71,6 +84,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Back, User, Phone } from '@element-plus/icons-vue'
 import { getUserDetail } from '@/api/admin'
 import type { User } from '@/types/User'
 
@@ -110,65 +124,41 @@ const fetchUserDetail = async (id: number) => {
 </script>
 
 <style scoped>
-.detail-container {
-  width: 100%;
-  padding: 10px 0;
+.detail-card {
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
 }
 
-.header-row {
+.emergency-card {
+  max-width: 800px;
+}
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #222;
-  margin: 0;
-}
-
-.detail-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  padding: 30px;
-}
-
-.detail-section {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.detail-item {
+.header-left {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.label {
-  width: 120px;
-  font-size: 14px;
-  color: #666;
-  flex-shrink: 0;
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.value {
+.value-text {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.time-text {
+  color: var(--text-secondary);
   font-size: 14px;
-  color: #333;
 }
 </style>

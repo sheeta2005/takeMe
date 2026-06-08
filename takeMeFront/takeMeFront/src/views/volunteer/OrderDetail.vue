@@ -1,54 +1,48 @@
 <template>
   <div class="page-container">
+    <div class="page-header">
+      <h2 class="page-title">订单详情</h2>
+      <p class="page-subtitle">查看订单详细信息</p>
+    </div>
+
     <el-skeleton :rows="8" animated v-if="loading" />
 
     <template v-else-if="order">
-      <div class="page-header">
-        <h2 class="page-title">订单详情</h2>
-        <el-tag :type="getStatusType(order.status)" size="large" effect="dark">
-          {{ getStatusText(order.status) }}
-        </el-tag>
-      </div>
-
       <el-card class="detail-card" shadow="hover">
         <template #header>
           <div class="card-header">
             <el-icon><Document /></el-icon>
             <span>订单信息</span>
+            <el-tag :type="getStatusType(order.status)" size="large" effect="dark">
+              {{ getStatusText(order.status) }}
+            </el-tag>
           </div>
         </template>
 
         <el-descriptions :column="2" border>
           <el-descriptions-item label="订单编号">
-            <el-tag type="info" size="large">{{ order.orderNo }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="订单状态">
-            <el-tag :type="getStatusType(order.status)" size="large">
-              {{ getStatusText(order.status) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="订单金额">
-            <span class="price-text">¥{{ order.totalPrice }}</span>
+            <span class="order-no-text">{{ order.orderNo }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="下单时间">
             {{ formatTime(order.createTime) }}
           </el-descriptions-item>
-          <el-descriptions-item label="服务时间">
-            {{ order.serviceDate }} {{ order.serviceTime }}
+          <el-descriptions-item label="服务时间" v-if="order.serviceDate">
+            {{ order.serviceDate }} {{ order.serviceTime || '' }}
           </el-descriptions-item>
-          <el-descriptions-item label="服务地址" :span="2">
+          <el-descriptions-item label="服务地址" v-if="order.address">
             <div class="address-content">
               <el-icon><Location /></el-icon>
-              <span>{{ order.address }}</span>
+              {{ order.address }}
             </div>
           </el-descriptions-item>
-          <el-descriptions-item label="备注" :span="2" v-if="order.remark">
-            <el-alert
-              :title="order.remark"
-              type="info"
-              :closable="false"
-              show-icon
-            />
+          <el-descriptions-item label="联系人" v-if="order.contactName">
+            {{ order.contactName }}
+          </el-descriptions-item>
+          <el-descriptions-item label="联系电话" v-if="order.contactPhone">
+            {{ order.contactPhone }}
+          </el-descriptions-item>
+          <el-descriptions-item label="备注" v-if="order.remark" :span="2">
+            {{ order.remark }}
           </el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -72,7 +66,14 @@
                 <el-tag :type="getServiceTypeTag(row.serviceType)" size="small">
                   {{ getServiceTypeName(row.serviceType) }}
                 </el-tag>
-                <span class="service-name">{{ row.serviceName }}</span>
+                <el-link
+                  type="primary"
+                  :underline="false"
+                  class="service-name-link"
+                  @click="showServiceDetail(row)"
+                >
+                  {{ row.serviceName }}
+                </el-link>
               </div>
             </template>
           </el-table-column>
@@ -143,6 +144,88 @@
     </template>
 
     <el-empty v-else description="订单不存在" :image-size="200" />
+
+    <el-dialog
+      v-model="serviceDetailVisible"
+      title="服务详情"
+      width="700px"
+      :close-on-click-modal="false"
+      class="service-detail-dialog"
+    >
+      <div v-if="currentService" class="detail-content">
+        <div class="detail-section">
+          <div class="section-title">
+            <el-icon><Document /></el-icon>
+            <span>服务信息</span>
+          </div>
+          <el-descriptions :column="2" border class="detail-descriptions">
+            <el-descriptions-item label="服务类型">
+              <el-tag :type="getServiceTypeTag(currentService.serviceType)" size="large">
+                {{ getServiceTypeName(currentService.serviceType) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="服务名称">
+              <span style="font-weight: 500; font-size: 16px">{{ currentService.serviceName }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="服务单价">
+              <span style="color: #f5222d; font-weight: bold; font-size: 18px">¥{{ currentService.servicePrice }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="数量">
+              <el-tag type="primary" size="large">×{{ currentService.quantity }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="小计金额" :span="2">
+              <span style="color: #f5222d; font-weight: bold; font-size: 20px">¥{{ currentService.itemPrice }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <div class="detail-section" v-if="currentService.serviceDate || currentService.serviceTime">
+          <div class="section-title">
+            <el-icon><Calendar /></el-icon>
+            <span>预约时间</span>
+          </div>
+          <el-descriptions :column="2" border class="detail-descriptions">
+            <el-descriptions-item label="服务日期" v-if="currentService.serviceDate">
+              <el-tag type="success" size="large">
+                <el-icon style="margin-right: 4px"><Clock /></el-icon>
+                {{ currentService.serviceDate }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="服务时间" v-if="currentService.serviceTime">
+              <el-tag type="warning" size="large">
+                <el-icon style="margin-right: 4px"><Timer /></el-icon>
+                {{ currentService.serviceTime }}
+              </el-tag>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <div class="detail-section" v-if="currentService.address">
+          <div class="section-title">
+            <el-icon><Location /></el-icon>
+            <span>服务地址</span>
+          </div>
+          <div class="address-box">
+            <el-icon class="address-icon"><LocationFilled /></el-icon>
+            <span class="address-text">{{ currentService.address }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section" v-if="currentService.remark">
+          <div class="section-title">
+            <el-icon><EditPen /></el-icon>
+            <span>备注信息</span>
+          </div>
+          <div class="remark-box">
+            {{ currentService.remark }}
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button size="large" @click="serviceDetailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -151,7 +234,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Document, List, Location, Coin, CircleCheck, CloseBold, Back
+  Document, List, Location, Coin, CircleCheck, CloseBold, Back,
+  Calendar, Clock, EditPen, Timer, LocationFilled
 } from '@element-plus/icons-vue'
 import {
   getVolunteerOrderDetail,
@@ -168,6 +252,9 @@ const loading = ref(true)
 const completing = ref(false)
 const abandoning = ref(false)
 const order = ref<any>(null)
+
+const serviceDetailVisible = ref(false)
+const currentService = ref<any>(null)
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',
@@ -242,6 +329,11 @@ const loadOrderDetail = async (id: number) => {
   } finally {
     loading.value = false
   }
+}
+
+const showServiceDetail = (service: any) => {
+  currentService.value = service
+  serviceDetailVisible.value = true
 }
 
 const handleCompleteOrder = async () => {
@@ -368,8 +460,14 @@ const back = () => {
   gap: 8px;
 }
 
-.service-name {
+.service-name-link {
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.service-name-link:hover {
+  opacity: 0.8;
 }
 
 .price-cell {
@@ -437,4 +535,114 @@ const back = () => {
   font-weight: bold;
   color: #00b899;
 }
+
+/* 服务详情弹窗样式 */
+.service-detail-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #00b899 0%, #00d4a8 100%);
+  color: white;
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.service-detail-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.service-detail-dialog :deep(.el-dialog__close) {
+  color: white;
+}
+
+.service-detail-dialog :deep(.el-dialog__body) {
+  padding: 24px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.detail-content {
+  padding: 0;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  padding-left: 8px;
+  border-left: 4px solid #00b899;
+}
+
+.section-title .el-icon {
+  font-size: 20px;
+  color: #00b899;
+}
+
+.detail-descriptions {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.detail-descriptions .el-descriptions__label) {
+  background-color: #fafafa;
+  font-weight: 600;
+  width: 120px;
+}
+
+:deep(.detail-descriptions .el-descriptions__content) {
+  padding: 12px 16px;
+}
+
+.address-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #f0f9f4;
+  border-radius: 8px;
+  border: 1px solid #b7eb8f;
+}
+
+.address-icon {
+  font-size: 24px;
+  color: #00b899;
+  flex-shrink: 0;
+}
+
+.address-text {
+  font-size: 16px;
+  color: #333;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.remark-box {
+  padding: 16px 20px;
+  background: #fff7e6;
+  border-radius: 8px;
+  border: 1px solid #ffd591;
+  font-size: 16px;
+  color: #333;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.service-detail-dialog :deep(.el-dialog__footer) {
+  padding: 16px 24px;
+  border-top: 1px solid #ebeef5;
+  background-color: #fafafa;
+}
 </style>
+

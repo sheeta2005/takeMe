@@ -15,35 +15,26 @@
       <div class="detail-content">
         <p class="content-text">{{ message?.content || '暂无内容' }}</p>
 
-        <!-- 关联订单跳转 -->
-        <div v-if="message?.relatedId" class="related-order">
+        <div v-if="message?.relatedOrderId" class="related-order">
           <span>关联订单：</span>
           <el-button
             type="primary"
             link
             size="default"
-            @click="goToOrder(message.relatedUrl)"
+            @click="goToOrder"
           >
-            查看订单 {{ message.relatedId }}
+            查看订单 {{ message.relatedOrderId }}
           </el-button>
         </div>
       </div>
 
       <div class="detail-footer">
-        <span class="create-time">发送时间：{{ message?.createTime || '未知时间' }}</span>
+        <span class="create-time">发送时间：{{ formatTime(message?.createTime) }}</span>
       </div>
     </div>
 
     <div class="action-buttons">
       <el-button size="default" @click="$router.back()">返回列表</el-button>
-      <el-button
-        v-if="!message?.isRead"
-        type="primary"
-        size="default"
-        @click="confirmMarkRead"
-      >
-        标记为已读
-      </el-button>
     </div>
   </div>
 </template>
@@ -52,11 +43,11 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { Message } from '@/types/Message.ts'
+import { getUserMessageById, markMessageRead } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
-const message = ref<Message>({} as Message)
+const message = ref<any>(null)
 const loading = ref(false)
 
 onMounted(() => {
@@ -69,49 +60,41 @@ onMounted(() => {
   }
 })
 
-// 获取消息详情
 const fetchMessageDetail = async (id: number) => {
   loading.value = true
   try {
-    // 模拟数据
-    message.value = {
-      id: id,
-      userId: 2001,
-      type: 1,
-      title: '服务提醒：助餐服务',
-      content: '您的助餐服务订单ORD20260520001将于明天09:00送达，服务内容为营养套餐A。请您保持电话畅通，准备接收。',
-      createTime: '2026-05-19 10:30:00',
-      isRead: false,
-      relatedId: 'ORD20260520001',
-      relatedUrl: `/user/order/detail/ORD20260520001`
+    const res = await getUserMessageById(id)
+    if (res.code === 200 && res.data) {
+      message.value = res.data
+
+      if (message.value.isRead === 0) {
+        await markMessageRead(id)
+        message.value.isRead = 1
+      }
+    } else {
+      ElMessage.error('消息不存在')
+      router.back()
     }
   } catch (err) {
     console.error('获取消息详情失败', err)
     ElMessage.error('获取消息详情失败')
+    router.back()
   } finally {
     loading.value = false
   }
 }
 
-// 跳转到关联订单
-const goToOrder = (url?: string) => {
-  if (!url) {
+const goToOrder = () => {
+  if (!message.value?.relatedOrderId) {
     ElMessage.info('暂无关联订单')
     return
   }
-  router.push(url)
+  router.push(`/user/order/detail/${message.value.relatedOrderId}`)
 }
 
-// 标记已读
-const confirmMarkRead = () => {
-  message.value.isRead = true
-  ElMessage.success('标记已读成功')
-}
-
-// 类型映射
 const getTypeText = (type?: number): string => {
   if (type === undefined) return '未知'
-  const map = { 0: '系统通知', 1: '服务通知', 2: '温馨提醒' }
+  const map = { 0: '系统通知', 1: '订单通知', 2: '服务通知' }
   return map[type] || '未知'
 }
 
@@ -119,6 +102,17 @@ const getTypeTagType = (type?: number): string => {
   if (type === undefined) return ''
   const map = { 0: 'primary', 1: 'warning', 2: 'success' }
   return map[type] || ''
+}
+
+const formatTime = (time: string) => {
+  if (!time) return ''
+  return new Date(time).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 </script>
 

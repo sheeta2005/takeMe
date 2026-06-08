@@ -36,10 +36,12 @@
           <span class="label">可服务时间：</span>
           <span class="value">{{ volunteerStore.serviceDayText }}</span>
         </div>
-        <div class="info-item">
-          <span class="label">可服务业务：</span>
-          <span class="value">{{ volunteerStore.serviceTypeText }}</span>
-        </div>
+
+        <!-- Deleted:<div class="info-item"> -->
+        <!-- Deleted:  <span class="label">可服务业务：</span> -->
+        <!-- Deleted:  <span class="value">{{ volunteerStore.serviceTypeText }}</span> -->
+        <!-- Deleted:</div> -->
+
         <div class="info-item">
           <span class="label">工作状态：</span>
           <span class="value">{{ volunteerStore.workStatusText }}</span>

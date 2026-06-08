@@ -61,16 +61,6 @@
         </div>
       </el-form-item>
 
-      <el-form-item label="可服务业务" prop="serviceType">
-        <el-select v-model="form.serviceType" placeholder="请选择服务业务" class="input-large">
-          <el-option label="代购服务" :value="0" />
-          <el-option label="助洁服务" :value="1" />
-          <el-option label="助餐服务" :value="2" />
-          <el-option label="助医服务" :value="3" />
-          <el-option label="陪伴服务" :value="4" />
-        </el-select>
-      </el-form-item>
-
       <el-form-item label="紧急联系人" prop="emergencyName">
         <el-input v-model="form.emergencyName" placeholder="请输入紧急联系人姓名" class="input-large" />
       </el-form-item>
@@ -123,7 +113,6 @@ const form = ref({
   password: '',
   avatar: '',
   serviceDays: [] as number[], // 多选数组，存储0-6的数字
-  serviceType: 0,
   gender: 0,
   age: 20,
   address: '',
@@ -179,7 +168,6 @@ onMounted(async () => {
     password: '',
     avatar: volunteerStore.avatar || '',
     serviceDays: serviceDaysArr,
-    serviceType: volunteerStore.serviceType || 0,
     gender: volunteerStore.gender || 0,
     age: volunteerStore.age || 20,
     address: volunteerStore.address || '',
@@ -235,7 +223,6 @@ const submitForm = async () => {
         age: form.value.age,
         address: form.value.address,
         serviceDays: form.value.serviceDays.sort((a, b) => a - b).join(','),
-        serviceType: form.value.serviceType,
         emergencyName: form.value.emergencyName,
         emergencyPhone: form.value.emergencyPhone
       }
