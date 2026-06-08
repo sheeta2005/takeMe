@@ -78,7 +78,7 @@
                   type="success"
                   :underline="false"
                   class="volunteer-link"
-                  @click="showVolunteerDetail(row.volunteerId)"
+                  @click="goToVolunteerDetail(row.volunteerId)"
                 >
                   <el-icon><User /></el-icon>
                   查看志愿者
@@ -144,79 +144,6 @@
     </template>
 
     <el-empty v-else description="订单不存在" :image-size="200" />
-
-    <el-dialog
-      v-model="volunteerDetailVisible"
-      title="志愿者信息"
-      width="700px"
-      :close-on-click-modal="false"
-    >
-      <div v-if="volunteerDetail" class="volunteer-detail">
-        <div class="volunteer-header">
-          <el-avatar :size="80" :src="volunteerDetail.avatar || defaultAvatar" />
-          <div class="volunteer-info">
-            <h3 class="volunteer-name">{{ volunteerDetail.realName }}</h3>
-            <div class="volunteer-stats">
-              <el-tag type="success" size="large">
-                完成服务 {{ volunteerDetail.completedCount }} 次
-              </el-tag>
-              <el-tag type="warning" size="large">
-                平均评分 {{ volunteerDetail.averageRating }} 分
-              </el-tag>
-            </div>
-          </div>
-        </div>
-
-        <el-divider />
-
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="联系电话">
-            {{ volunteerDetail.volunteer?.phone }}
-          </el-descriptions-item>
-          <el-descriptions-item label="性别">
-            {{ volunteerDetail.volunteer?.gender === 1 ? '男' : volunteerDetail.volunteer?.gender === 2 ? '女' : '未知' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="年龄">
-            {{ volunteerDetail.volunteer?.age || '未填写' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="地址">
-            {{ volunteerDetail.volunteer?.address || '未填写' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="服务总时长">
-            {{ volunteerDetail.volunteer?.totalServiceHours || 0 }} 小时
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <el-divider />
-
-        <div class="reviews-section">
-          <h4 class="section-title">
-            <el-icon><ChatDotRound /></el-icon>
-            评价内容（{{ volunteerDetail.reviews?.length || 0 }} 条）
-          </h4>
-          <div v-if="volunteerDetail.reviews && volunteerDetail.reviews.length > 0" class="reviews-list">
-            <div v-for="review in volunteerDetail.reviews" :key="review.id" class="review-item">
-              <div class="review-header">
-                <el-avatar :size="40" :src="review.userAvatar || defaultAvatar" />
-                <div class="review-info">
-                  <div class="review-user">{{ review.userName }}</div>
-                  <div class="review-meta">
-                    <el-rate :model-value="review.rating" disabled size="small" />
-                    <span class="review-time">{{ review.createTime }}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="review-content">{{ review.content }}</div>
-            </div>
-          </div>
-          <el-empty v-else description="暂无评价" :image-size="80" />
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button size="large" @click="volunteerDetailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -225,10 +152,9 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Document, List, Location, CircleCheck, CloseBold, Back, User, ChatDotRound
+  Document, List, Location, CircleCheck, CloseBold, Back, User
 } from '@element-plus/icons-vue'
 import { getOrderDetail, completeOrder, cancelOrder } from '@/api/admin'
-import { getVolunteerDetail } from '@/api/admin'
 
 const route = useRoute()
 const router = useRouter()
@@ -237,9 +163,6 @@ const loading = ref(true)
 const completeLoading = ref(false)
 const cancelLoading = ref(false)
 const order = ref<any>(null)
-const volunteerDetailVisible = ref(false)
-const volunteerDetail = ref<any>(null)
-const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk0YTNiOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWksei0pTwvdGV4dD48L3N2Zz4='
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',
@@ -316,18 +239,8 @@ const loadOrderDetail = async (id: number) => {
   }
 }
 
-const showVolunteerDetail = async (volunteerId: number) => {
-  try {
-    const res = await getVolunteerDetail(volunteerId)
-    if (res.code === 200) {
-      volunteerDetail.value = res.data
-      volunteerDetailVisible.value = true
-    } else {
-      ElMessage.error('加载志愿者信息失败')
-    }
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载志愿者信息失败')
-  }
+const goToVolunteerDetail = (volunteerId: number) => {
+  router.push({ path: `/admin/volunteer/detail/${volunteerId}` })
 }
 
 const handleComplete = async () => {
