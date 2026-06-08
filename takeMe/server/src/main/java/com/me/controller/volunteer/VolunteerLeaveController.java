@@ -1,4 +1,3 @@
-
 package com.me.controller.volunteer;
 
 import com.me.context.BaseContext;
@@ -27,9 +26,14 @@ public class VolunteerLeaveController {
 
     @PostMapping("/submit")
     public Result<Void> submit(@RequestBody VolunteerLeave leave) {
-        Long volunteerId = BaseContext.getLoginId();
-        leave.setVolunteerId(volunteerId);
-        volunteerLeaveService.submit(leave);
-        return Result.success();
+        try {
+            Long volunteerId = BaseContext.getLoginId();
+            leave.setVolunteerId(volunteerId);
+            volunteerLeaveService.submit(leave);
+            return Result.success();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("提交失败：" + e.getMessage());
+        }
     }
 }

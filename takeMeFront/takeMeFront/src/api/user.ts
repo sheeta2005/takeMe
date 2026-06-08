@@ -177,3 +177,11 @@ export function startService(orderItemId: number) {
     params: { orderItemId }
   })
 }
+
+export function getVolunteerDetail(volunteerId: number) {
+  return request({
+    url: '/api/user/volunteer/detail',
+    method: 'get',
+    params: { volunteerId }
+  })
+}

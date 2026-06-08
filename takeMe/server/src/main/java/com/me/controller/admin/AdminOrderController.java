@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.entity.Order;
 import com.me.result.Result;
 import com.me.service.OrderService;
+import com.me.vo.OrderVO;
 import com.me.vo.PageResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -54,8 +55,8 @@ public class AdminOrderController {
     }
 
     @GetMapping("/detail/{id}")
-    public Result<Order> getOrderDetail(@PathVariable Long id) {
-        Order order = orderService.getAdminOrderDetail(id);
+    public Result<OrderVO> getOrderDetail(@PathVariable Long id) {
+        OrderVO order = orderService.getAdminOrderDetailVO(id);
         if (order == null) {
             return Result.error("订单不存在");
         }

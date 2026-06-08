@@ -80,7 +80,7 @@
                   开始服务
                 </el-button>
                 <el-button
-                  v-if="service.itemStatus === 1 || service.itemStatus === 2"
+                  v-if="service.itemStatus === 2"
                   type="primary"
                   size="large"
                   @click="completeService(service)"
@@ -127,18 +127,20 @@ const myServices = ref<any[]>([])
 
 const statusMap: Record<number, string> = {
   0: '待接单',
-  1: '进行中',
-  2: '待确认',
-  3: '已完成',
-  4: '已放弃'
+  1: '已接单',
+  2: '服务中',
+  3: '待确认',
+  4: '已完成',
+  5: '已放弃'
 }
 
 const statusTypeMap: Record<number, string> = {
   0: 'info',
   1: 'primary',
   2: 'warning',
-  3: 'success',
-  4: 'info'
+  3: 'warning',
+  4: 'success',
+  5: 'info'
 }
 
 const serviceTypeMap: Record<number, string> = {
@@ -184,7 +186,7 @@ const loadMyServices = async () => {
       const services: any[] = []
       res.data?.records?.forEach((order: any) => {
         order.items?.forEach((item: any) => {
-          if (item.volunteerId && [1, 2].includes(item.itemStatus)) {
+          if (item.volunteerId && [1, 2, 3].includes(item.itemStatus)) {
             services.push({
               ...item,
               orderNo: order.orderNo,

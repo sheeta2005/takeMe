@@ -4,7 +4,6 @@
       <div class="header-left">takeMe 管理员后台</div>
       <div class="header-right">
         <div class="user-box">
-          <img class="user-avatar" :src="adminStore.avatar" alt="头像" />
           <span>您好，{{ adminName }} 管理员</span>
         </div>
       </div>
@@ -31,11 +30,15 @@
           </el-menu-item>
           <el-menu-item index="/admin/user">
             <el-icon><User /></el-icon>
-            <span>老人管理</span>
+            <span>用户管理</span>
           </el-menu-item>
           <el-menu-item index="/admin/approval">
             <el-icon><Check /></el-icon>
             <span>业务审批</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/servicePackage">
+            <el-icon><Goods /></el-icon>
+            <span>服务套餐管理</span>
           </el-menu-item>
 
           <el-menu-item index="/admin/sendMsg">
@@ -66,7 +69,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import {
-  House, Document, User, Check, List, ChatDotRound, Message, Warning
+  House, Document, User, Check, ChatDotRound, Message, Goods, Setting
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -112,17 +115,9 @@ const handleMenuSelect = (path: string) => {
   align-items: center;
   gap: 14px;
 }
-.user-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
 .layout-aside {
   background-color: #ffffff;
-  border-right: 1px solid #e57eb;
+  border-right: 1px solid #e0e7eb;
 }
 .aside-menu {
   border-right: none;

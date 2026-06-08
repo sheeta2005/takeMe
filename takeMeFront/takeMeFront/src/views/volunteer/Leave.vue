@@ -14,8 +14,8 @@
         </div>
         <div class="calendar-days">
           <div
-            v-for="date in calendarDays"
-            :key="date.day"
+            v-for="(date, index) in calendarDays"
+            :key="`${currentYear}-${currentMonthIndex}-${index}`"
             class="calendar-day"
             :class="{
               other: date.isOtherMonth,
@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useVolunteerStore } from '@/stores/volunteer'
 import { submitLeave, getLeaveList } from '@/api/volunteer'
@@ -94,7 +94,7 @@ import { submitLeave, getLeaveList } from '@/api/volunteer'
 const volunteerStore = useVolunteerStore()
 
 const leaveForm = ref({
-  type: undefined as number | undefined,
+  type: 0,
   time: [] as string[],
   reason: ''
 })
@@ -106,10 +106,15 @@ const currentDate = new Date()
 const currentYear = ref(currentDate.getFullYear())
 const currentMonthIndex = ref(currentDate.getMonth())
 
-const workDaysArray = computed(() => {
-  if (!volunteerStore.serviceDays) return []
-  return volunteerStore.serviceDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d))
-})
+const workDaysArray = ref<number[]>([])
+
+const updateWorkDaysArray = () => {
+  if (!volunteerStore.serviceDays) {
+    workDaysArray.value = []
+    return
+  }
+  workDaysArray.value = volunteerStore.serviceDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d))
+}
 
 const workDaysText = computed(() => {
   const dayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -129,12 +134,11 @@ const calendarDays = computed(() => {
   const daysInMonth = lastDay.getDate()
 
   const result: any[] = []
-  const prevMonth = new Date(year, month, 0)
-  const prevMonthDays = prevMonth.getDate()
+  const prevMonthLastDay = new Date(year, month, 0).getDate()
 
   for (let i = startDay - 1; i >= 0; i--) {
     result.push({
-      day: prevMonthDays - i,
+      day: prevMonthLastDay - i,
       isOtherMonth: true,
       isWorkDay: false,
       isToday: false
@@ -142,11 +146,11 @@ const calendarDays = computed(() => {
   }
 
   const today = new Date()
-  const workDays = workDaysArray.value
+  const currentWorkDays = workDaysArray.value
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month, day)
     const dayOfWeek = date.getDay()
-    const isWorkDay = workDays.includes(dayOfWeek)
+    const isWorkDay = currentWorkDays.includes(dayOfWeek)
     const isToday = date.toDateString() === today.toDateString()
     result.push({
       day,
@@ -156,15 +160,17 @@ const calendarDays = computed(() => {
     })
   }
 
-  const totalCells = 42
   const nextMonthStart = 1
-  for (let i = result.length; i < totalCells; i++) {
-    result.push({
-      day: nextMonthStart + (i - result.length),
-      isOtherMonth: true,
-      isWorkDay: false,
-      isToday: false
-    })
+  const remainingCells = 42 - result.length
+  if (remainingCells > 0) {
+    for (let i = 0; i < remainingCells; i++) {
+      result.push({
+        day: nextMonthStart + i,
+        isOtherMonth: true,
+        isWorkDay: false,
+        isToday: false
+      })
+    }
   }
 
   return result
@@ -195,7 +201,7 @@ const getTagType = (status: number) => {
 }
 
 const submitLeaveForm = async () => {
-  if (!leaveForm.value.type || !leaveForm.value.time.length || !leaveForm.value.reason) {
+  if (leaveForm.value.type === undefined || leaveForm.value.type === null || !leaveForm.value.time.length || !leaveForm.value.reason) {
     ElMessage.warning('请完善请假信息')
     return
   }
@@ -208,10 +214,10 @@ const submitLeaveForm = async () => {
       reason: leaveForm.value.reason
     })
     ElMessage.success('请假申请已提交')
-    leaveForm.value = { type: undefined, time: [], reason: '' }
+    leaveForm.value = { type: 0, time: [], reason: '' }
     await loadLeaveList()
-  } catch {
-    ElMessage.error('提交失败，请重试')
+  } catch (error: any) {
+    ElMessage.error(error.message || '提交失败，请重试')
   }
 }
 
@@ -228,7 +234,12 @@ const loadLeaveList = async () => {
 
 onMounted(async () => {
   await volunteerStore.fetchVolunteerInfo()
+  updateWorkDaysArray()
   loadLeaveList()
+})
+
+watch(() => volunteerStore.serviceDays, () => {
+  updateWorkDaysArray()
 })
 </script>
 

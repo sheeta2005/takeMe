@@ -1,11 +1,20 @@
 package com.me.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.me.entity.ServicePackage;
 
 import java.util.List;
 
 public interface ServicePackageService extends IService<ServicePackage> {
+
+    Page<ServicePackage> searchServicePackage(
+            Integer page,
+            Integer pageSize,
+            Integer type,
+            Integer status,
+            String keyword
+    );
 
     /**
      * 根据服务类型获取可用服务列表

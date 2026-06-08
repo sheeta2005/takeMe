@@ -59,6 +59,10 @@
             {{ day }}
           </div>
         </div>
+        <div class="days-tip">
+          <el-icon><InfoFilled /></el-icon>
+          <span>修改可服务时间需要管理员审批，审批通过后方可生效</span>
+        </div>
       </el-form-item>
 
       <el-form-item label="紧急联系人" prop="emergencyName">
@@ -96,7 +100,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, InfoFilled } from '@element-plus/icons-vue'
 import { useVolunteerStore } from '@/stores/volunteer'
 
 const router = useRouter()
@@ -215,6 +219,8 @@ const submitForm = async () => {
     }
 
     try {
+      const newServiceDays = form.value.serviceDays.sort((a, b) => a - b).join(',')
+
       const submitData = {
         realName: form.value.realName,
         phone: form.value.phone,
@@ -222,7 +228,7 @@ const submitForm = async () => {
         gender: form.value.gender,
         age: form.value.age,
         address: form.value.address,
-        serviceDays: form.value.serviceDays.sort((a, b) => a - b).join(','),
+        serviceDays: newServiceDays,
         emergencyName: form.value.emergencyName,
         emergencyPhone: form.value.emergencyPhone
       }
@@ -231,10 +237,19 @@ const submitForm = async () => {
         Object.assign(submitData, { password: form.value.password })
       }
 
+      const oldServiceDays = volunteerStore.serviceDays || ''
+      const serviceDaysChanged = oldServiceDays !== newServiceDays
+
       await volunteerStore.updateVolunteerInfo(submitData)
+
+      if (serviceDaysChanged) {
+        ElMessage.success('信息已更新，工作日修改申请已提交，等待管理员审批')
+      } else {
+        ElMessage.success('修改成功')
+      }
       router.push('/volunteer/info')
-    } catch {
-      ElMessage.error('修改失败，请重试')
+    } catch (error: any) {
+      ElMessage.error(error.message || '修改失败，请重试')
     }
   })
 }
@@ -329,4 +344,16 @@ const back = () => {
   color: #fff;
   border-color: #00b899;
 }
-</style>
+
+.days-tip {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e6a23c;
+  font-size: 13px;
+}
+
+.days-tip .el-icon {
+  font-size: 16px;
+}

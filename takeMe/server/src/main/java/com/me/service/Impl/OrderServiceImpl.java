@@ -272,6 +272,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void volunteerConfirmOrder(Long volunteerId, Long orderItemId) {
+        LambdaQueryWrapper<OrderItem> inProgressWrapper = new LambdaQueryWrapper<>();
+        inProgressWrapper.eq(OrderItem::getVolunteerId, volunteerId);
+        inProgressWrapper.in(OrderItem::getItemStatus, 1, 2);
+        Long count = orderItemMapper.selectCount(inProgressWrapper);
+        if (count > 0) {
+            throw new RuntimeException("您有正在进行中的服务，请先完成当前服务");
+        }
+
         OrderItem item = orderItemMapper.selectById(orderItemId);
         if (item == null) {
             throw new RuntimeException("服务项目不存在");
@@ -298,15 +306,41 @@ public class OrderServiceImpl implements OrderService {
         if (!item.getVolunteerId().equals(volunteerId)) {
             throw new RuntimeException("无权操作此服务项目");
         }
-        if (item.getItemStatus() != 1) {
+        if (item.getItemStatus() != 1 && item.getItemStatus() != 2) {
             throw new RuntimeException("当前状态不允许放弃");
         }
 
         item.setVolunteerId(null);
         item.setItemStatus(0);
-        orderItemMapper.updateById(item);
+        int updateCount = orderItemMapper.updateById(item);
+        
+        if (updateCount == 0) {
+            throw new RuntimeException("放弃服务失败，请重试");
+        }
         
         updateOrderVolunteerIds(item.getOrderId());
+        updateOrderStatus(item.getOrderId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void volunteerStartService(Long volunteerId, Long orderItemId) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            throw new RuntimeException("服务项目不存在");
+        }
+        
+        if (!item.getVolunteerId().equals(volunteerId)) {
+            throw new RuntimeException("无权操作此服务");
+        }
+        
+        if (item.getItemStatus() != 1) {
+            throw new RuntimeException("当前状态不允许开始服务");
+        }
+
+        item.setItemStatus(2);
+        orderItemMapper.updateById(item);
+        
         updateOrderStatus(item.getOrderId());
     }
 
@@ -320,11 +354,11 @@ public class OrderServiceImpl implements OrderService {
         if (!item.getVolunteerId().equals(volunteerId)) {
             throw new RuntimeException("无权操作此服务项目");
         }
-        if (item.getItemStatus() != 1) {
+        if (item.getItemStatus() != 2) {
             throw new RuntimeException("当前状态不允许完成");
         }
 
-        item.setItemStatus(2);
+        item.setItemStatus(3);
         orderItemMapper.updateById(item);
         
         checkAndCompleteOrder(item.getOrderId());
@@ -357,6 +391,7 @@ public class OrderServiceImpl implements OrderService {
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrderItem::getOrderId, orderId);
         wrapper.isNotNull(OrderItem::getVolunteerId);
+        wrapper.ne(OrderItem::getItemStatus, 0);
         List<OrderItem> items = orderItemMapper.selectList(wrapper);
         
         Set<Long> volunteerIdSet = items.stream()
@@ -385,13 +420,13 @@ public class OrderServiceImpl implements OrderService {
         if (items.isEmpty()) return;
         
         boolean allCompleted = items.stream().allMatch(item -> 
-            item.getItemStatus() == 3
+            item.getItemStatus() == 4
         );
         
         if (allCompleted) {
             Order order = orderMapper.selectById(orderId);
-            if (order != null && order.getStatus() != 3) {
-                order.setStatus(3);
+            if (order != null && order.getStatus() != 4) {
+                order.setStatus(4);
                 order.setCompleteTime(LocalDateTime.now());
                 orderMapper.updateById(order);
                 return;
@@ -399,10 +434,14 @@ public class OrderServiceImpl implements OrderService {
         }
         
         boolean anyPendingConfirm = items.stream().anyMatch(item -> 
-            item.getItemStatus() == 2
+            item.getItemStatus() == 3
         );
         
         boolean anyInProgress = items.stream().anyMatch(item -> 
+            item.getItemStatus() == 2
+        );
+        
+        boolean anyAccepted = items.stream().anyMatch(item -> 
             item.getItemStatus() == 1
         );
         
@@ -410,8 +449,10 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) return;
         
         if (anyPendingConfirm) {
-            order.setStatus(2);
+            order.setStatus(3);
         } else if (anyInProgress) {
+            order.setStatus(2);
+        } else if (anyAccepted) {
             order.setStatus(1);
         } else {
             order.setStatus(0);
@@ -532,6 +573,27 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Order getAdminOrderDetail(Long id) {
         return orderMapper.selectById(id);
+    }
+    
+    @Override
+    public OrderVO getAdminOrderDetailVO(Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null) {
+            return null;
+        }
+
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(order, orderVO);
+
+        List<OrderItem> items = orderItemMapper.selectByOrderId(id);
+        List<OrderItemVO> itemVOList = items.stream().map(item -> {
+            OrderItemVO vo = new OrderItemVO();
+            BeanUtils.copyProperties(item, vo);
+            return vo;
+        }).collect(Collectors.toList());
+
+        orderVO.setItems(itemVOList);
+        return orderVO;
     }
     
     @Override

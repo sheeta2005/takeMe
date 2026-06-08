@@ -19,10 +19,10 @@ public class VolunteerLeave {
     private Long id;
 
     private Long volunteerId;
-    private Integer type;
+    private Byte type;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String reason;
-    private Integer status;
+    private Byte status;
     private LocalDateTime createTime;
 }

@@ -15,7 +15,7 @@
         <el-form-item label="申请类型">
           <el-select v-model="filterType" placeholder="请选择" @change="fetchApprovals" style="width: 140px">
             <el-option label="全部" value="" />
-            <el-option label="志愿者注册" value="register" />
+            <el-option label="工作日期变更" value="service_days_change" />
             <el-option label="志愿者请假" value="leave" />
             <el-option label="服务变更" value="service_change" />
             <el-option label="积分申诉" value="points_appeal" />
@@ -316,7 +316,7 @@ const confirmReject = async () => {
 
 const getTypeText = (type: string) => {
   const map: Record<string, string> = {
-    register: '志愿者注册',
+    service_days_change: '工作日期变更',
     leave: '志愿者请假',
     service_change: '服务变更',
     points_appeal: '积分申诉'
@@ -326,9 +326,9 @@ const getTypeText = (type: string) => {
 
 const getTypeTagType = (type: string) => {
   const map: Record<string, string> = {
-    register: 'success',
+    service_days_change: 'primary',
     leave: 'warning',
-    service_change: 'primary',
+    service_change: 'success',
     points_appeal: 'danger'
   }
   return map[type] || 'info'

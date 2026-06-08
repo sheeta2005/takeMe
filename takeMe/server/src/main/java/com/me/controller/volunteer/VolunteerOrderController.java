@@ -63,4 +63,11 @@ public class VolunteerOrderController {
         orderService.volunteerCompleteOrder(volunteerId, orderItemId);
         return Result.success();
     }
+
+    @PostMapping("/start")
+    public Result<Void> start(@RequestParam Long orderItemId) {
+        Long volunteerId = BaseContext.getLoginId();
+        orderService.volunteerStartService(volunteerId, orderItemId);
+        return Result.success();
+    }
 }

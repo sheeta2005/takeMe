@@ -63,7 +63,7 @@ export function updateVolunteerInfo(data: any) {
 /**
  * 志愿者头像上传
  */
-export function uploadVolunteerAvatar(file: File) {
+export const uploadAvatar = (file: File) => {
   const formData = new FormData()
   formData.append('file', file)
   return request({
@@ -73,6 +73,14 @@ export function uploadVolunteerAvatar(file: File) {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
+  })
+}
+
+export const updateServiceDays = (serviceDays: string) => {
+  return request({
+    url: '/api/volunteer/updateServiceDays',
+    method: 'post',
+    data: { serviceDays }
   })
 }
 
@@ -216,7 +224,7 @@ export function confirmOrder(orderItemId: number) {
 
 export function startService(orderItemId: number) {
   return request({
-    url: '/api/user/order/startService',
+    url: '/api/volunteer/order/start',
     method: 'post',
     params: { orderItemId }
   })

@@ -2,13 +2,21 @@ package com.me.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.me.entity.OrderItem;
+import com.me.entity.Review;
 import com.me.entity.Volunteer;
+import com.me.mapper.OrderItemMapper;
+import com.me.mapper.ReviewMapper;
 import com.me.service.VolunteerService;
 import com.me.result.Result;
 import com.me.vo.PageResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/volunteer")
@@ -17,6 +25,8 @@ public class AdminVolunteerController {
 
     private final VolunteerService volunteerService;
     private final PasswordEncoder passwordEncoder;
+    private final OrderItemMapper orderItemMapper;
+    private final ReviewMapper reviewMapper;
 
     @GetMapping("/page")
     public Result<PageResultVO<Volunteer>> getVolunteerPage(
@@ -49,13 +59,38 @@ public class AdminVolunteerController {
     }
 
     @GetMapping("/detail/{id}")
-    public Result<Volunteer> getVolunteerDetail(@PathVariable Long id) {
+    public Result<Map<String, Object>> getVolunteerDetail(@PathVariable Long id) {
         Volunteer volunteer = volunteerService.getById(id);
         if (volunteer == null) {
             return Result.error("志愿者不存在");
         }
         volunteer.setPassword(null);
-        return Result.success(volunteer);
+
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderItem::getVolunteerId, id);
+        wrapper.eq(OrderItem::getItemStatus, 3);
+        Long completedCount = orderItemMapper.selectCount(wrapper);
+
+        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
+        reviewWrapper.eq(Review::getVolunteerId, id);
+        reviewWrapper.orderByDesc(Review::getCreateTime);
+        List<Review> reviews = reviewMapper.selectList(reviewWrapper);
+
+        double averageRating = 0.0;
+        if (!reviews.isEmpty()) {
+            averageRating = reviews.stream()
+                    .mapToInt(Review::getRating)
+                    .average()
+                    .orElse(0.0);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("volunteer", volunteer);
+        result.put("completedCount", completedCount);
+        result.put("averageRating", String.format("%.1f", averageRating));
+        result.put("reviews", reviews);
+
+        return Result.success(result);
     }
 
     @PostMapping("/add")
@@ -71,22 +106,6 @@ public class AdminVolunteerController {
         volunteer.setStatus(1);
         volunteerService.save(volunteer);
         
-        return Result.success();
-    }
-
-    @PostMapping("/update")
-    public Result<Void> updateVolunteer(@RequestBody Volunteer volunteer) {
-        Volunteer existVolunteer = volunteerService.getById(volunteer.getId());
-        if (existVolunteer == null) {
-            return Result.error("志愿者不存在");
-        }
-        
-        volunteer.setUsername(null);
-        volunteer.setPassword(null);
-        volunteer.setCreateTime(null);
-        volunteer.setLastLoginTime(null);
-        
-        volunteerService.updateById(volunteer);
         return Result.success();
     }
 

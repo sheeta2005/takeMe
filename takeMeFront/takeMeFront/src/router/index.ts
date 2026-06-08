@@ -21,13 +21,14 @@ const routes = [
     children: [
       { path: 'index', component: () => import('@/views/admin/Index.vue') },
       { path: 'order', component: () => import('@/views/admin/Order.vue') },
-      { path: 'order/detail', component: () => import('@/views/admin/OrderDetail.vue') },
+      { path: 'order/detail/:id', name: 'AdminOrderDetail', component: () => import('@/views/admin/OrderDetail.vue') },
       { path: 'orderManage', component: () => import('@/views/admin/OrderManage.vue') },
       { path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue') },
-      { path: 'volunteer/detail', component: () => import('@/views/admin/VolunteerDetail.vue') },
+      { path: 'volunteer/detail/:id', component: () => import('@/views/admin/VolunteerDetail.vue') },
       { path: 'user', component: () => import('@/views/admin/User.vue') },
-      { path: 'user/detail', component: () => import('@/views/admin/UserDetail.vue') },
+      { path: 'user/detail/:id', component: () => import('@/views/admin/UserDetail.vue') },
       { path: 'approval', component: () => import('@/views/admin/Approval.vue') },
+      { path: 'servicePackage', component: () => import('@/views/admin/ServicePackage.vue') },
       { path: 'sendMsg', component: () => import('@/views/admin/SendMsg.vue') },
       { path: 'message', component: () => import('@/views/admin/Message.vue') },
       { path: 'setting', component: () => import('@/views/admin/Setting.vue') }
@@ -118,7 +119,15 @@ router.beforeEach((to, from, next) => {
     return next()
   }
 
-  const requiredRole = to.meta.role as number | undefined
+  let requiredRole: number | undefined
+
+  if (to.path.startsWith('/admin')) {
+    requiredRole = 0
+  } else if (to.path.startsWith('/volunteer')) {
+    requiredRole = 1
+  } else if (to.path.startsWith('/user')) {
+    requiredRole = 2
+  }
 
   let hasToken = false
   let currentRole: number | null = null

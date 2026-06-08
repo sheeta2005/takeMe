@@ -8,14 +8,23 @@
     <el-skeleton :rows="3" animated v-if="loading" />
 
     <template v-else>
-      <el-empty v-if="availableServices.length === 0" description="暂无可接取的服务" :image-size="200">
+      <el-alert
+        v-if="hasInProgressService"
+        title="您有正在进行中的服务，请先完成当前服务后再接取新服务"
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 24px"
+      />
+
+      <el-empty v-if="availableServices.length === 0 && !hasInProgressService" description="暂无可接取的服务" :image-size="200">
         <el-button type="primary" @click="refreshData">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
       </el-empty>
 
-      <template v-else>
+      <template v-else-if="!hasInProgressService">
         <div class="service-grid">
           <el-card
             v-for="service in availableServices"
@@ -30,7 +39,7 @@
               </div>
               <el-tag type="info" size="large">
                 <el-icon><Bell /></el-icon>
-                待接单
+                待接取
               </el-tag>
             </div>
 
@@ -101,16 +110,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Bell, Ticket, Calendar, Location, Document, Check } from '@element-plus/icons-vue'
-import { getAvailableOrderList, confirmOrder } from '@/api/volunteer'
+import { getAvailableOrderList, confirmOrder, getVolunteerOrderList } from '@/api/volunteer'
+import { useVolunteerStore } from '@/stores/volunteer'
 
+const volunteerStore = useVolunteerStore()
 const loading = ref(true)
 const availableServices = ref<any[]>([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const hasInProgressService = ref(false)
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',
@@ -134,6 +146,28 @@ const getServiceTypeName = (type: number) => {
 
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
+}
+
+const checkInProgressService = async () => {
+  try {
+    const res = await getVolunteerOrderList({
+      page: 1,
+      pageSize: 1
+    })
+    if (res.code === 200) {
+      let hasInProgress = false
+      res.data?.records?.forEach((order: any) => {
+        order.items?.forEach((item: any) => {
+          if (item.volunteerId && item.itemStatus === 1) {
+            hasInProgress = true
+          }
+        })
+      })
+      hasInProgressService.value = hasInProgress
+    }
+  } catch (error: any) {
+    console.error('检查进行中服务失败:', error)
+  }
 }
 
 const loadAvailableServices = async () => {
@@ -169,6 +203,7 @@ const loadAvailableServices = async () => {
 const refreshData = () => {
   currentPage.value = 1
   loadAvailableServices()
+  checkInProgressService()
 }
 
 const handleSizeChange = (size: number) => {
@@ -183,6 +218,11 @@ const handlePageChange = (page: number) => {
 }
 
 const acceptService = async (service: any) => {
+  if (hasInProgressService.value) {
+    ElMessage.warning('您有正在进行中的服务，请先完成当前服务后再接取新服务')
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
       `确认接取服务 ${service.serviceName}？接取后将立即开始服务。`,
@@ -196,6 +236,7 @@ const acceptService = async (service: any) => {
 
     await confirmOrder(service.id)
     ElMessage.success('接取成功')
+    await checkInProgressService()
     await loadAvailableServices()
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -204,8 +245,9 @@ const acceptService = async (service: any) => {
   }
 }
 
-onMounted(() => {
-  loadAvailableServices()
+onMounted(async () => {
+  await checkInProgressService()
+  await loadAvailableServices()
 })
 </script>
 

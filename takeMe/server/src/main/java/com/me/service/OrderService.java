@@ -24,6 +24,8 @@ public interface OrderService {
 
     void userStartService(Long userId, Long orderItemId);
 
+    void volunteerStartService(Long volunteerId, Long orderItemId);
+
     Page<OrderVO> getVolunteerOrderList(Long volunteerId, Integer page, Integer pageSize, Integer status, String orderNo);
 
     OrderVO getVolunteerOrderDetail(Long volunteerId, Long orderId);
@@ -53,6 +55,8 @@ public interface OrderService {
     );
     
     Order getAdminOrderDetail(Long id);
+    
+    OrderVO getAdminOrderDetailVO(Long id);
     
     boolean adminCancelOrder(Long id);
     

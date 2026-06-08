@@ -74,6 +74,16 @@
                 >
                   {{ row.serviceName }}
                 </el-link>
+                <el-link
+                  v-if="row.volunteerId"
+                  type="success"
+                  :underline="false"
+                  class="volunteer-link"
+                  @click="showVolunteerDetail(row.volunteerId)"
+                >
+                  <el-icon><User /></el-icon>
+                  查看志愿者
+                </el-link>
               </div>
             </template>
           </el-table-column>
@@ -189,10 +199,90 @@
         <el-descriptions-item label="备注" v-if="currentService.remark">
           {{ currentService.remark }}
         </el-descriptions-item>
+        <el-descriptions-item label="志愿者" v-if="currentService.volunteerId">
+          <el-link type="primary" @click="showVolunteerDetail(currentService.volunteerId)">
+            查看志愿者信息
+          </el-link>
+        </el-descriptions-item>
       </el-descriptions>
 
       <template #footer>
         <el-button size="large" @click="serviceDetailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="volunteerDetailVisible"
+      title="志愿者信息"
+      width="700px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="volunteerDetail" class="volunteer-detail">
+        <div class="volunteer-header">
+          <el-avatar :size="80" :src="volunteerDetail.avatar || defaultAvatar" />
+          <div class="volunteer-info">
+            <h3 class="volunteer-name">{{ volunteerDetail.realName }}</h3>
+            <div class="volunteer-stats">
+              <el-tag type="success" size="large">
+                完成服务 {{ volunteerDetail.completedCount }} 次
+              </el-tag>
+              <el-tag type="warning" size="large">
+                平均评分 {{ volunteerDetail.averageRating }} 分
+              </el-tag>
+            </div>
+          </div>
+        </div>
+
+        <el-divider />
+
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="联系电话">
+            {{ volunteerDetail.volunteer?.phone }}
+          </el-descriptions-item>
+          <el-descriptions-item label="性别">
+            {{ volunteerDetail.volunteer?.gender === 1 ? '男' : volunteerDetail.volunteer?.gender === 2 ? '女' : '未知' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="年龄">
+            {{ volunteerDetail.volunteer?.age || '未填写' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="地址">
+            {{ volunteerDetail.volunteer?.address || '未填写' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="服务总时长">
+            {{ volunteerDetail.volunteer?.totalServiceHours || 0 }} 小时
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider />
+
+        <div class="reviews-section">
+          <h4 class="section-title">
+            <el-icon><ChatDotRound /></el-icon>
+            用户评价（{{ volunteerDetail.reviews?.length || 0 }}条）
+          </h4>
+          <el-empty v-if="!volunteerDetail.reviews || volunteerDetail.reviews.length === 0" description="暂无评价" />
+          <div v-else class="reviews-list">
+            <div v-for="review in volunteerDetail.reviews" :key="review.id" class="review-item">
+              <div class="review-header">
+                <div class="review-user">
+                  <el-avatar :size="40" />
+                  <div class="review-user-info">
+                    <div class="review-username">{{ review.userName || '匿名用户' }}</div>
+                    <el-rate v-model="review.rating" disabled show-score size="small" />
+                  </div>
+                </div>
+                <div class="review-time">{{ formatTime(review.createTime) }}</div>
+              </div>
+              <div class="review-content" v-if="review.comment">
+                {{ review.comment }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button size="large" @click="volunteerDetailVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -203,9 +293,10 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Document, List, Location, CircleCheck, CloseBold, Back, Star, Edit
+  Document, List, Location, CircleCheck, CloseBold, Back, Star, Edit, User, ChatDotRound
 } from '@element-plus/icons-vue'
 import { getUserOrderDetail, cancelOrder, confirmOrder } from '@/api/order'
+import { getVolunteerDetail } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -217,6 +308,10 @@ const order = ref<any>(null)
 
 const serviceDetailVisible = ref(false)
 const currentService = ref<any>(null)
+
+const volunteerDetailVisible = ref(false)
+const volunteerDetail = ref<any>(null)
+const defaultAvatar = ref('/src/assets/default-avatar.png')
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',
@@ -239,7 +334,7 @@ const getStatusType = (status: number) => {
     0: 'warning',
     1: 'primary',
     2: 'primary',
-    3: 'info',
+    3: 'warning',
     4: 'success',
     5: 'danger'
   }
@@ -294,6 +389,20 @@ const loadOrderDetail = async (id: number) => {
 const showServiceDetail = (service: any) => {
   currentService.value = service
   serviceDetailVisible.value = true
+}
+
+const showVolunteerDetail = async (volunteerId: number) => {
+  serviceDetailVisible.value = false
+
+  try {
+    const res = await getVolunteerDetail(volunteerId)
+    if (res.code === 200) {
+      volunteerDetail.value = res.data
+      volunteerDetailVisible.value = true
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '获取志愿者信息失败')
+  }
 }
 
 const handleCancelOrder = async () => {
@@ -422,6 +531,7 @@ const back = () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .service-name-link {
@@ -432,6 +542,110 @@ const back = () => {
 
 .service-name-link:hover {
   opacity: 0.8;
+}
+
+.volunteer-link {
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.volunteer-link .el-icon {
+  margin-right: 4px;
+}
+
+.volunteer-detail {
+  padding: 0 10px;
+}
+
+.volunteer-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.volunteer-info {
+  flex: 1;
+}
+
+.volunteer-name {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.volunteer-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reviews-section {
+  margin-top: 20px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-item {
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.review-item:hover {
+  background: #e8edf3;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.review-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review-username {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.review-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.review-content {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .price-cell {

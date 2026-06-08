@@ -5,34 +5,6 @@
       <p class="page-subtitle">管理系统账号和安全设置</p>
     </div>
 
-    <!-- 账号信息卡片 -->
-    <el-card class="setting-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <el-icon :size="20" color="#00a88d"><User /></el-icon>
-            <span class="card-title">账号信息</span>
-          </div>
-        </div>
-      </template>
-
-      <el-descriptions :column="2" border size="large">
-        <el-descriptions-item label="管理员ID">
-          <span class="value-text">{{ adminInfo.id || '-' }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="用户名">
-          <span class="value-text">{{ adminInfo.username || '-' }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="真实姓名">
-          <span class="value-text">{{ adminInfo.realName || '-' }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="最后登录">
-          <span class="time-text">{{ adminInfo.lastLoginTime || '-' }}</span>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-card>
-
-    <!-- 安全操作卡片 -->
     <el-card class="action-card" shadow="hover">
       <template #header>
         <div class="card-header">
@@ -60,29 +32,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User, Warning, SwitchButton } from '@element-plus/icons-vue'
+import { Warning, SwitchButton } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'
 import { adminLogout } from '@/api/admin'
 
 const adminStore = useAdminStore()
-const adminInfo = ref({
-  id: '',
-  username: '',
-  realName: '',
-  lastLoginTime: ''
-})
-
-onMounted(() => {
-  // 从 store 获取管理员信息
-  adminInfo.value = {
-    id: adminStore.admin?.id || '',
-    username: adminStore.admin?.username || '',
-    realName: adminStore.admin?.realName || '',
-    lastLoginTime: adminStore.admin?.lastLoginTime || ''
-  }
-})
 
 const handleLogout = () => {
   ElMessageBox.confirm(
@@ -109,7 +64,6 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
-.setting-card,
 .action-card {
   margin-bottom: 24px;
   border: 1px solid var(--border-light);
@@ -132,17 +86,6 @@ const handleLogout = () => {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.value-text {
-  font-size: 15px;
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.time-text {
-  color: var(--text-secondary);
-  font-size: 14px;
 }
 
 .action-content {

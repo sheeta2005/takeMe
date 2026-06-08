@@ -299,13 +299,14 @@ export const getApprovalPage = (
   pageSize: number,
   type?: string,
   status?: string,
+  keyword?: string,
   startDate?: string,
   endDate?: string
 ) => {
   return request({
     url: '/api/admin/approval/page',
     method: 'get',
-    params: { page, pageSize, type, status, startDate, endDate }
+    params: { page, pageSize, type, status, keyword, startDate, endDate }
   })
 }
 
@@ -329,5 +330,58 @@ export const rejectApplication = (id: number, remark: string) => {
     url: `/api/admin/approval/reject/${id}`,
     method: 'post',
     data: { remark }
+  })
+}
+
+// ========================= 服务套餐管理 =========================
+export const getServicePackagePage = (
+  page: number,
+  pageSize: number,
+  type?: number,
+  status?: number,
+  keyword?: string
+) => {
+  return request({
+    url: '/api/admin/service-package/page',
+    method: 'get',
+    params: { page, pageSize, type, status, keyword }
+  })
+}
+
+export const getServicePackageDetail = (id: number) => {
+  return request({
+    url: `/api/admin/service-package/detail/${id}`,
+    method: 'get'
+  })
+}
+
+export const addServicePackage = (data: any) => {
+  return request({
+    url: '/api/admin/service-package/add',
+    method: 'post',
+    data
+  })
+}
+
+export const updateServicePackage = (data: any) => {
+  return request({
+    url: '/api/admin/service-package/update',
+    method: 'post',
+    data
+  })
+}
+
+export const deleteServicePackage = (id: number) => {
+  return request({
+    url: `/api/admin/service-package/delete/${id}`,
+    method: 'delete'
+  })
+}
+
+export const updateServicePackageStatus = (id: number, status: number) => {
+  return request({
+    url: `/api/admin/service-package/status/${id}`,
+    method: 'post',
+    params: { status }
   })
 }

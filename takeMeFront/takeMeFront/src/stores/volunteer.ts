@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getVolunteerInfo, updateVolunteerInfo, volunteerLogout, uploadVolunteerAvatar } from '@/api/volunteer'
+import { getVolunteerInfo, updateVolunteerInfo, volunteerLogout, uploadAvatar } from '@/api/volunteer'
 import { ElMessage } from 'element-plus'
 
 export interface VolunteerInfo {

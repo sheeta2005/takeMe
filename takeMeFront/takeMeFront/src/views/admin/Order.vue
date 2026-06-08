@@ -172,7 +172,7 @@ const handleReset = () => {
 }
 
 const handleDetail = (row: any) => {
-  router.push({ name: 'OrderDetail', params: { id: row.id } })
+  router.push({ name: 'AdminOrderDetail', params: { id: row.id } })
 }
 
 const handleComplete = async (row: any) => {

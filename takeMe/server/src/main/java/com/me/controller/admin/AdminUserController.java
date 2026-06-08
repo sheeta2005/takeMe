@@ -2,13 +2,21 @@ package com.me.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.me.entity.Order;
+import com.me.entity.Review;
 import com.me.entity.User;
+import com.me.mapper.OrderMapper;
+import com.me.mapper.ReviewMapper;
 import com.me.service.UserService;
 import com.me.result.Result;
 import com.me.vo.PageResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/user")
@@ -17,6 +25,8 @@ public class AdminUserController {
 
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final OrderMapper orderMapper;
+    private final ReviewMapper reviewMapper;
 
     @GetMapping("/page")
     public Result<PageResultVO<User>> getUserPage(
@@ -51,13 +61,30 @@ public class AdminUserController {
     }
 
     @GetMapping("/detail/{id}")
-    public Result<User> getUserDetail(@PathVariable Long id) {
+    public Result<Map<String, Object>> getUserDetail(@PathVariable Long id) {
         User user = userService.getById(id);
         if (user == null) {
             return Result.error("用户不存在");
         }
         user.setPassword(null);
-        return Result.success(user);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("user", user);
+
+        LambdaQueryWrapper<Order> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.eq(Order::getUserId, id);
+        orderWrapper.orderByDesc(Order::getCreateTime);
+        orderWrapper.last("LIMIT 5");
+        List<Order> recentOrders = orderMapper.selectList(orderWrapper);
+        result.put("recentOrders", recentOrders);
+
+        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
+        reviewWrapper.eq(Review::getUserId, id);
+        reviewWrapper.orderByDesc(Review::getCreateTime);
+        List<Review> reviews = reviewMapper.selectList(reviewWrapper);
+        result.put("reviews", reviews);
+
+        return Result.success(result);
     }
 
     @PostMapping("/add")
@@ -73,23 +100,6 @@ public class AdminUserController {
         user.setStatus(1);
         userService.save(user);
         
-        return Result.success();
-    }
-
-    @PostMapping("/update")
-    public Result<Void> updateUser(@RequestBody User user) {
-        User existUser = userService.getById(user.getId());
-        if (existUser == null) {
-            return Result.error("用户不存在");
-        }
-        
-        user.setUsername(null);
-        user.setPassword(null);
-        user.setStatus(null);
-        user.setCreateTime(null);
-        user.setLastLoginTime(null);
-        
-        userService.updateById(user);
         return Result.success();
     }
 
