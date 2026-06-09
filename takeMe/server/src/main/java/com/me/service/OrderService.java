@@ -1,16 +1,17 @@
 package com.me.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
+import com.me.dto.PageResultDTO;
 import com.me.entity.Order;
 import com.me.vo.OrderVO;
+
 import java.util.List;
 
 public interface OrderService {
-
-    Page<OrderVO> getMyOrderList(Long userId, Integer page, Integer pageSize, Integer status, String orderNo);
+    IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO);
 
     OrderVO getOrderDetail(Long userId, Long orderId);
 
@@ -26,41 +27,29 @@ public interface OrderService {
 
     void volunteerStartService(Long volunteerId, Long orderItemId);
 
-    Page<OrderVO> getVolunteerOrderList(Long volunteerId, Integer page, Integer pageSize, Integer status, String orderNo);
+    IPage<OrderVO> getVolunteerOrderList(Long volunteerId, Integer status, String orderNo, PageResultDTO pageResultDTO);
 
     OrderVO getVolunteerOrderDetail(Long volunteerId, Long orderId);
 
     void volunteerConfirmOrder(Long volunteerId, Long orderItemId);
 
     void volunteerAbandonOrder(Long volunteerId, Long orderItemId);
-
     void volunteerCompleteOrder(Long volunteerId, Long orderItemId);
-    
-    Page<OrderVO> getAvailableOrderList(Integer page, Integer pageSize);
-    
-    Page<Order> getAdminOrderPage(Integer page, Integer pageSize, Integer status);
-    
-    Page<Order> searchAdminOrder(
-        Integer page,
-        Integer pageSize,
-        Integer status,
-        String orderNo,
-        Long userId,
-        String userName,
-        Long volunteerId,
-        String volunteerName,
-        Integer serviceType,
-        String startDate,
-        String endDate
-    );
-    
+
+    IPage<OrderVO> getAvailableOrderList(PageResultDTO pageResultDTO);
+
+    IPage<Order> getAdminOrderPage(Integer status, PageResultDTO pageResultDTO);
+
+    IPage<Order> searchAdminOrder(
+            Integer status, String orderNo, Long userId, String userName, Long volunteerId, String volunteerName, Integer serviceType, String startDate, String endDate, PageResultDTO pageResultDTO);
+
     Order getAdminOrderDetail(Long id);
-    
+
     OrderVO getAdminOrderDetailVO(Long id);
-    
+
     boolean adminCancelOrder(Long id);
-    
+
     boolean adminCompleteOrder(Long id);
-    
+
     Long countOrders(LambdaQueryWrapper<Order> wrapper);
 }

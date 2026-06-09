@@ -14,7 +14,7 @@
         <el-tabs v-model="activeTab" class="login-tabs" @tab-change="resetForm">
           <el-tab-pane label="登录" name="login">
             <el-form
-              v-model="loginForm"
+              :model="loginForm"
               label-position="left"
               label-width="70px"
               class="login-form"
@@ -76,7 +76,7 @@
 
           <el-tab-pane label="注册" name="register">
             <el-form
-              v-model="registerForm"
+              :model="registerForm"
               label-position="left"
               label-width="70px"
               class="login-form"
@@ -234,10 +234,12 @@ const registerRules = {
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     {
       validator: (rule: any, value: string, callback: any) => {
-        if (value !== registerForm.value.password) {
-          callback(new Error('两次输入的密码不一致'))
+        if (value === '') {
+          callback(new Error('请再次输入密码'));
+        } else if (value !== registerForm.value.password) {
+          callback(new Error('两次输入的密码不一致'));
         } else {
-          callback()
+          callback();
         }
       },
       trigger: 'blur'

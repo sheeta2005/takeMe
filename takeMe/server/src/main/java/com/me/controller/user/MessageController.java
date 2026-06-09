@@ -1,7 +1,8 @@
 package com.me.controller.user;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.context.BaseContext;
-import com.me.dto.PageQueryDTO;
+import com.me.dto.PageResultDTO;
 import com.me.result.Result;
 import com.me.service.MessageService;
 import com.me.vo.MessageVO;
@@ -18,26 +19,49 @@ public class MessageController {
 
     @GetMapping("/list")
     public Result<PageResultVO<MessageVO>> list(
-            PageQueryDTO pageQueryDTO,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) Integer isRead) {
 
         Long receiverId = BaseContext.getLoginId();
         Integer receiverType = BaseContext.getLoginType();
 
-        PageResultVO<MessageVO> result = messageService.list(receiverId, receiverType, type, isRead, pageQueryDTO);
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
+
+        IPage<MessageVO> iPage = messageService.list(receiverId, receiverType, type, isRead, pageResultDTO);
+        PageResultVO<MessageVO> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
 
-    @GetMapping("/{id}")
-    public Result<MessageVO> getById(@PathVariable Long id) {
-        MessageVO message = messageService.getById(id);
-        return Result.success(message);
+    @PostMapping("/read/{id}")
+    public Result<Void> markAsRead(@PathVariable Long id) {
+        Long receiverId = BaseContext.getLoginId();
+        boolean success = messageService.markAsRead(id, receiverId);
+        if (!success) {
+            return Result.error("标记已读失败");
+        }
+        return Result.success();
     }
 
-    @PostMapping("/read/{id}")
-    public Result<Void> markRead(@PathVariable Long id) {
-        messageService.markRead(id);
+    @PostMapping("/read-all")
+    public Result<Void> markAllAsRead() {
+        Long receiverId = BaseContext.getLoginId();
+        Integer receiverType = BaseContext.getLoginType();
+        boolean success = messageService.markAllAsRead(receiverType, receiverId);
+        if (!success) {
+            return Result.error("全部标记已读失败");
+        }
         return Result.success();
+    }
+
+    @GetMapping("/unread-count")
+    public Result<Integer> getUnreadCount() {
+        Long receiverId = BaseContext.getLoginId();
+        Integer receiverType = BaseContext.getLoginType();
+        int count = messageService.getUnreadCount(receiverType, receiverId);
+        return Result.success(count);
     }
 }

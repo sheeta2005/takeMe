@@ -3,12 +3,15 @@ package com.me.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.LoginDTO;
+import com.me.dto.UserRegisterDTO;
 import com.me.entity.Volunteer;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer> implements VolunteerService {
@@ -43,7 +46,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
                 .eq(Volunteer::getUsername, username)
                 .one();
     }
-    
+
     @Override
     public Page<Volunteer> searchVolunteer(
             Integer page,
@@ -53,15 +56,48 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     ) {
         Page<Volunteer> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
-        
+
         if (username != null && !username.trim().isEmpty()) {
             wrapper.like(Volunteer::getUsername, username);
         }
         if (id != null) {
             wrapper.eq(Volunteer::getId, id);
         }
-        
+
         wrapper.orderByDesc(Volunteer::getCreateTime);
         return this.page(pageParam, wrapper);
+    }
+    
+    @Override
+    public boolean register(UserRegisterDTO registerDTO) {
+        // 检查用户名是否已存在
+        Volunteer existingVolunteer = this.getByUsername(registerDTO.getUsername());
+        if (existingVolunteer != null) {
+            return false; // 用户名已存在，注册失败
+        }
+        
+        // 创建新志愿者对象
+        Volunteer volunteer = new Volunteer();
+        volunteer.setUsername(registerDTO.getUsername());
+        volunteer.setPassword(passwordEncoder.encode(registerDTO.getPassword())); // 加密密码
+        volunteer.setRealName(registerDTO.getRealName());
+        volunteer.setPhone(registerDTO.getPhone());
+        volunteer.setStatus(0); // 新注册用户默认为待审批状态（0=停用，1=启用）
+        volunteer.setCreateTime(LocalDateTime.now());
+        volunteer.setLastLoginTime(null);
+        
+        // 设置默认值
+        volunteer.setGender(null);
+        volunteer.setAge(null);
+        volunteer.setAddress(null);
+        volunteer.setServiceDays(null);
+        volunteer.setWorkStatus(0); // 默认休息中
+        volunteer.setTotalServiceHours(0);
+        volunteer.setEmergencyName(null);
+        volunteer.setEmergencyPhone(null);
+        volunteer.setAvatar("http://localhost:8080/uploads/default-volunteer-avatar.png"); // 设置默认头像
+        
+        // 保存到数据库
+        return this.save(volunteer);
     }
 }

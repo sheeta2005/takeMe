@@ -165,6 +165,28 @@ export function markMessageRead(id: number) {
   })
 }
 
+// ========================= 首页数据 =========================
+/**
+ * 获取用户首页统计数据（总订单数、已完成、进行中、平均评分）
+ */
+export function getUserStatistics() {
+  return request({
+    url: '/api/user/statistics',
+    method: 'get'
+  })
+}
+
+/**
+ * 获取未读消息数量
+ */
+export function getUnreadMessageCount() {
+  return request({
+    url: '/api/user/message/list',
+    method: 'get',
+    params: { pageNum: 1, pageSize: 1, isRead: 0 }
+  })
+}
+
 // ========================= 订单相关 =========================
 /**
  * 确认开始服务

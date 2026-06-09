@@ -2,11 +2,13 @@ package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Approval;
+import com.me.entity.Message;
 import com.me.entity.Volunteer;
 import com.me.entity.VolunteerLeave;
 import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerLeaveMapper;
 import com.me.mapper.VolunteerMapper;
+import com.me.service.MessageService;
 import com.me.service.VolunteerLeaveService;
 import com.me.vo.VolunteerLeaveVO;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
     private final VolunteerLeaveMapper volunteerLeaveMapper;
     private final ApprovalMapper approvalMapper;
     private final VolunteerMapper volunteerMapper;
+    private final MessageService messageService;
 
     @Override
     public List<VolunteerLeaveVO> getListByVolunteerId(Long volunteerId) {
@@ -41,7 +44,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
 
     @Override
     public void submit(VolunteerLeave leave) {
-        leave.setStatus((byte) 0);
+        leave.setStatus((byte) 0d);
         leave.setCreateTime(LocalDateTime.now());
         volunteerLeaveMapper.insert(leave);
 
@@ -58,5 +61,26 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
         approval.setStatus("pending");
         approval.setCreateTime(LocalDateTime.now());
         approvalMapper.insert(approval);
+
+        // 通知志愿者本人请假申请已提交
+        sendMessage(leave.getVolunteerId(), 1, 1, "请假申请已提交",
+                applicantName + "的请假申请已提交，等待管理员审批", null);
+    }
+
+    /**
+     * 封装消息发送方法
+     */
+    private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
+                             String title, String content, Long relatedOrderId) {
+        Message msg = new Message();
+        msg.setReceiverId(receiverId);
+        msg.setReceiverType(receiverType);
+        msg.setType(type);
+        msg.setTitle(title);
+        msg.setContent(content);
+        msg.setIsRead(0);
+        msg.setRelatedOrderId(relatedOrderId);
+        msg.setCreateTime(LocalDateTime.now());
+        messageService.sendMessage(msg);
     }
 }

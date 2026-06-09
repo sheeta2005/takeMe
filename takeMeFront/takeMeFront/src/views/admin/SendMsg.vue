@@ -216,7 +216,7 @@ const handleSend = async () => {
       if (form.receiverType === 'all_volunteer') {
         receiverType = 1
       } else if (form.receiverType === 'all_elder') {
-        receiverType = 0
+        receiverType = 2
       }
       await sendMessage({
         receiverType,

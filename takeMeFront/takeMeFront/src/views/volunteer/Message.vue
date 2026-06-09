@@ -1,57 +1,103 @@
 <template>
-  <div class="message-container">
-    <h2 class="page-title">消息中心</h2>
-
-    <!-- 筛选条件 -->
-    <div class="filter-box">
-      <el-select v-model="filterType" placeholder="消息类型" clearable style="width: 150px; margin-right: 10px">
-        <el-option label="全部" :value="null" />
-        <el-option label="系统通知" :value="0" />
-        <el-option label="订单消息" :value="1" />
-        <el-option label="审核消息" :value="2" />
-      </el-select>
-
-      <el-select v-model="filterRead" placeholder="阅读状态" clearable style="width: 150px; margin-right: 10px">
-        <el-option label="全部" :value="null" />
-        <el-option label="未读" :value="0" />
-        <el-option label="已读" :value="1" />
-      </el-select>
-
-      <el-button type="primary" @click="loadMessages">查询</el-button>
-    </div>
-
-    <!-- 消息列表 -->
-    <div class="message-list">
-      <el-empty v-if="messageList.length === 0" description="暂无消息" />
-
-      <div
-        v-for="msg in messageList"
-        :key="msg.id"
-        class="message-item"
-        :class="{ unread: msg.isRead === 0 }"
-        @click="handleMessageClick(msg)"
-      >
-        <div class="message-header">
-          <span class="message-title">{{ msg.title }}</span>
-          <el-tag v-if="msg.isRead === 0" type="danger" size="small">未读</el-tag>
-        </div>
-        <div class="message-content">{{ msg.content }}</div>
-        <div class="message-footer">
-          <span class="message-time">{{ msg.createTime }}</span>
-        </div>
+  <div class="page-container">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">消息中心</h2>
+        <p class="page-subtitle">查看您的系统通知和任务消息</p>
       </div>
     </div>
 
-    <!-- 分页 -->
-    <div class="pagination-box" v-if="total > 0">
+    <!-- 筛选栏 -->
+    <el-card class="filter-card" shadow="hover">
+      <el-form :inline="true" class="filter-form">
+        <el-form-item label="消息类型">
+          <el-select v-model="filterType" placeholder="请选择类型" @change="loadMessages" style="width: 140px">
+            <el-option label="全部" value="" />
+            <el-option label="系统通知" :value="0" />
+            <el-option label="任务通知" :value="1" />
+            <el-option label="温馨提醒" :value="2" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="filterRead" placeholder="请选择" @change="loadMessages" style="width: 140px">
+            <el-option label="全部" value="" />
+            <el-option label="未读" :value="0" />
+            <el-option label="已读" :value="1" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadMessages">
+            <el-icon><Search /></el-icon>
+            查询
+          </el-button>
+          <el-button @click="resetFilter">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 消息列表 -->
+    <el-card class="table-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+            <el-icon :size="20" color="#00a88d"><Bell /></el-icon>
+            <span class="card-title">我的消息</span>
+          </div>
+          <span class="total-count">共 {{ total }} 条</span>
+        </div>
+      </template>
+
+      <el-table :data="messageList" v-loading="loading" stripe style="width: 100%" @row-click="handleRowClick">
+        <el-table-column prop="title" label="标题" min-width="200">
+          <template #default="{ row }">
+            <div class="msg-title-cell">
+              <el-tag :type="getTypeTagType(row.type)" size="small" class="type-tag">
+                {{ getTypeText(row.type) }}
+              </el-tag>
+              <span class="msg-title" :class="{ unread: row.isRead === 0 }">{{ row.title }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="content" label="内容" min-width="250" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="content-text">{{ row.content }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag v-if="row.isRead === 0" type="danger" size="small">未读</el-tag>
+            <el-tag v-else type="info" size="small">已读</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="接收时间" width="180">
+          <template #default="{ row }">
+            <span class="time-text">{{ row.createTime }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click.stop="handleMarkRead(row)">
+              <el-icon><Check /></el-icon>
+              {{ row.isRead === 0 ? '标记已读' : '查看详情' }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :total="total"
-        layout="total, prev, pager, next"
-        @current-change="handlePageChange"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next, jumper"
+        @change="loadMessages"
+        style="margin-top: 24px; justify-content: flex-end"
       />
-    </div>
+    </el-card>
   </div>
 </template>
 
@@ -59,147 +105,176 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Search, Refresh, Bell, Check } from '@element-plus/icons-vue'
 import { getVolunteerMessages, markVolunteerMessageRead } from '@/api/volunteer'
 
 const router = useRouter()
 
-// 筛选条件
-const filterType = ref<number | null>(null)
-const filterRead = ref<number | null>(null)
+const loading = ref(false)
+const filterType = ref<number | ''>('')
+const filterRead = ref<number | ''>('')
 
-// 消息列表
-const messageList = ref<any[]>([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 加载消息列表
+const messageList = ref<any[]>([])
+
+onMounted(() => {
+  loadMessages()
+})
+
 const loadMessages = async () => {
+  loading.value = true
   try {
     const res = await getVolunteerMessages({
       pageNum: currentPage.value,
       pageSize: pageSize.value,
-      type: filterType.value === '' ? undefined : Number(filterType.value),
-      isRead: filterRead.value === '' ? undefined : Number(filterRead.value)
+      type: filterType.value !== '' ? filterType.value : undefined,
+      isRead: filterRead.value !== '' ? filterRead.value : undefined
     })
 
     if (res.code === 200) {
       messageList.value = res.data.records || []
       total.value = res.data.total || 0
     }
-  } catch {
+  } catch (err) {
+    console.error('获取消息列表失败', err)
     ElMessage.error('获取消息列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
-// 分页变化
-const handlePageChange = (page: number) => {
-  currentPage.value = page
+const resetFilter = () => {
+  filterType.value = ''
+  filterRead.value = ''
+  currentPage.value = 1
   loadMessages()
 }
 
-// 点击消息
-const handleMessageClick = async (msg: any) => {
-  // 标记为已读
-  if (msg.isRead === 0) {
+const handleRowClick = (row: any) => {
+  if (!row.id) return
+  if (row.isRead === 0) {
+    markVolunteerMessageRead(row.id).then(() => {
+      row.isRead = 1
+    }).catch(() => {})
+  }
+  router.push(`/volunteer/message/detail/${row.id}`)
+}
+
+const handleMarkRead = async (row: any) => {
+  if (!row.id) return
+  if (row.isRead === 0) {
     try {
-      await markVolunteerMessageRead(msg.id)
-      msg.isRead = 1
-    } catch {
-      ElMessage.error('标记已读失败')
+      await markVolunteerMessageRead(row.id)
+      row.isRead = 1
+      ElMessage.success('标记已读成功')
+    } catch (err) {
+      console.error('标记已读失败', err)
+      ElMessage.error('操作失败')
     }
+  } else {
+    router.push(`/volunteer/message/detail/${row.id}`)
   }
-
-  // 跳转到消息详情
-  router.push(`/volunteer/message/detail/${msg.id}`)
 }
 
-onMounted(() => {
-  loadMessages()
-})
+const getTypeText = (type: number): string => {
+  const map: Record<number, string> = { 0: '系统通知', 1: '任务通知', 2: '温馨提醒' }
+  return map[type] || '未知'
+}
+
+const getTypeTagType = (type: number): string => {
+  const map: Record<number, string> = { 0: 'info', 1: 'primary', 2: 'success' }
+  return map[type] || ''
+}
 </script>
 
 <style scoped>
-.message-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px 0;
+.page-header {
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #333;
-  margin: 0 0 30px 0;
-  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px 0;
 }
 
-.filter-box {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+.page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
 }
 
-.message-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+.filter-card {
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
 }
 
-.message-item {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+.filter-form {
+  margin-bottom: 0;
 }
 
-.message-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 184, 153, 0.15);
-  transform: translateY(-2px);
+.table-card {
+  border: 1px solid var(--border-light);
 }
 
-.message-item.unread {
-  border-left: 4px solid #00b899;
-}
-
-.message-header {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
 }
 
-.message-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.message-content {
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.total-count {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.msg-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.type-tag {
+  flex-shrink: 0;
+}
+
+.msg-title {
   font-size: 15px;
-  color: #666;
-  margin-bottom: 10px;
-  line-height: 1.6;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
-.message-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.msg-title.unread {
+  font-weight: 600;
 }
 
-.message-time {
+.content-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.time-text {
+  color: var(--text-secondary);
   font-size: 13px;
-  color: #999;
 }
 
-.pagination-box {
-  display: flex;
-  justify-content: center;
-  margin-top: 30px;
+:deep(.el-table__row) {
+  cursor: pointer;
 }
 </style>

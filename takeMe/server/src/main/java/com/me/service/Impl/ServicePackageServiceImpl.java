@@ -1,33 +1,28 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.me.dto.PageResultDTO;
 import com.me.entity.ServicePackage;
 import com.me.mapper.ServicePackageMapper;
 import com.me.service.ServicePackageService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
-@RequiredArgsConstructor
-public class ServicePackageServiceImpl
-        extends ServiceImpl<ServicePackageMapper, ServicePackage>
-        implements ServicePackageService {
+public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper, ServicePackage> implements ServicePackageService {
 
     @Override
-    public Page<ServicePackage> searchServicePackage(
-            Integer page,
-            Integer pageSize,
+    public IPage<ServicePackage> searchServicePackage(
             Integer type,
             Integer status,
-            String keyword
+            String keyword,
+            PageResultDTO pageResultDTO
     ) {
-        Page<ServicePackage> pageParam = new Page<>(page, pageSize);
-        LambdaQueryWrapper<ServicePackage> wrapper = new LambdaQueryWrapper<>();
+        Page<ServicePackage> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
 
+        LambdaQueryWrapper<ServicePackage> wrapper = new LambdaQueryWrapper<>();
         if (type != null) {
             wrapper.eq(ServicePackage::getType, type);
         }
@@ -39,14 +34,6 @@ public class ServicePackageServiceImpl
         }
 
         wrapper.orderByDesc(ServicePackage::getCreateTime);
-        return this.page(pageParam, wrapper);
-    }
-
-    @Override
-    public List<ServicePackage> getAvailableServiceByType(Integer type) {
-        LambdaQueryWrapper<ServicePackage> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ServicePackage::getType, type)
-                .eq(ServicePackage::getStatus, 1); // 只返回启用的服务
-        return this.list(wrapper);
+        return this.page(page, wrapper);
     }
 }

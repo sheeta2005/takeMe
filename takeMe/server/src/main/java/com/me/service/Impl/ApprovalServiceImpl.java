@@ -1,19 +1,23 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.me.dto.PageResultDTO;
 import com.me.entity.Approval;
+import com.me.entity.Message;
 import com.me.entity.Volunteer;
 import com.me.entity.VolunteerLeave;
 import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerLeaveMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.ApprovalService;
+import com.me.service.MessageService;
+import java.time.LocalDateTime;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -21,18 +25,19 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
 
     private final VolunteerLeaveMapper volunteerLeaveMapper;
     private final VolunteerMapper volunteerMapper;
+    private final MessageService messageService;
 
     @Override
-    public Page<Approval> getApprovalPage(
-            Integer page,
-            Integer pageSize,
+    public IPage<Approval> getApprovalPage(
             String type,
             String status,
             String keyword,
             String startDate,
-            String endDate
+            String endDate,
+            PageResultDTO pageResultDTO
     ) {
-        Page<Approval> pageParam = new Page<>(page, pageSize);
+        Page<Approval> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
+
         LambdaQueryWrapper<Approval> wrapper = new LambdaQueryWrapper<>();
 
         if (type != null && !type.trim().isEmpty()) {
@@ -54,7 +59,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         }
 
         wrapper.orderByDesc(Approval::getCreateTime);
-        return this.page(pageParam, wrapper);
+        return this.page(page, wrapper);
     }
 
     @Override
@@ -89,7 +94,16 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         approval.setStatus("approved");
         approval.setRemark(remark);
         approval.setUpdateTime(LocalDateTime.now());
-        return this.updateById(approval);
+        boolean success = this.updateById(approval);
+
+        if (success) {
+            String title = "申请已通过";
+            String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
+            sendMessage(approval.getApplicantId(), 1, 0, 
+                    title, String.format("您的%s申请已通过审批", typeText), approval.getId());
+        }
+
+        return success;
     }
 
     @Override
@@ -103,51 +117,59 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
             return false;
         }
 
-        String type = approval.getType();
-        if ("leave".equals(type)) {
-            handleLeaveRejected(approval);
-        }
-
         approval.setStatus("rejected");
         approval.setRemark(remark);
         approval.setUpdateTime(LocalDateTime.now());
-        return this.updateById(approval);
+        boolean success = this.updateById(approval);
+
+        if (success) {
+            String title = "申请被拒绝";
+            String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
+            sendMessage(approval.getApplicantId(), 1, 0, 
+                    title, String.format("您的%s申请被拒绝，原因：%s", typeText, remark), approval.getId());
+        }
+
+        return success;
     }
 
     private void handleLeaveApproved(Approval approval) {
-        LambdaQueryWrapper<VolunteerLeave> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(VolunteerLeave::getVolunteerId, approval.getApplicantId());
-        wrapper.eq(VolunteerLeave::getStatus, (byte) 0);
-        wrapper.orderByDesc(VolunteerLeave::getCreateTime);
-        wrapper.last("LIMIT 1");
-
-        VolunteerLeave leave = volunteerLeaveMapper.selectOne(wrapper);
-        if (leave != null) {
-            leave.setStatus((byte) 1);
-            volunteerLeaveMapper.updateById(leave);
+        VolunteerLeave leave = volunteerLeaveMapper.selectById(approval.getRelatedId());
+        if (leave == null) {
+            return;
         }
-    }
 
-    private void handleLeaveRejected(Approval approval) {
-        LambdaQueryWrapper<VolunteerLeave> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(VolunteerLeave::getVolunteerId, approval.getApplicantId());
-        wrapper.eq(VolunteerLeave::getStatus, (byte) 0);
-        wrapper.orderByDesc(VolunteerLeave::getCreateTime);
-        wrapper.last("LIMIT 1");
-
-        VolunteerLeave leave = volunteerLeaveMapper.selectOne(wrapper);
-        if (leave != null) {
-            leave.setStatus((byte) 2);
-            volunteerLeaveMapper.updateById(leave);
+        Volunteer volunteer = volunteerMapper.selectById(leave.getVolunteerId());
+        if (volunteer != null) {
+            volunteer.setAvailableServiceDays(volunteer.getAvailableServiceDays() - leave.getDays());
+            volunteerMapper.updateById(volunteer);
         }
     }
 
     private void handleServiceDaysChangeApproved(Approval approval) {
-        Long volunteerId = approval.getApplicantId();
-        Volunteer volunteer = volunteerMapper.selectById(volunteerId);
-        if (volunteer != null) {
-            volunteer.setServiceDays(approval.getContent());
-            volunteerMapper.updateById(volunteer);
+        String newDaysStr = approval.getContent();
+        try {
+            Integer newDays = Integer.parseInt(newDaysStr);
+            Volunteer volunteer = volunteerMapper.selectById(approval.getRelatedId());
+            if (volunteer != null) {
+                volunteer.setAvailableServiceDays(newDays);
+                volunteerMapper.updateById(volunteer);
+            }
+        } catch (NumberFormatException e) {
+            // ignore
         }
+    }
+
+    private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
+                            String title, String content, Long relatedOrderId) {
+        Message message = new Message();
+        message.setReceiverId(receiverId);
+        message.setReceiverType(receiverType);
+        message.setType(type);
+        message.setTitle(title);
+        message.setContent(content);
+        message.setIsRead(0);
+        message.setRelatedOrderId(relatedOrderId);
+        message.setCreateTime(LocalDateTime.now());
+        messageService.save(message);
     }
 }

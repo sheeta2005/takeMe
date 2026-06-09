@@ -34,7 +34,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
 
         return user;
     }
-    
+
     @Override
     public boolean register(UserRegisterDTO registerDTO) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
@@ -43,32 +43,32 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         if (count > 0) {
             return false;
         }
-        
+
         User user = new User();
         user.setUsername(registerDTO.getUsername());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
         user.setRealName(registerDTO.getRealName());
         user.setPhone(registerDTO.getPhone());
         user.setStatus(1);
-        
+
         return this.save(user);
     }
-    
+
     @Override
     public boolean updatePassword(Long userId, String oldPassword, String newPassword) {
         User user = this.getById(userId);
         if (user == null) {
             return false;
         }
-        
+
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             return false;
         }
-        
+
         user.setPassword(passwordEncoder.encode(newPassword));
         return this.updateById(user);
     }
-    
+
     @Override
     public Page<User> searchUser(
             Integer page,
@@ -80,7 +80,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     ) {
         Page<User> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        
+
         if (keyword != null && !keyword.trim().isEmpty()) {
             wrapper.and(w -> w.like(User::getUsername, keyword)
                     .or()
@@ -97,7 +97,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         if (endDate != null && !endDate.trim().isEmpty()) {
             wrapper.le(User::getCreateTime, endDate + " 23:59:59");
         }
-        
+
         wrapper.orderByDesc(User::getCreateTime);
         return this.page(pageParam, wrapper);
     }

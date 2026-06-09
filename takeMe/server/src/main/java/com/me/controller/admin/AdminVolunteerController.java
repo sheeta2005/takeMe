@@ -1,14 +1,15 @@
 package com.me.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.me.dto.PageResultDTO;
 import com.me.entity.OrderItem;
 import com.me.entity.Review;
 import com.me.entity.Volunteer;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.ReviewMapper;
-import com.me.service.VolunteerService;
 import com.me.result.Result;
+import com.me.service.VolunteerService;
 import com.me.vo.PageResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,31 +31,35 @@ public class AdminVolunteerController {
 
     @GetMapping("/page")
     public Result<PageResultVO<Volunteer>> getVolunteerPage(
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize
     ) {
-        Page<Volunteer> pageParam = new Page<>(page, pageSize);
-        LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(Volunteer::getCreateTime);
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
         
-        Page<Volunteer> mpPage = volunteerService.page(pageParam, wrapper);
-        mpPage.getRecords().forEach(v -> v.setPassword(null));
+        IPage<Volunteer> iPage = volunteerService.searchVolunteer(null, null, pageResultDTO);
+        iPage.getRecords().forEach(v -> v.setPassword(null));
         
-        PageResultVO<Volunteer> result = new PageResultVO<>(mpPage.getTotal(), mpPage.getRecords());
+        PageResultVO<Volunteer> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
 
     @GetMapping("/search")
     public Result<PageResultVO<Volunteer>> searchVolunteer(
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String username,
             @RequestParam(required = false) Long id
     ) {
-        Page<Volunteer> mpPage = volunteerService.searchVolunteer(page, pageSize, username, id);
-        mpPage.getRecords().forEach(v -> v.setPassword(null));
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
         
-        PageResultVO<Volunteer> result = new PageResultVO<>(mpPage.getTotal(), mpPage.getRecords());
+        IPage<Volunteer> iPage = volunteerService.searchVolunteer(username, id, pageResultDTO);
+        iPage.getRecords().forEach(v -> v.setPassword(null));
+        
+        PageResultVO<Volunteer> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
 
@@ -87,51 +92,18 @@ public class AdminVolunteerController {
         Map<String, Object> result = new HashMap<>();
         result.put("volunteer", volunteer);
         result.put("completedCount", completedCount);
-        result.put("averageRating", String.format("%.1f", averageRating));
+        result.put("averageRating", averageRating);
         result.put("reviews", reviews);
-
+        
         return Result.success(result);
     }
 
-    @PostMapping("/add")
-    public Result<Void> addVolunteer(@RequestBody Volunteer volunteer) {
-        LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Volunteer::getUsername, volunteer.getUsername());
-        Long count = volunteerService.count(wrapper);
-        if (count > 0) {
-            return Result.error("账号已存在");
-        }
-        
-        volunteer.setPassword(passwordEncoder.encode("123456"));
-        volunteer.setStatus(1);
-        volunteerService.save(volunteer);
-        
-        return Result.success();
-    }
-
-    @DeleteMapping("/delete/{id}")
+    @PostMapping("/delete/{id}")
     public Result<Void> deleteVolunteer(@PathVariable Long id) {
-        Volunteer volunteer = volunteerService.getById(id);
-        if (volunteer == null) {
-            return Result.error("志愿者不存在");
+        boolean success = volunteerService.removeById(id);
+        if (!success) {
+            return Result.error("删除失败");
         }
-        
-        volunteerService.removeById(id);
-        return Result.success();
-    }
-
-    @PostMapping("/status/{id}")
-    public Result<Void> updateVolunteerStatus(
-            @PathVariable Long id,
-            @RequestParam Integer status
-    ) {
-        Volunteer volunteer = volunteerService.getById(id);
-        if (volunteer == null) {
-            return Result.error("志愿者不存在");
-        }
-        
-        volunteer.setStatus(status);
-        volunteerService.updateById(volunteer);
         return Result.success();
     }
 }

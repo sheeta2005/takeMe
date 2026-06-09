@@ -41,14 +41,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(volunteerInterceptor)
                 .addPathPatterns("/api/volunteer/**")
                 .excludePathPatterns(
-                        "/api/volunteer/login"
+                        "/api/volunteer/login",
+                        "/api/volunteer/register"
                 );
 
         // 普通用户拦截器：拦截所有 /api/user/**
         registry.addInterceptor(userInterceptor)
                 .addPathPatterns("/api/user/**")
                 .excludePathPatterns(
-                        "/api/user/login"
+                        "/api/user/login",
+                        "/api/user/register"
                 );
     }
 }

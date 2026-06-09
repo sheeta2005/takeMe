@@ -27,9 +27,8 @@
         <el-form-item label="接收者类型">
           <el-select v-model="filterReceiverType" placeholder="请选择" @change="fetchMsgs" style="width: 140px">
             <el-option label="全部" value="" />
-            <el-option label="老人用户" :value="0" />
             <el-option label="志愿者" :value="1" />
-            <el-option label="全部广播" :value="2" />
+            <el-option label="用户（老人）" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -182,7 +181,7 @@ const getTypeTagType = (type: number) => {
 }
 
 const getReceiverTypeText = (type: number) => {
-  const map = ['老人用户', '志愿者', '全部广播']
+  const map = ['管理员', '志愿者', '用户（老人）']
   return map[type] || '未知'
 }
 </script>

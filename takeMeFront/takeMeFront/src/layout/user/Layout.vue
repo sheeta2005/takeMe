@@ -98,7 +98,7 @@
           <el-menu-item index="/user/message">
             <el-icon><Message /></el-icon>
             <span>消息中心</span>
-            <el-badge :value="3" class="menu-badge" />
+            <el-badge :value="unreadMessageCount" :hidden="unreadMessageCount === 0" class="menu-badge" />
           </el-menu-item>
           <el-menu-item index="/user/info">
             <el-icon><User /></el-icon>
@@ -127,6 +127,7 @@ import {
   House, Dish, Brush, FirstAidKit, ShoppingBag,
   ChatLineRound, Document, ShoppingCart, Message, User, Setting
 } from '@element-plus/icons-vue'
+import { getUnreadMessageCount } from '@/api/user'
 
 const router = useRouter()
 const route = useRoute()
@@ -135,6 +136,7 @@ const cartStore = useCartStore()
 
 const cartPopoverVisible = ref(false)
 const activeMenu = computed(() => route.path)
+const unreadMessageCount = ref(0)
 
 const handleMenuSelect = (path: string) => {
   router.push(path)
@@ -145,9 +147,21 @@ const goToCart = () => {
   router.push('/user/cart')
 }
 
-// ✅ 加载购物车（不会再报错）
+const fetchUnreadCount = async () => {
+  try {
+    const res = await getUnreadMessageCount()
+    if (res.code === 200 && res.data) {
+      unreadMessageCount.value = res.data.total || 0
+    }
+  } catch (err) {
+    console.error('获取未读消息数量失败', err)
+  }
+}
+
+// ✅ 加载购物车 + 未读消息数量
 onMounted(() => {
   cartStore.loadFromLocalStorage()
+  fetchUnreadCount()
 })
 </script>
 

@@ -1,8 +1,10 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.me.dto.PageResultDTO;
 import com.me.entity.Review;
 import com.me.mapper.ReviewMapper;
 import com.me.service.ReviewService;
@@ -15,8 +17,9 @@ import java.util.Map;
 public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> implements ReviewService {
 
     @Override
-    public Page<Review> getReviewPage(Integer page, Integer pageSize, Integer rating) {
-        Page<Review> pageParam = new Page<>(page, pageSize);
+    public IPage<Review> getReviewPage(Integer rating, PageResultDTO pageResultDTO) {
+        Page<Review> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
+
         LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
 
         if (rating != null) {
@@ -24,7 +27,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> impleme
         }
 
         wrapper.orderByDesc(Review::getCreateTime);
-        return this.page(pageParam, wrapper);
+        return this.page(page, wrapper);
     }
 
     @Override

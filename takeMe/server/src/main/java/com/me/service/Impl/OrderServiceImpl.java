@@ -1,15 +1,19 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
+import com.me.dto.PageResultDTO;
+import com.me.entity.Message;
 import com.me.entity.Order;
 import com.me.entity.OrderItem;
 import com.me.entity.Review;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.ReviewMapper;
+import com.me.service.MessageService;
 import com.me.service.OrderService;
 import com.me.vo.OrderItemVO;
 import com.me.vo.OrderVO;
@@ -17,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -30,9 +35,10 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final ReviewMapper reviewMapper;
+    private final MessageService messageService;
 
     @Override
-    public Page<OrderVO> getMyOrderList(Long userId, Integer page, Integer pageSize, Integer status, String orderNo) {
+    public IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getUserId, userId);
         if (status != null) {
@@ -43,9 +49,7 @@ public class OrderServiceImpl implements OrderService {
         }
         wrapper.orderByDesc(Order::getCreateTime);
 
-        Page<Order> orderPage = orderMapper.selectPage(new Page<>(page, pageSize), wrapper);
-        Page<OrderVO> voPage = new Page<>();
-        BeanUtils.copyProperties(orderPage, voPage);
+        Page<Order> orderPage = orderMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), wrapper);
 
         List<OrderVO> records = orderPage.getRecords().stream().map(order -> {
             OrderVO vo = new OrderVO();
@@ -65,12 +69,13 @@ public class OrderServiceImpl implements OrderService {
             return vo;
         }).collect(Collectors.toList());
 
+        Page<OrderVO> voPage = new Page<>(orderPage.getCurrent(), orderPage.getSize(), orderPage.getTotal());
         voPage.setRecords(records);
         return voPage;
     }
 
     @Override
-    public Page<OrderVO> getVolunteerOrderList(Long volunteerId, Integer page, Integer pageSize, Integer status, String orderNo) {
+    public IPage<OrderVO> getVolunteerOrderList(Long volunteerId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
         LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
         itemWrapper.eq(OrderItem::getVolunteerId, volunteerId);
         if (status != null) {
@@ -78,10 +83,7 @@ public class OrderServiceImpl implements OrderService {
         }
         itemWrapper.orderByDesc(OrderItem::getCreateTime);
 
-        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(page, pageSize), itemWrapper);
-        
-        Page<OrderVO> voPage = new Page<>();
-        BeanUtils.copyProperties(itemPage, voPage, "records");
+        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), itemWrapper);
         
         List<OrderVO> records = itemPage.getRecords().stream()
             .map(item -> {
@@ -107,20 +109,19 @@ public class OrderServiceImpl implements OrderService {
             .filter(vo -> vo != null)
             .collect(Collectors.toList());
         
+        Page<OrderVO> voPage = new Page<>(itemPage.getCurrent(), itemPage.getSize(), itemPage.getTotal());
         voPage.setRecords(records);
         return voPage;
     }
 
     @Override
-    public Page<OrderVO> getAvailableOrderList(Integer page, Integer pageSize) {
+    public IPage<OrderVO> getAvailableOrderList(PageResultDTO pageResultDTO) {
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.isNull(OrderItem::getVolunteerId);
         wrapper.eq(OrderItem::getItemStatus, 0);
         wrapper.orderByDesc(OrderItem::getCreateTime);
 
-        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(page, pageSize), wrapper);
-        Page<OrderVO> voPage = new Page<>();
-        BeanUtils.copyProperties(itemPage, voPage, "records");
+        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), wrapper);
 
         List<OrderVO> records = itemPage.getRecords().stream()
             .map(item -> {
@@ -146,6 +147,7 @@ public class OrderServiceImpl implements OrderService {
             .filter(vo -> vo != null)
             .collect(Collectors.toList());
         
+        Page<OrderVO> voPage = new Page<>(itemPage.getCurrent(), itemPage.getSize(), itemPage.getTotal());
         voPage.setRecords(records);
         return voPage;
     }
@@ -251,7 +253,9 @@ public class OrderServiceImpl implements OrderService {
         }).collect(Collectors.toList());
         
         orderVO.setItems(itemVOList);
-        
+
+        sendMessage(userId, 2, 1, "订单已提交", "您的订单已成功提交，等待志愿者接单", order.getId());
+
         return orderVO;
     }
 
@@ -294,6 +298,11 @@ public class OrderServiceImpl implements OrderService {
         
         updateOrderVolunteerIds(item.getOrderId());
         updateOrderStatus(item.getOrderId());
+
+        Order order = orderMapper.selectById(item.getOrderId());
+        if (order != null) {
+            sendMessage(order.getUserId(), 2, 2, "服务已接单", "您的订单服务已被志愿者接取，请耐心等待服务", order.getId());
+        }
     }
 
     @Override
@@ -320,6 +329,11 @@ public class OrderServiceImpl implements OrderService {
         
         updateOrderVolunteerIds(item.getOrderId());
         updateOrderStatus(item.getOrderId());
+
+        Order order = orderMapper.selectById(item.getOrderId());
+        if (order != null) {
+            sendMessage(order.getUserId(), 2, 0, "志愿者已放弃服务", "您订单的志愿者已放弃服务，系统将重新安排接单", item.getOrderId());
+        }
     }
 
     @Override
@@ -362,6 +376,11 @@ public class OrderServiceImpl implements OrderService {
         orderItemMapper.updateById(item);
         
         checkAndCompleteOrder(item.getOrderId());
+
+        Order order = orderMapper.selectById(item.getOrderId());
+        if (order != null) {
+            sendMessage(order.getUserId(), 2, 0, "服务已完成", "您的订单服务已完成，请前往确认", order.getId());
+        }
     }
 
     @Override
@@ -521,12 +540,24 @@ public class OrderServiceImpl implements OrderService {
             
             order.setIsReviewed(1);
             orderMapper.updateById(order);
+
+            if (order.getVolunteerIds() != null && !order.getVolunteerIds().isEmpty()) {
+                String[] ids = order.getVolunteerIds().split(",");
+                for (String id : ids) {
+                    try {
+                        Long vid = Long.parseLong(id.trim());
+                        sendMessage(vid, 1, 0, "收到新评价", "您的服务收到了用户的评价，评分：" + rating + " 星", orderId);
+                    } catch (NumberFormatException e) {
+                        // ignore
+                    }
+                }
+            }
         }
     }
 
     @Override
-    public Page<Order> getAdminOrderPage(Integer page, Integer pageSize, Integer status) {
-        Page<Order> pageParam = new Page<>(page, pageSize);
+    public IPage<Order> getAdminOrderPage(Integer status, PageResultDTO pageResultDTO) {
+        Page<Order> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         
         if (status != null) {
@@ -538,13 +569,12 @@ public class OrderServiceImpl implements OrderService {
     }
     
     @Override
-    public Page<Order> searchAdminOrder(
-            Integer page, Integer pageSize, Integer status,
-            String orderNo, Long userId, String userName,
+    public IPage<Order> searchAdminOrder(
+            Integer status, String orderNo, Long userId, String userName,
             Long volunteerId, String volunteerName, Integer serviceType,
-            String startDate, String endDate
+            String startDate, String endDate, PageResultDTO pageResultDTO
     ) {
-        Page<Order> pageParam = new Page<>(page, pageSize);
+        Page<Order> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         
         if (status != null) {
@@ -625,5 +655,19 @@ public class OrderServiceImpl implements OrderService {
 
     private String generateOrderNo() {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+    }
+
+    private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
+                             String title, String content, Long relatedOrderId) {
+        Message msg = new Message();
+        msg.setReceiverId(receiverId);
+        msg.setReceiverType(receiverType);
+        msg.setType(type);
+        msg.setTitle(title);
+        msg.setContent(content);
+        msg.setIsRead(0);
+        msg.setRelatedOrderId(relatedOrderId);
+        msg.setCreateTime(LocalDateTime.now());
+        messageService.sendMessage(msg);
     }
 }

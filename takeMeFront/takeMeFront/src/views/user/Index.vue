@@ -81,10 +81,9 @@
                 <el-icon :size="20" color="#f59e0b"><Bell /></el-icon>
                 <span class="card-title">平台公告</span>
               </div>
-              <el-badge :value="4" :max="99" class="news-badge" />
             </div>
           </template>
-          <div class="news-list">
+          <div v-if="newsList.length > 0" class="news-list">
             <div class="news-item" v-for="(item, i) in newsList" :key="i">
               <div class="news-left">
                 <el-icon :size="20" color="#00a88d"><Document /></el-icon>
@@ -92,6 +91,9 @@
               </div>
               <el-tag size="small" type="info">{{ item.date }}</el-tag>
             </div>
+          </div>
+          <div v-else class="empty-tip">
+            <el-empty description="暂无公告" :image-size="60" />
           </div>
         </el-card>
       </el-col>
@@ -159,6 +161,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { getUserStatistics } from '@/api/user'
+import { getMyOrderList } from '@/api/order'
 import {
   UserFilled, Document, Grid, Dish, Brush, FirstAidKit,
   ShoppingBag, ChatLineRound, Bell, InfoFilled, DataAnalysis,
@@ -169,33 +173,51 @@ const router = useRouter()
 const userStore = useUserStore()
 const userName = ref('')
 const orderCount = ref(0)
+const serviceStats = ref({
+  total: 0,
+  completed: 0,
+  pending: 0,
+  rating: '0.0'
+})
 
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-onMounted(() => {
-  userName.value = userStore.username || '尊敬的用户'
-  orderCount.value = 5 // 可以从 API 获取
-})
-
-const newsList = ref([
-  { title: '助餐服务每日10点前下单，当日配送', date: '2025-01-01' },
-  { title: '助洁服务支持预约上门时间', date: '2025-01-02' },
-  { title: '助医服务可协助挂号、陪同就诊', date: '2025-01-03' },
-  { title: '代购服务支持生活用品、药品代买', date: '2025-01-04' },
-])
-
-const tipsList = ref([
+const tipsList = [
   '请提前10分钟准备好服务所需物品',
   '服务完成后请及时评价',
   '遇到问题可联系客服',
   '定期更新个人信息以便我们更好地为您服务'
-])
+]
 
-const serviceStats = ref({
-  total: 28,
-  completed: 25,
-  pending: 3,
-  rating: 4.8
+const newsList = [
+  { title: '助餐服务每日10点前下单，当日配送', date: '2025-01-01' },
+  { title: '助洁服务支持预约上门时间', date: '2025-01-02' },
+  { title: '助医服务可协助挂号、陪同就诊', date: '2025-01-03' },
+  { title: '代购服务支持生活用品、药品代买', date: '2025-01-04' },
+]
+
+onMounted(async () => {
+  userName.value = userStore.username || '尊敬的用户'
+
+  try {
+    // 获取用户统计数据
+    const statsRes = await getUserStatistics()
+    if (statsRes.data) {
+      serviceStats.value = statsRes.data
+    }
+  } catch (e) {
+    console.error('获取统计数据失败', e)
+  }
+
+  try {
+    // 获取订单总数
+    const orderRes = await getMyOrderList({ page: 1, pageSize: 1 })
+    if (orderRes.data) {
+      orderCount.value = orderRes.data.total || 0
+    }
+  } catch (e) {
+    console.error('获取订单数失败', e)
+  }
 })
 </script>
 
@@ -323,10 +345,6 @@ const serviceStats = ref({
   border: 1px solid #e2e8f0;
 }
 
-.news-badge {
-  margin-left: 8px;
-}
-
 .news-list {
   display: flex;
   flex-direction: column;
@@ -420,4 +438,11 @@ const serviceStats = ref({
     text-align: center;
   }
 }
+
+.empty-tip {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
 </style>
+`

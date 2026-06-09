@@ -1,7 +1,8 @@
 package com.me.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.me.dto.PageResultDTO;
 import com.me.entity.Order;
 import com.me.result.Result;
 import com.me.service.OrderService;
@@ -10,7 +11,6 @@ import com.me.vo.PageResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,18 +23,22 @@ public class AdminOrderController {
 
     @GetMapping("/page")
     public Result<PageResultVO<Order>> getOrderPage(
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Integer status
     ) {
-        Page<Order> mpPage = orderService.getAdminOrderPage(page, pageSize, status);
-        PageResultVO<Order> result = new PageResultVO<>(mpPage.getTotal(), mpPage.getRecords());
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
+        
+        IPage<Order> iPage = orderService.getAdminOrderPage(status, pageResultDTO);
+        PageResultVO<Order> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
 
     @GetMapping("/search")
     public Result<PageResultVO<Order>> searchOrder(
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String orderNo,
@@ -46,11 +50,15 @@ public class AdminOrderController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
-        Page<Order> mpPage = orderService.searchAdminOrder(
-            page, pageSize, status, orderNo, userId, userName, 
-            volunteerId, volunteerName, serviceType, startDate, endDate
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
+        
+        IPage<Order> iPage = orderService.searchAdminOrder(
+            status, orderNo, userId, userName, 
+            volunteerId, volunteerName, serviceType, startDate, endDate, pageResultDTO
         );
-        PageResultVO<Order> result = new PageResultVO<>(mpPage.getTotal(), mpPage.getRecords());
+        PageResultVO<Order> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
 

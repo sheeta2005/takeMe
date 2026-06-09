@@ -1,6 +1,7 @@
 package com.me.controller.volunteer;
 
 import com.me.dto.LoginDTO;
+import com.me.dto.UserRegisterDTO;
 import com.me.entity.Volunteer;
 import com.me.result.Result;
 import com.me.service.VolunteerService;
@@ -37,6 +38,18 @@ public class VolunteerLoginController {
                 volunteer.getAvatar()
         );
         return Result.success(loginVO);
+    }
+
+    /**
+     * 志愿者注册接口
+     */
+    @PostMapping("/register")
+    public Result<Void> register(@RequestBody UserRegisterDTO registerDTO) {
+        boolean success = volunteerService.register(registerDTO);
+        if (!success) {
+            return Result.error("账号已存在");
+        }
+        return Result.success();
     }
 
     /**
