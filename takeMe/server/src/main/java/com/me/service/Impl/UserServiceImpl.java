@@ -1,8 +1,10 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.LoginDTO;
+import com.me.dto.PageResultDTO;
 import com.me.dto.UserRegisterDTO;
 import com.me.entity.User;
 import com.me.mapper.UserMapper;
@@ -70,15 +72,14 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     }
 
     @Override
-    public Page<User> searchUser(
-            Integer page,
-            Integer pageSize,
+    public IPage<User> searchUser(
             String keyword,
             Integer gender,
             String startDate,
-            String endDate
+            String endDate,
+            PageResultDTO pageResultDTO
     ) {
-        Page<User> pageParam = new Page<>(page, pageSize);
+        Page<User> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
 
         if (keyword != null && !keyword.trim().isEmpty()) {

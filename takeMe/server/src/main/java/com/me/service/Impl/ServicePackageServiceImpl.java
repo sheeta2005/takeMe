@@ -10,6 +10,8 @@ import com.me.mapper.ServicePackageMapper;
 import com.me.service.ServicePackageService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper, ServicePackage> implements ServicePackageService {
 
@@ -35,5 +37,14 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
 
         wrapper.orderByDesc(ServicePackage::getCreateTime);
         return this.page(page, wrapper);
+    }
+
+    @Override
+    public List<ServicePackage> getAvailableServiceByType(Integer type) {
+        LambdaQueryWrapper<ServicePackage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ServicePackage::getType, type);
+        wrapper.eq(ServicePackage::getStatus, 1);
+        wrapper.orderByAsc(ServicePackage::getCreateTime);
+        return this.list(wrapper);
     }
 }

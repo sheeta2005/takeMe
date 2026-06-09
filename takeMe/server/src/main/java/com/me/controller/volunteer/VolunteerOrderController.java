@@ -1,10 +1,12 @@
 package com.me.controller.volunteer;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.context.BaseContext;
+import com.me.dto.PageResultDTO;
 import com.me.service.OrderService;
 import com.me.vo.OrderVO;
-import com.me.vo.Result;
+import com.me.vo.PageResultVO;
+import com.me.result.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,24 +18,34 @@ public class VolunteerOrderController {
     private final OrderService orderService;
 
     @GetMapping("/list")
-    public Result<Page<OrderVO>> list(
-            @RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResultVO<OrderVO>> list(
+            @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String orderNo
     ) {
         Long volunteerId = BaseContext.getLoginId();
-        Page<OrderVO> pageResult = orderService.getVolunteerOrderList(volunteerId, page, pageSize, status, orderNo);
-        return Result.success(pageResult);
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
+
+        IPage<OrderVO> iPage = orderService.getVolunteerOrderList(volunteerId, status, orderNo, pageResultDTO);
+        PageResultVO<OrderVO> result = PageResultVO.from(iPage);
+        return Result.success(result);
     }
 
     @GetMapping("/available")
-    public Result<Page<OrderVO>> available(
-            @RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResultVO<OrderVO>> available(
+            @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize
     ) {
-        Page<OrderVO> pageResult = orderService.getAvailableOrderList(page, pageSize);
-        return Result.success(pageResult);
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
+
+        IPage<OrderVO> iPage = orderService.getAvailableOrderList(pageResultDTO);
+        PageResultVO<OrderVO> result = PageResultVO.from(iPage);
+        return Result.success(result);
     }
 
     @GetMapping("/detail")

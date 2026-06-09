@@ -57,16 +57,16 @@ export const getServiceTypeDist = () => {
 }
 
 // ========================= 订单管理 =========================
-export const getOrderPage = (page: number, pageSize: number, status?: number) => {
+export const getOrderPage = (pageNum: number, pageSize: number, status?: number) => {
   return request({
     url: '/api/admin/order/page',
     method: 'get',
-    params: { page, pageSize, status }
+    params: { pageNum, pageSize, status }
   })
 }
 
 export const searchOrder = (
-  page: number,
+  pageNum: number,
   pageSize: number,
   status?: number,
   orderNo?: string,
@@ -78,7 +78,7 @@ export const searchOrder = (
   return request({
     url: '/api/admin/order/search',
     method: 'get',
-    params: { page, pageSize, status, orderNo, userId, volunteerId, startDate, endDate }
+    params: { pageNum, pageSize, status, orderNo, userId, volunteerId, startDate, endDate }
   })
 }
 
@@ -112,7 +112,7 @@ export const getOrderStatistics = () => {
 
 // ========================= 志愿者管理 =========================
 export const searchVolunteer = (
-  page: number,
+  pageNum: number,
   pageSize: number,
   username?: string,
   id?: number
@@ -120,7 +120,7 @@ export const searchVolunteer = (
   return request({
     url: '/api/admin/volunteer/search',
     method: 'get',
-    params: { page, pageSize, username, id }
+    params: { pageNum, pageSize, username, id }
   })
 }
 
@@ -164,7 +164,7 @@ export const updateVolunteerStatus = (id: number, status: number) => {
 
 // ========================= 用户（老人）管理 =========================
 export const searchUser = (
-  page: number,
+  pageNum: number,
   pageSize: number,
   keyword?: string,
   gender?: number,
@@ -174,7 +174,7 @@ export const searchUser = (
   return request({
     url: '/api/admin/user/search',
     method: 'get',
-    params: { page, pageSize, keyword, gender, startDate, endDate }
+    params: { pageNum, pageSize, keyword, gender, startDate, endDate }
   })
 }
 
@@ -217,19 +217,19 @@ export const updateUserStatus = (id: number, status: number) => {
 }
 
 // ========================= 消息管理 =========================
-export const getMessagePage = (page: number, pageSize: number, receiverType?: number, type?: number) => {
+export const getMessagePage = (pageNum: number, pageSize: number, receiverType?: number, type?: number) => {
   return request({
     url: '/api/admin/message/page',
     method: 'get',
-    params: { page, pageSize, receiverType, type }
+    params: { pageNum, pageSize, receiverType, type }
   })
 }
 
-export const getSentMessagePage = (page: number, pageSize: number, receiverType?: number, type?: number) => {
+export const getSentMessagePage = (pageNum: number, pageSize: number, receiverType?: number, type?: number) => {
   return request({
     url: '/api/admin/message/sent',
     method: 'get',
-    params: { page, pageSize, receiverType, type }
+    params: { pageNum, pageSize, receiverType, type }
   })
 }
 
@@ -264,11 +264,11 @@ export const getMessageStatistics = () => {
 }
 
 // ========================= 评价管理 =========================
-export const getReviewPage = (page: number, pageSize: number, rating?: number) => {
+export const getReviewPage = (pageNum: number, pageSize: number, rating?: number) => {
   return request({
     url: '/api/admin/review/page',
     method: 'get',
-    params: { page, pageSize, rating }
+    params: { pageNum, pageSize, rating }
   })
 }
 
@@ -295,7 +295,7 @@ export const getReviewStatistics = () => {
 
 // ========================= 审批管理 =========================
 export const getApprovalPage = (
-  page: number,
+  pageNum: number,
   pageSize: number,
   type?: string,
   status?: string,
@@ -306,7 +306,7 @@ export const getApprovalPage = (
   return request({
     url: '/api/admin/approval/page',
     method: 'get',
-    params: { page, pageSize, type, status, keyword, startDate, endDate }
+    params: { pageNum, pageSize, type, status, keyword, startDate, endDate }
   })
 }
 
@@ -335,7 +335,7 @@ export const rejectApplication = (id: number, remark: string) => {
 
 // ========================= 服务套餐管理 =========================
 export const getServicePackagePage = (
-  page: number,
+  pageNum: number,
   pageSize: number,
   type?: number,
   status?: number,
@@ -344,7 +344,7 @@ export const getServicePackagePage = (
   return request({
     url: '/api/admin/service-package/page',
     method: 'get',
-    params: { page, pageSize, type, status, keyword }
+    params: { pageNum, pageSize, type, status, keyword }
   })
 }
 

@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-export function getMyOrderList(params: { page: number; pageSize: number; status?: number; orderNo?: string }) {
+export function getMyOrderList(params: { pageNum: number; pageSize: number; status?: number; orderNo?: string }) {
   return request({
     url: '/api/user/order/list',
     method: 'get',

@@ -151,7 +151,7 @@ const getServiceTypeTag = (type: number) => {
 const checkInProgressService = async () => {
   try {
     const res = await getVolunteerOrderList({
-      page: 1,
+      pageNum: 1,
       pageSize: 1
     })
     if (res.code === 200) {
@@ -174,7 +174,7 @@ const loadAvailableServices = async () => {
   loading.value = true
   try {
     const res = await getAvailableOrderList({
-      page: currentPage.value,
+      pageNum: currentPage.value,
       pageSize: pageSize.value
     })
     if (res.code === 200) {

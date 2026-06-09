@@ -2,25 +2,28 @@ package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.LoginDTO;
+import com.me.dto.PageResultDTO;
 import com.me.dto.UserRegisterDTO;
+import com.me.entity.Approval;
 import com.me.entity.Volunteer;
+import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
 @Service
+@RequiredArgsConstructor
 public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer> implements VolunteerService {
 
     private final PasswordEncoder passwordEncoder;
-
-    public VolunteerServiceImpl(PasswordEncoder passwordEncoder) {
-        this.passwordEncoder = passwordEncoder;
-    }
+    private final ApprovalMapper approvalMapper;
 
     @Override
     public Volunteer login(LoginDTO loginDTO) {
@@ -48,13 +51,12 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     }
 
     @Override
-    public Page<Volunteer> searchVolunteer(
-            Integer page,
-            Integer pageSize,
+    public IPage<Volunteer> searchVolunteer(
             String username,
-            Long id
+            Long id,
+            PageResultDTO pageResultDTO
     ) {
-        Page<Volunteer> pageParam = new Page<>(page, pageSize);
+        Page<Volunteer> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
 
         if (username != null && !username.trim().isEmpty()) {
@@ -98,6 +100,21 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         volunteer.setAvatar("http://localhost:8080/uploads/default-volunteer-avatar.png"); // 设置默认头像
         
         // 保存到数据库
-        return this.save(volunteer);
+        boolean saved = this.save(volunteer);
+        
+        if (saved) {
+            // 创建审批记录
+            Approval approval = new Approval();
+            approval.setType("register");
+            approval.setApplicantId(volunteer.getId());
+            approval.setApplicantName(volunteer.getRealName());
+            approval.setContent("志愿者注册申请");
+            approval.setStatus("pending");
+            approval.setCreateTime(LocalDateTime.now());
+            
+            approvalMapper.insert(approval);
+        }
+        
+        return saved;
     }
 }

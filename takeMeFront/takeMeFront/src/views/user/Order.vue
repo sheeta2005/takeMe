@@ -196,7 +196,7 @@ const loadOrders = async () => {
   loading.value = true
   try {
     const res = await getMyOrderList({
-      page: currentPage.value,
+      pageNum: currentPage.value,
       pageSize: pageSize.value,
       status: filterStatus.value,
       orderNo: searchOrderNo.value || undefined

@@ -179,7 +179,7 @@ const loadMyServices = async () => {
   loading.value = true
   try {
     const res = await getVolunteerOrderList({
-      page: 1,
+      pageNum: 1,
       pageSize: 50
     })
     if (res.code === 200) {

@@ -1,7 +1,8 @@
 package com.me.service;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.LoginDTO;
+import com.me.dto.PageResultDTO;
 import com.me.dto.UserRegisterDTO;
 import com.me.entity.Volunteer;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -21,19 +22,10 @@ public interface VolunteerService extends IService<Volunteer> {
      */
     Volunteer getByUsername(String username);
 
-    /**
-     * 分页搜索志愿者
-     * @param page 页码
-     * @param pageSize 每页数量
-     * @param username 用户名
-     * @param id ID
-     * @return 分页结果
-     */
-    Page<Volunteer> searchVolunteer(
-            Integer page,
-            Integer pageSize,
+    IPage<Volunteer> searchVolunteer(
             String username,
-            Long id
+            Long id,
+            PageResultDTO pageResultDTO
     );
     
     /**

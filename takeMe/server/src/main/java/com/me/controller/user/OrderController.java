@@ -1,12 +1,14 @@
 package com.me.controller.user;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.me.dto.PageResultDTO;
 import com.me.result.Result;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
 import com.me.service.OrderService;
 import com.me.utils.JwtUtil;
 import com.me.vo.OrderVO;
+import com.me.vo.PageResultVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -23,16 +25,21 @@ public class OrderController {
 
     // ===================== 订单列表 =====================
     @GetMapping("/list")
-    public Result<Page<OrderVO>> list(
+    public Result<PageResultVO<OrderVO>> list(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String orderNo
     ) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
-        Page<OrderVO> pageResult = orderService.getMyOrderList(userId, page, pageSize, status, orderNo);
-        return Result.success(pageResult);
+        PageResultDTO pageResultDTO = new PageResultDTO();
+        pageResultDTO.setPageNum(pageNum);
+        pageResultDTO.setPageSize(pageSize);
+
+        IPage<OrderVO> iPage = orderService.getMyOrderList(userId, status, orderNo, pageResultDTO);
+        PageResultVO<OrderVO> result = PageResultVO.from(iPage);
+        return Result.success(result);
     }
 
     // ===================== 订单详情 =====================

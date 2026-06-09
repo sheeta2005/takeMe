@@ -7,11 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Approval;
 import com.me.entity.Message;
-import com.me.entity.Volunteer;
-import com.me.entity.VolunteerLeave;
 import com.me.mapper.ApprovalMapper;
-import com.me.mapper.VolunteerLeaveMapper;
-import com.me.mapper.VolunteerMapper;
 import com.me.service.ApprovalService;
 import com.me.service.MessageService;
 import java.time.LocalDateTime;
@@ -23,8 +19,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> implements ApprovalService {
 
-    private final VolunteerLeaveMapper volunteerLeaveMapper;
-    private final VolunteerMapper volunteerMapper;
     private final MessageService messageService;
 
     @Override
@@ -82,10 +76,8 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
 
         switch (type) {
             case "leave":
-                handleLeaveApproved(approval);
                 break;
             case "service_days_change":
-                handleServiceDaysChangeApproved(approval);
                 break;
             default:
                 break;
@@ -132,32 +124,6 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         return success;
     }
 
-    private void handleLeaveApproved(Approval approval) {
-        VolunteerLeave leave = volunteerLeaveMapper.selectById(approval.getRelatedId());
-        if (leave == null) {
-            return;
-        }
-
-        Volunteer volunteer = volunteerMapper.selectById(leave.getVolunteerId());
-        if (volunteer != null) {
-            volunteer.setAvailableServiceDays(volunteer.getAvailableServiceDays() - leave.getDays());
-            volunteerMapper.updateById(volunteer);
-        }
-    }
-
-    private void handleServiceDaysChangeApproved(Approval approval) {
-        String newDaysStr = approval.getContent();
-        try {
-            Integer newDays = Integer.parseInt(newDaysStr);
-            Volunteer volunteer = volunteerMapper.selectById(approval.getRelatedId());
-            if (volunteer != null) {
-                volunteer.setAvailableServiceDays(newDays);
-                volunteerMapper.updateById(volunteer);
-            }
-        } catch (NumberFormatException e) {
-            // ignore
-        }
-    }
 
     private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
                             String title, String content, Long relatedOrderId) {

@@ -22,8 +22,7 @@
         <!-- MyBatis-Plus 核心依赖，提供 @TableName 等注解 -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.5.5</version>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>

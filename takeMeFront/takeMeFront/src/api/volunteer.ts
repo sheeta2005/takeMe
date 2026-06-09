@@ -190,7 +190,7 @@ export function getStudyDetail(id: number) {
   })
 }
 
-export function getVolunteerOrderList(params: { page: number; pageSize: number; status?: number }) {
+export function getVolunteerOrderList(params: { pageNum: number; pageSize: number; status?: number }) {
   return request({
     url: '/api/volunteer/order/list',
     method: 'get',
@@ -198,7 +198,7 @@ export function getVolunteerOrderList(params: { page: number; pageSize: number; 
   })
 }
 
-export function getAvailableOrderList(params: { page: number; pageSize: number }) {
+export function getAvailableOrderList(params: { pageNum: number; pageSize: number }) {
   return request({
     url: '/api/volunteer/order/available',
     method: 'get',

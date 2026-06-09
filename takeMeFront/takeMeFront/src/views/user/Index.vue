@@ -211,7 +211,7 @@ onMounted(async () => {
 
   try {
     // 获取订单总数
-    const orderRes = await getMyOrderList({ page: 1, pageSize: 1 })
+    const orderRes = await getMyOrderList({ pageNum: 1, pageSize: 1 })
     if (orderRes.data) {
       orderCount.value = orderRes.data.total || 0
     }
@@ -445,4 +445,3 @@ onMounted(async () => {
   padding: 20px 0;
 }
 </style>
-`

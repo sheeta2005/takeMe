@@ -163,7 +163,7 @@ const loadRecords = async () => {
   loading.value = true
   try {
     const res = await getVolunteerOrderList({
-      page: currentPage.value,
+      pageNum: currentPage.value,
       pageSize: pageSize.value,
       status: 3
     })
