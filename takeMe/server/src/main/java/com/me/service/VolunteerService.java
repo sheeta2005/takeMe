@@ -34,4 +34,11 @@ public interface VolunteerService extends IService<Volunteer> {
      * @return 注册是否成功
      */
     boolean register(UserRegisterDTO registerDTO);
+    
+    /**
+     * 释放志愿者所有进行中的服务（itemStatus=1或2）
+     * @param volunteerId 志愿者ID
+     * @return 释放的服务数量
+     */
+    int releaseVolunteerServices(Long volunteerId);
 }

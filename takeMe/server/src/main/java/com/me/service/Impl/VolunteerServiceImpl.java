@@ -8,8 +8,10 @@ import com.me.dto.LoginDTO;
 import com.me.dto.PageResultDTO;
 import com.me.dto.UserRegisterDTO;
 import com.me.entity.Approval;
+import com.me.entity.OrderItem;
 import com.me.entity.Volunteer;
 import com.me.mapper.ApprovalMapper;
+import com.me.mapper.OrderItemMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
 
     private final PasswordEncoder passwordEncoder;
     private final ApprovalMapper approvalMapper;
+    private final OrderItemMapper orderItemMapper;
 
     @Override
     public Volunteer login(LoginDTO loginDTO) {
@@ -116,5 +121,34 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         }
         
         return saved;
+    }
+    
+    @Override
+    public int releaseVolunteerServices(Long volunteerId) {
+        if (volunteerId == null) {
+            return 0;
+        }
+        
+        // 查询该志愿者所有 itemStatus=1（已接单）或 2（服务中）的订单项
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderItem::getVolunteerId, volunteerId)
+               .in(OrderItem::getItemStatus, Arrays.asList(1, 2));
+        
+        List<OrderItem> items = orderItemMapper.selectList(wrapper);
+        
+        if (items == null || items.isEmpty()) {
+            return 0;
+        }
+        
+        int count = 0;
+        for (OrderItem item : items) {
+            // 清空志愿者ID，设置为已放弃状态
+            item.setVolunteerId(null);
+            item.setItemStatus( 5); // 5=已放弃
+            orderItemMapper.updateById(item);
+            count++;
+        }
+        
+        return count;
     }
 }

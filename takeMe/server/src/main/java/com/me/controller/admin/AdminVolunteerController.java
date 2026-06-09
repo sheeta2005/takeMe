@@ -106,4 +106,35 @@ public class AdminVolunteerController {
         }
         return Result.success();
     }
+    
+    @PostMapping("/disable/{id}")
+    public Result<Void> disableVolunteer(@PathVariable Long id) {
+        Volunteer volunteer = volunteerService.getById(id);
+        if (volunteer == null) {
+            return Result.error("志愿者不存在");
+        }
+        
+        // 设置状态为禁用
+        volunteer.setStatus(0);
+        volunteerService.updateById(volunteer);
+        
+        // 释放该志愿者所有进行中的服务
+        int releasedCount = volunteerService.releaseVolunteerServices(id);
+        
+        return Result.success();
+    }
+    
+    @PostMapping("/enable/{id}")
+    public Result<Void> enableVolunteer(@PathVariable Long id) {
+        Volunteer volunteer = volunteerService.getById(id);
+        if (volunteer == null) {
+            return Result.error("志愿者不存在");
+        }
+        
+        // 设置状态为启用
+        volunteer.setStatus(1);
+        volunteerService.updateById(volunteer);
+        
+        return Result.success();
+    }
 }
