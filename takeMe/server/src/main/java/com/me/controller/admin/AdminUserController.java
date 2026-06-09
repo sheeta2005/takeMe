@@ -26,7 +26,7 @@ public class AdminUserController {
         pageResultDTO.setPageNum(pageNum);
         pageResultDTO.setPageSize(pageSize);
         
-        IPage<User> iPage = userService.searchUser(null, null, null, null, pageResultDTO);
+        IPage<User> iPage = userService.searchUser(null, null, null, null, null, pageResultDTO);
         iPage.getRecords().forEach(u -> u.setPassword(null));
         
         PageResultVO<User> result = PageResultVO.from(iPage);

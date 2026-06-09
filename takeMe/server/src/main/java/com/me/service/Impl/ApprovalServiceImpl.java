@@ -12,10 +12,10 @@ import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerLeaveMapper;
 import com.me.service.ApprovalService;
 import com.me.service.MessageService;
-import java.time.LocalDateTime;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -104,7 +104,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         if (success) {
             String title = "申请已通过";
             String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
-            sendMessage(approval.getApplicantId(), 1, 0, 
+            sendMessage(approval.getApplicantId(), 1, 0,
                     title, String.format("您的%s申请已通过审批", typeText), approval.getId());
         }
 
@@ -128,7 +128,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         boolean success = this.updateById(approval);
 
         if (success) {
-            if ("leave".equals(type)) {
+            if ("leave".equals(approval.getType())) {
                 LambdaQueryWrapper<VolunteerLeave> leaveWrapper = new LambdaQueryWrapper<>();
                 leaveWrapper.eq(VolunteerLeave::getVolunteerId, approval.getApplicantId())
                         .eq(VolunteerLeave::getStatus, 0)
@@ -143,7 +143,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
 
             String title = "申请被拒绝";
             String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
-            sendMessage(approval.getApplicantId(), 1, 0, 
+            sendMessage(approval.getApplicantId(), 1, 0,
                     title, String.format("您的%s申请被拒绝，原因：%s", typeText, remark), approval.getId());
         }
 
@@ -151,8 +151,8 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
     }
 
 
-    private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
-                            String title, String content, Long relatedOrderId) {
+    private void sendMessage(Long receiverId, Integer receiverType, Integer type,
+                             String title, String content, Long relatedOrderId) {
         Message message = new Message();
         message.setReceiverId(receiverId);
         message.setReceiverType(receiverType);
