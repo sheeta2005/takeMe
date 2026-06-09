@@ -5,116 +5,175 @@
       <p class="page-subtitle">浏览并接取可提供的服务项目</p>
     </div>
 
-    <el-skeleton :rows="3" animated v-if="loading" />
+    <el-alert
+      v-if="volunteerStore.status === 0"
+      title="账号异常"
+      description="您的账号已被禁用，无法接取服务或查看待办操作。如有疑问请联系管理员。"
+      type="error"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 24px"
+    />
 
-    <template v-else>
-      <el-alert
-        v-if="hasInProgressService"
-        title="您有正在进行中的服务，请先完成当前服务后再接取新服务"
-        type="warning"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 24px"
-      />
+    <el-alert
+      v-if="volunteerStore.status === 1 && volunteerStore.workStatus === 0"
+      title="请好好休息"
+      description="您当前处于休息状态，请休息后再接取服务。"
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 24px"
+    />
 
-      <el-empty v-if="availableServices.length === 0 && !hasInProgressService" description="暂无可接取的服务" :image-size="200">
-        <el-button type="primary" @click="refreshData">
-          <el-icon><Refresh /></el-icon>
-          刷新
-        </el-button>
-      </el-empty>
+    <template v-if="volunteerStore.status === 1 && volunteerStore.workStatus !== 0">
+      <el-card class="filter-card" shadow="hover" style="margin-bottom: 24px;">
+        <el-form :inline="true" class="filter-form">
+          <el-form-item label="服务类型">
+            <el-select v-model="filterServiceType" placeholder="全部" clearable style="width: 140px" @change="applyFilter">
+              <el-option label="全部" :value="undefined" />
+              <el-option label="代购服务" :value="0" />
+              <el-option label="助洁服务" :value="1" />
+              <el-option label="助餐服务" :value="2" />
+              <el-option label="助医服务" :value="3" />
+              <el-option label="陪伴服务" :value="4" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="服务ID">
+            <el-input
+              v-model="filterServiceId"
+              placeholder="服务项目ID"
+              clearable
+              style="width: 140px"
+              @keyup.enter="applyFilter"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="applyFilter">
+              <el-icon><Search /></el-icon>
+              搜索
+            </el-button>
+            <el-button @click="resetFilter">
+              <el-icon><Refresh /></el-icon>
+              重置
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
 
-      <template v-else-if="!hasInProgressService">
-        <div class="service-grid">
-          <el-card
-            v-for="service in availableServices"
-            :key="service.id"
-            class="service-card"
-            shadow="hover"
-          >
-            <div class="service-card-header">
-              <div class="order-info">
-                <span class="order-label">订单编号</span>
-                <span class="order-no">{{ service.orderNo }}</span>
+      <el-skeleton :rows="3" animated v-if="loading"/>
+
+      <template v-else>
+        <el-alert
+          v-if="hasInProgressService"
+          title="您有正在进行中的服务，请先完成当前服务后再接取新服务"
+          type="warning"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 24px"
+        />
+
+        <el-empty v-if="filteredServices.length === 0 && !hasInProgressService"
+                  description="暂无可接取的服务" :image-size="200">
+          <el-button type="primary" @click="refreshData">
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
+        </el-empty>
+
+        <template v-else-if="!hasInProgressService">
+          <div class="service-grid">
+            <el-card
+              v-for="service in filteredServices"
+              :key="service.id"
+              class="service-card"
+              shadow="hover"
+            >
+              <div class="service-card-header">
+                <div class="order-info">
+                  <span class="order-label">订单编号</span>
+                  <span class="order-no">{{ service.orderNo }}</span>
+                </div>
+                <el-tag type="info" size="large">
+                  <el-icon><Bell/></el-icon>
+                  待接取
+                </el-tag>
               </div>
-              <el-tag type="info" size="large">
-                <el-icon><Bell /></el-icon>
-                待接取
-              </el-tag>
-            </div>
 
-            <el-divider />
+              <el-divider/>
 
-            <div class="service-card-body">
-              <div class="info-item">
-                <el-icon class="info-icon"><Ticket /></el-icon>
-                <span class="info-label">服务项目：</span>
-                <div class="service-detail">
-                  <el-tag :type="getServiceTypeTag(service.serviceType)" size="small">
-                    {{ getServiceTypeName(service.serviceType) }}
-                  </el-tag>
-                  <span class="service-name">{{ service.serviceName }}</span>
-                  <span class="service-quantity">×{{ service.quantity }}</span>
+              <div class="service-card-body">
+                <div class="info-item">
+                  <el-icon class="info-icon"><Ticket/></el-icon>
+                  <span class="info-label">服务项目：</span>
+                  <div class="service-detail">
+                    <el-tag :type="getServiceTypeTag(service.serviceType)" size="small">
+                      {{ getServiceTypeName(service.serviceType) }}
+                    </el-tag>
+                    <span class="service-name">{{ service.serviceName }}</span>
+                    <span class="service-quantity">×{{ service.quantity }}</span>
+                  </div>
+                </div>
+
+                <div class="info-item">
+                  <el-icon class="info-icon"><Calendar/></el-icon>
+                  <span class="info-label">服务时间：</span>
+                  <span class="info-value">{{ service.serviceDate }} {{ service.serviceTime }}</span>
+                </div>
+
+                <div class="info-item">
+                  <el-icon class="info-icon"><Location/></el-icon>
+                  <span class="info-label">服务地址：</span>
+                  <span class="info-value">{{ service.address }}</span>
+                </div>
+
+                <div class="info-item" v-if="service.remark">
+                  <el-icon class="info-icon"><Document/></el-icon>
+                  <span class="info-label">备注：</span>
+                  <span class="info-value">{{ service.remark }}</span>
                 </div>
               </div>
 
-              <div class="info-item">
-                <el-icon class="info-icon"><Calendar /></el-icon>
-                <span class="info-label">服务时间：</span>
-                <span class="info-value">{{ service.serviceDate }} {{ service.serviceTime }}</span>
+              <div class="service-card-footer">
+                <div class="price-info">
+                  <span class="price-label">服务金额：</span>
+                  <span class="price-value">¥{{ service.itemPrice }}</span>
+                </div>
+                <div class="action-buttons">
+                  <el-button type="primary" size="large" @click="acceptService(service)">
+                    <el-icon><Check/></el-icon>
+                    确认接取
+                  </el-button>
+                </div>
               </div>
+            </el-card>
+          </div>
 
-              <div class="info-item">
-                <el-icon class="info-icon"><Location /></el-icon>
-                <span class="info-label">服务地址：</span>
-                <span class="info-value">{{ service.address }}</span>
-              </div>
-
-              <div class="info-item" v-if="service.remark">
-                <el-icon class="info-icon"><Document /></el-icon>
-                <span class="info-label">备注：</span>
-                <span class="info-value">{{ service.remark }}</span>
-              </div>
-            </div>
-
-            <div class="service-card-footer">
-              <div class="price-info">
-                <span class="price-label">服务金额：</span>
-                <span class="price-value">¥{{ service.itemPrice }}</span>
-              </div>
-              <div class="action-buttons">
-                <el-button type="primary" size="large" @click="acceptService(service)">
-                  <el-icon><Check /></el-icon>
-                  确认接取
-                </el-button>
-              </div>
-            </div>
-          </el-card>
-        </div>
-
-        <div class="pagination-wrapper" v-if="total > 0">
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 30, 50]"
-            :total="total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handlePageChange"
-            background
-          />
-        </div>
+          <div class="pagination-wrapper" v-if="total > 0">
+            <el-pagination
+              v-model:current-page="currentPage"
+              v-model:page-size="pageSize"
+              :page-sizes="[10, 20, 30, 50]"
+              :total="total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleSizeChange"
+              @current-change="handlePageChange"
+              background
+            />
+          </div>
+        </template>
       </template>
     </template>
+
+    <el-empty v-if="volunteerStore.status === 0 || (volunteerStore.status === 1 && volunteerStore.workStatus === 0)" description="暂不可用" :image-size="200" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Bell, Ticket, Calendar, Location, Document, Check } from '@element-plus/icons-vue'
-import { getAvailableOrderList, confirmOrder, getVolunteerOrderList } from '@/api/volunteer'
-import { useVolunteerStore } from '@/stores/volunteer'
+import {computed, onMounted, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Bell, Calendar, Check, Document, Location, Refresh, Search, Ticket} from '@element-plus/icons-vue'
+import {confirmOrder, getAvailableOrderList, getVolunteerOrderList} from '@/api/volunteer'
+import {useVolunteerStore} from '@/stores/volunteer'
 
 const volunteerStore = useVolunteerStore()
 const loading = ref(true)
@@ -123,6 +182,30 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const hasInProgressService = ref(false)
+
+const filterServiceType = ref<number | undefined>(undefined)
+const filterServiceId = ref<string>('')
+
+const filteredServices = computed(() => {
+  let list = availableServices.value
+  if (filterServiceType.value !== undefined) {
+    list = list.filter(s => s.serviceType === filterServiceType.value)
+  }
+  if (filterServiceId.value.trim() !== '') {
+    const idNum = Number(filterServiceId.value.trim())
+    list = list.filter(s => s.serviceId === idNum || s.id === idNum)
+  }
+  return list
+})
+
+const applyFilter = () => {
+  // filteredServices is computed, auto-updates
+}
+
+const resetFilter = () => {
+  filterServiceType.value = undefined
+  filterServiceId.value = ''
+}
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',
@@ -218,6 +301,14 @@ const handlePageChange = (page: number) => {
 }
 
 const acceptService = async (service: any) => {
+  if (volunteerStore.status === 0) {
+    ElMessage.error('账号异常，无法接取服务')
+    return
+  }
+  if (volunteerStore.workStatus === 0) {
+    ElMessage.warning('请好好休息，休息后再接取服务')
+    return
+  }
   if (hasInProgressService.value) {
     ElMessage.warning('您有正在进行中的服务，请先完成当前服务后再接取新服务')
     return
@@ -246,8 +337,13 @@ const acceptService = async (service: any) => {
 }
 
 onMounted(async () => {
-  await checkInProgressService()
-  await loadAvailableServices()
+  await volunteerStore.fetchVolunteerInfo()
+  if (volunteerStore.status === 1 && volunteerStore.workStatus !== 0) {
+    await checkInProgressService()
+    await loadAvailableServices()
+  } else {
+    loading.value = false
+  }
 })
 </script>
 
@@ -274,6 +370,15 @@ onMounted(async () => {
   font-size: 16px;
   color: #666;
   margin: 0;
+}
+
+.filter-card {
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
+}
+
+.filter-form {
+  margin-bottom: 0;
 }
 
 .service-grid {

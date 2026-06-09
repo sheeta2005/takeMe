@@ -258,7 +258,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { getDashboardData, getOrderTrend7d, getServiceTypeDist } from '@/api/admin'
+import { getDashboardData, getOrderTrend7d, getServiceTypeDist, searchOrder } from '@/api/admin'
 import { useAdminStore } from '@/stores/admin'
 import defaultAvatar from '@/assets/default-avatar.png'
 import {
@@ -270,7 +270,7 @@ import {
 const router = useRouter()
 const adminStore = useAdminStore()
 
-const pendingCount = ref(12)
+const pendingCount = ref(0)
 const trendPeriod = ref('week')
 const recentOrders = ref<any[]>([])
 
@@ -437,13 +437,12 @@ onMounted(async () => {
   try {
     const res = await getDashboardData()
     dashboardData.value = res.data
+    pendingCount.value = res.data.activeOrders || 0
 
-    // 模拟最近订单数据
-    recentOrders.value = [
-      { orderNo: 'ORD202501010001', status: 1, totalAmount: 150.00, createTime: new Date().toISOString() },
-      { orderNo: 'ORD202501010002', status: 0, totalAmount: 200.00, createTime: new Date(Date.now() - 3600000).toISOString() },
-      { orderNo: 'ORD202501010003', status: 2, totalAmount: 180.00, createTime: new Date(Date.now() - 7200000).toISOString() },
-    ]
+    const orderRes = await searchOrder(1, 5)
+    if (orderRes.data) {
+      recentOrders.value = orderRes.data.records || []
+    }
   } catch (err) {
     console.error('获取工作台数据失败', err)
   }

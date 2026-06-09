@@ -15,6 +15,15 @@
 
     <el-card class="filter-card" shadow="hover">
       <el-form :inline="true" class="filter-form">
+        <el-form-item label="ID">
+          <el-input
+            v-model="filterId"
+            placeholder="志愿者ID"
+            clearable
+            style="width: 120px"
+            @keyup.enter="fetchVolunteers"
+          />
+        </el-form-item>
         <el-form-item label="关键词">
           <el-input
             v-model="filterKeyword"
@@ -144,6 +153,7 @@ import { searchVolunteer, addVolunteer, deleteVolunteer, updateVolunteerStatus }
 
 const router = useRouter()
 const loading = ref(false)
+const filterId = ref<number | undefined>(undefined)
 const filterKeyword = ref('')
 
 const currentPage = ref(1)
@@ -170,7 +180,8 @@ const fetchVolunteers = async () => {
     const res = await searchVolunteer(
       currentPage.value,
       pageSize.value,
-      filterKeyword.value || undefined
+      filterKeyword.value || undefined,
+      filterId.value
     )
     volunteerList.value = res.data.records || []
     total.value = res.data.total || 0
@@ -183,6 +194,7 @@ const fetchVolunteers = async () => {
 }
 
 const resetFilter = () => {
+  filterId.value = undefined
   filterKeyword.value = ''
   currentPage.value = 1
   fetchVolunteers()

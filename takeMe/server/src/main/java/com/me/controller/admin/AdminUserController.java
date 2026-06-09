@@ -39,6 +39,7 @@ public class AdminUserController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer gender,
+            @RequestParam(required = false) Long id,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
@@ -46,7 +47,7 @@ public class AdminUserController {
         pageResultDTO.setPageNum(pageNum);
         pageResultDTO.setPageSize(pageSize);
         
-        IPage<User> iPage = userService.searchUser(keyword, gender, startDate, endDate, pageResultDTO);
+        IPage<User> iPage = userService.searchUser(keyword, gender, id, startDate, endDate, pageResultDTO);
         iPage.getRecords().forEach(u -> u.setPassword(null));
         
         PageResultVO<User> result = PageResultVO.from(iPage);

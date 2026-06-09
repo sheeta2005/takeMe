@@ -164,6 +164,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useVolunteerStore } from '@/stores/volunteer'
+import { getVolunteerOrderList, getPointsSummary } from '@/api/volunteer'
 import * as echarts from 'echarts'
 import {
   UserFilled, Clock, Document, CircleCheck, Coin, Star,
@@ -179,15 +180,42 @@ const serviceChart = ref<HTMLDivElement | null>(null)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
 const volunteerData = ref({
-  totalOrders: 45,
-  completedOrders: 42,
-  points: 1250,
-  rating: 4.9
+  totalOrders: 0,
+  completedOrders: 0,
+  points: 0,
+  rating: '0.0'
 })
 
-onMounted(() => {
+onMounted(async () => {
   userName.value = volunteerStore.realName || '尊敬的志愿者'
-  serviceHours.value = volunteerStore.totalServiceHours || 120
+  serviceHours.value = volunteerStore.totalServiceHours || 0
+
+  try {
+    const orderRes = await getVolunteerOrderList({ pageNum: 1, pageSize: 1 })
+    if (orderRes.data) {
+      volunteerData.value.totalOrders = orderRes.data.total || 0
+    }
+  } catch (e) {
+    console.error('获取订单总数失败', e)
+  }
+
+  try {
+    const completedRes = await getVolunteerOrderList({ pageNum: 1, pageSize: 1, status: 4 })
+    if (completedRes.data) {
+      volunteerData.value.completedOrders = completedRes.data.total || 0
+    }
+  } catch (e) {
+    console.error('获取已完成订单数失败', e)
+  }
+
+  try {
+    const pointsRes = await getPointsSummary()
+    if (pointsRes.data) {
+      volunteerData.value.points = pointsRes.data.totalPoints || 0
+    }
+  } catch (e) {
+    console.error('获取积分失败', e)
+  }
 
   initChart()
 })
@@ -199,46 +227,62 @@ const newsList = ref([
   { title: '代购服务：请核对药品/生活用品清单，确保无遗漏', date: '2025-01-04' },
 ])
 
-const initChart = () => {
+const initChart = async () => {
   if (!serviceChart.value) return
 
-  const chart = echarts.init(serviceChart.value)
-  chart.setOption({
-    tooltip: { trigger: 'item' },
-    legend: {
-      orient: 'vertical',
-      right: 10,
-      top: 'center',
-      textStyle: { color: '#64748b' }
-    },
-    series: [{
-      name: '服务类型',
-      type: 'pie',
-      radius: ['50%', '70%'],
-      center: ['40%', '50%'],
-      avoidLabelOverlap: false,
-      itemStyle: {
-        borderRadius: 10,
-        borderColor: '#fff',
-        borderWidth: 2
+  try {
+    const res = await getVolunteerOrderList({ pageNum: 1, pageSize: 100 })
+    const typeCounts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 }
+    if (res.data?.records) {
+      res.data.records.forEach((order: any) => {
+        order.items?.forEach((item: any) => {
+          if (typeCounts[item.serviceType] !== undefined) {
+            typeCounts[item.serviceType]++
+          }
+        })
+      })
+    }
+
+    const chart = echarts.init(serviceChart.value)
+    chart.setOption({
+      tooltip: { trigger: 'item' },
+      legend: {
+        orient: 'vertical',
+        right: 10,
+        top: 'center',
+        textStyle: { color: '#64748b' }
       },
-      label: { show: false },
-      emphasis: {
-        label: {
-          show: true,
-          fontSize: 16,
-          fontWeight: 'bold'
-        }
-      },
-      data: [
-        { value: 15, name: '助餐服务', itemStyle: { color: '#f59e0b' } },
-        { value: 12, name: '助洁服务', itemStyle: { color: '#3b82f6' } },
-        { value: 8, name: '助医服务', itemStyle: { color: '#10b981' } },
-        { value: 6, name: '代购服务', itemStyle: { color: '#8b5cf6' } },
-        { value: 4, name: '陪伴服务', itemStyle: { color: '#ef4444' } }
-      ]
-    }]
-  })
+      series: [{
+        name: '服务类型',
+        type: 'pie',
+        radius: ['50%', '70%'],
+        center: ['40%', '50%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: { show: false },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 16,
+            fontWeight: 'bold'
+          }
+        },
+        data: [
+          { value: typeCounts[2], name: '助餐服务', itemStyle: { color: '#f59e0b' } },
+          { value: typeCounts[1], name: '助洁服务', itemStyle: { color: '#3b82f6' } },
+          { value: typeCounts[3], name: '助医服务', itemStyle: { color: '#10b981' } },
+          { value: typeCounts[0], name: '代购服务', itemStyle: { color: '#8b5cf6' } },
+          { value: typeCounts[4], name: '陪伴服务', itemStyle: { color: '#ef4444' } }
+        ]
+      }]
+    })
+  } catch (e) {
+    console.error('加载图表数据失败', e)
+  }
 }
 </script>
 

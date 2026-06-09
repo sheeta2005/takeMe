@@ -17,6 +17,7 @@ public interface UserService extends IService<User> {
     IPage<User> searchUser(
             String keyword,
             Integer gender,
+            Long id,
             String startDate,
             String endDate,
             PageResultDTO pageResultDTO

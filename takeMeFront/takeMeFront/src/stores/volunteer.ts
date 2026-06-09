@@ -65,7 +65,7 @@ export const useVolunteerStore = defineStore('volunteer', {
 
 
     workStatusText: (state) => {
-      const statusMap = ['空闲', '服务中', '请假中']
+      const statusMap = ['休息中', '待命中', '服务中']
       return statusMap[state.workStatus] || '未知'
     }
   },
@@ -109,7 +109,7 @@ export const useVolunteerStore = defineStore('volunteer', {
 
     async uploadAvatar(file: File) {
       try {
-        const res = await uploadVolunteerAvatar(file)
+        const res = await uploadAvatar(file)
         if (res.code === 200 && res.data?.url) {
           this.avatar = res.data.url
           ElMessage.success('头像上传成功')

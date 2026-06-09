@@ -168,13 +168,14 @@ export const searchUser = (
   pageSize: number,
   keyword?: string,
   gender?: number,
+  id?: number,
   startDate?: string,
   endDate?: string
 ) => {
   return request({
     url: '/api/admin/user/search',
     method: 'get',
-    params: { pageNum, pageSize, keyword, gender, startDate, endDate }
+    params: { pageNum, pageSize, keyword, gender, id, startDate, endDate }
   })
 }
 

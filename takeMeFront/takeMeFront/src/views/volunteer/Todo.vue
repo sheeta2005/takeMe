@@ -5,104 +5,128 @@
       <p class="page-subtitle">查看和管理您已接取的服务</p>
     </div>
 
-    <el-skeleton :rows="3" animated v-if="loading" />
+    <el-alert
+      v-if="volunteerStore.status === 0"
+      title="账号异常"
+      description="您的账号已被禁用，无法查看待办操作。如有疑问请联系管理员。"
+      type="error"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 24px"
+    />
 
-    <template v-else>
-      <el-empty v-if="myServices.length === 0" description="暂无待办服务" :image-size="200">
-        <el-button type="primary" @click="refreshData">
-          <el-icon><Refresh /></el-icon>
-          刷新
-        </el-button>
-      </el-empty>
+    <el-alert
+      v-if="volunteerStore.status === 1 && volunteerStore.workStatus === 0"
+      title="请好好休息"
+      description="您当前处于休息状态，请休息后再查看待办。"
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 24px"
+    />
+
+    <template v-if="volunteerStore.status === 1 && volunteerStore.workStatus !== 0">
+      <el-skeleton :rows="3" animated v-if="loading" />
 
       <template v-else>
-        <div class="service-list">
-          <el-card
-            v-for="service in myServices"
-            :key="service.id"
-            class="service-card"
-            shadow="hover"
-          >
-            <div class="service-card-header">
-              <div class="order-info">
-                <span class="order-label">订单编号</span>
-                <span class="order-no">{{ service.orderNo }}</span>
-              </div>
-              <el-tag :type="getStatusType(service.itemStatus)" size="large" effect="dark">
-                {{ getStatusText(service.itemStatus) }}
-              </el-tag>
-            </div>
+        <el-empty v-if="myServices.length === 0" description="暂无待办服务" :image-size="200">
+          <el-button type="primary" @click="refreshData">
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
+        </el-empty>
 
-            <el-divider />
-
-            <div class="service-card-body">
-              <el-descriptions :column="1" border>
-                <el-descriptions-item label="服务项目">
-                  <div class="service-item-info">
-                    <el-tag :type="getServiceTypeTag(service.serviceType)">
-                      {{ getServiceTypeName(service.serviceType) }}
-                    </el-tag>
-                    <span class="service-name">{{ service.serviceName }}</span>
-                    <span class="service-detail">×{{ service.quantity }}</span>
-                  </div>
-                </el-descriptions-item>
-                <el-descriptions-item label="服务时间">
-                  <div class="time-info">
-                    <el-icon><Calendar /></el-icon>
-                    <span>{{ service.serviceDate }} {{ service.serviceTime }}</span>
-                  </div>
-                </el-descriptions-item>
-                <el-descriptions-item label="服务地址">
-                  <div class="address-info">
-                    <el-icon><Location /></el-icon>
-                    <span>{{ service.address }}</span>
-                  </div>
-                </el-descriptions-item>
-                <el-descriptions-item label="备注" v-if="service.remark">
-                  <el-alert :title="service.remark" type="info" :closable="false" show-icon />
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <div class="service-card-footer">
-              <div class="price-info">
-                <span class="price-label">服务金额：</span>
-                <span class="price-value">¥{{ service.itemPrice }}</span>
+        <template v-else>
+          <div class="service-list">
+            <el-card
+              v-for="service in myServices"
+              :key="service.id"
+              class="service-card"
+              shadow="hover"
+            >
+              <div class="service-card-header">
+                <div class="order-info">
+                  <span class="order-label">订单编号</span>
+                  <span class="order-no">{{ service.orderNo }}</span>
+                </div>
+                <el-tag :type="getStatusType(service.itemStatus)" size="large" effect="dark">
+                  {{ getStatusText(service.itemStatus) }}
+                </el-tag>
               </div>
-              <div class="action-buttons">
-                <el-button
-                  v-if="service.itemStatus === 1"
-                  type="success"
-                  size="large"
-                  @click="startService(service)"
-                >
-                  <el-icon><VideoPlay /></el-icon>
-                  开始服务
-                </el-button>
-                <el-button
-                  v-if="service.itemStatus === 2"
-                  type="primary"
-                  size="large"
-                  @click="completeService(service)"
-                >
-                  <el-icon><CircleCheck /></el-icon>
-                  完成服务
-                </el-button>
-                <el-button
-                  v-if="service.itemStatus === 1 || service.itemStatus === 2"
-                  type="danger"
-                  size="large"
-                  @click="abandonService(service)"
-                >
-                  <el-icon><CloseBold /></el-icon>
-                  放弃服务
-                </el-button>
+
+              <el-divider />
+
+              <div class="service-card-body">
+                <el-descriptions :column="1" border>
+                  <el-descriptions-item label="服务项目">
+                    <div class="service-item-info">
+                      <el-tag :type="getServiceTypeTag(service.serviceType)">
+                        {{ getServiceTypeName(service.serviceType) }}
+                      </el-tag>
+                      <span class="service-name">{{ service.serviceName }}</span>
+                      <span class="service-detail">×{{ service.quantity }}</span>
+                    </div>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="服务时间">
+                    <div class="time-info">
+                      <el-icon><Calendar /></el-icon>
+                      <span>{{ service.serviceDate }} {{ service.serviceTime }}</span>
+                    </div>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="服务地址">
+                    <div class="address-info">
+                      <el-icon><Location /></el-icon>
+                      <span>{{ service.address }}</span>
+                    </div>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="备注" v-if="service.remark">
+                    <el-alert :title="service.remark" type="info" :closable="false" show-icon />
+                  </el-descriptions-item>
+                </el-descriptions>
               </div>
-            </div>
-          </el-card>
-        </div>
+
+              <div class="service-card-footer">
+                <div class="price-info">
+                  <span class="price-label">服务金额：</span>
+                  <span class="price-value">¥{{ service.itemPrice }}</span>
+                </div>
+                <div class="action-buttons">
+                  <el-button
+                    v-if="service.itemStatus === 1"
+                    type="success"
+                    size="large"
+                    @click="startService(service)"
+                  >
+                    <el-icon><VideoPlay /></el-icon>
+                    开始服务
+                  </el-button>
+                  <el-button
+                    v-if="service.itemStatus === 2"
+                    type="primary"
+                    size="large"
+                    @click="completeService(service)"
+                  >
+                    <el-icon><CircleCheck /></el-icon>
+                    完成服务
+                  </el-button>
+                  <el-button
+                    v-if="service.itemStatus === 1 || service.itemStatus === 2"
+                    type="danger"
+                    size="large"
+                    @click="abandonService(service)"
+                  >
+                    <el-icon><CloseBold /></el-icon>
+                    放弃服务
+                  </el-button>
+                </div>
+              </div>
+            </el-card>
+          </div>
+        </template>
       </template>
     </template>
+
+    <el-empty v-if="volunteerStore.status === 0 || (volunteerStore.status === 1 && volunteerStore.workStatus === 0)" description="暂不可用" :image-size="200" />
   </div>
 </template>
 
@@ -119,8 +143,10 @@ import {
   abandonOrder as apiAbandonOrder,
   startService as apiStartService
 } from '@/api/volunteer'
+import { useVolunteerStore } from '@/stores/volunteer'
 
 const router = useRouter()
+const volunteerStore = useVolunteerStore()
 
 const loading = ref(true)
 const myServices = ref<any[]>([])
@@ -274,8 +300,13 @@ const abandonService = async (service: any) => {
   }
 }
 
-onMounted(() => {
-  loadMyServices()
+onMounted(async () => {
+  await volunteerStore.fetchVolunteerInfo()
+  if (volunteerStore.status === 1 && volunteerStore.workStatus !== 0) {
+    loadMyServices()
+  } else {
+    loading.value = false
+  }
 })
 </script>
 

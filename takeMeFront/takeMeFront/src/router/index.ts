@@ -22,7 +22,6 @@ const routes = [
       { path: 'index', component: () => import('@/views/admin/Index.vue') },
       { path: 'order', component: () => import('@/views/admin/Order.vue') },
       { path: 'order/detail/:id', name: 'AdminOrderDetail', component: () => import('@/views/admin/OrderDetail.vue') },
-      { path: 'orderManage', component: () => import('@/views/admin/OrderManage.vue') },
       { path: 'volunteer', component: () => import('@/views/admin/Volunteer.vue') },
       { path: 'volunteer/detail/:id', component: () => import('@/views/admin/VolunteerDetail.vue') },
       { path: 'user', component: () => import('@/views/admin/User.vue') },

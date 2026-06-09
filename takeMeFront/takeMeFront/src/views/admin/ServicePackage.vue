@@ -67,16 +67,6 @@
 
       <el-table :data="packageList" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="图片" width="100">
-          <template #default="{ row }">
-            <el-image
-              :src="row.image || defaultImage"
-              :preview-src-list="[row.image || defaultImage]"
-              style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover;"
-              fit="cover"
-            />
-          </template>
-        </el-table-column>
         <el-table-column prop="name" label="套餐名称" min-width="150" />
         <el-table-column label="服务类型" width="120">
           <template #default="{ row }">
@@ -150,9 +140,6 @@
         <el-form-item label="价格" required>
           <el-input-number v-model="editForm.price" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="图片地址">
-          <el-input v-model="editForm.image" placeholder="请输入图片URL" />
-        </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="请输入套餐描述" />
         </el-form-item>
@@ -200,7 +187,6 @@ const editForm = ref({
   name: '',
   type: 0,
   price: 0,
-  image: '',
   description: '',
   status: 1
 })
@@ -256,7 +242,6 @@ const handleAdd = () => {
     name: '',
     type: 0,
     price: 0,
-    image: '',
     description: '',
     status: 1
   }
@@ -270,7 +255,6 @@ const handleEdit = (row: any) => {
     name: row.name,
     type: row.type,
     price: row.price,
-    image: row.image || '',
     description: row.description || '',
     status: row.status
   }

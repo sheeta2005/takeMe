@@ -7,7 +7,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Approval;
 import com.me.entity.Message;
+import com.me.entity.VolunteerLeave;
 import com.me.mapper.ApprovalMapper;
+import com.me.mapper.VolunteerLeaveMapper;
 import com.me.service.ApprovalService;
 import com.me.service.MessageService;
 import java.time.LocalDateTime;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> implements ApprovalService {
 
     private final MessageService messageService;
+    private final VolunteerLeaveMapper volunteerLeaveMapper;
 
     @Override
     public IPage<Approval> getApprovalPage(
@@ -76,6 +79,16 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
 
         switch (type) {
             case "leave":
+                LambdaQueryWrapper<VolunteerLeave> leaveWrapper = new LambdaQueryWrapper<>();
+                leaveWrapper.eq(VolunteerLeave::getVolunteerId, approval.getApplicantId())
+                        .eq(VolunteerLeave::getStatus, 0)
+                        .orderByDesc(VolunteerLeave::getCreateTime)
+                        .last("LIMIT 1");
+                VolunteerLeave leave = volunteerLeaveMapper.selectOne(leaveWrapper);
+                if (leave != null) {
+                    leave.setStatus((byte) 1);
+                    volunteerLeaveMapper.updateById(leave);
+                }
                 break;
             case "service_days_change":
                 break;
@@ -115,6 +128,19 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         boolean success = this.updateById(approval);
 
         if (success) {
+            if ("leave".equals(type)) {
+                LambdaQueryWrapper<VolunteerLeave> leaveWrapper = new LambdaQueryWrapper<>();
+                leaveWrapper.eq(VolunteerLeave::getVolunteerId, approval.getApplicantId())
+                        .eq(VolunteerLeave::getStatus, 0)
+                        .orderByDesc(VolunteerLeave::getCreateTime)
+                        .last("LIMIT 1");
+                VolunteerLeave leave = volunteerLeaveMapper.selectOne(leaveWrapper);
+                if (leave != null) {
+                    leave.setStatus((byte) 2);
+                    volunteerLeaveMapper.updateById(leave);
+                }
+            }
+
             String title = "申请被拒绝";
             String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
             sendMessage(approval.getApplicantId(), 1, 0, 

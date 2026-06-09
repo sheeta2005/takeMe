@@ -75,6 +75,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     public IPage<User> searchUser(
             String keyword,
             Integer gender,
+            Long id,
             String startDate,
             String endDate,
             PageResultDTO pageResultDTO
@@ -82,6 +83,9 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         Page<User> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
 
+        if (id != null) {
+            wrapper.eq(User::getId, id);
+        }
         if (keyword != null && !keyword.trim().isEmpty()) {
             wrapper.and(w -> w.like(User::getUsername, keyword)
                     .or()

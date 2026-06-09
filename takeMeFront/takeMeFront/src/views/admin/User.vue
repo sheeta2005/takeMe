@@ -15,6 +15,15 @@
 
     <el-card class="filter-card" shadow="hover">
       <el-form :inline="true" class="filter-form">
+        <el-form-item label="ID">
+          <el-input
+            v-model="filterId"
+            placeholder="用户ID"
+            clearable
+            style="width: 120px"
+            @keyup.enter="fetchUsers"
+          />
+        </el-form-item>
         <el-form-item label="关键词">
           <el-input
             v-model="filterKeyword"
@@ -157,6 +166,7 @@ import { searchUser, addUser, deleteUser, updateUserStatus } from '@/api/admin'
 
 const router = useRouter()
 const loading = ref(false)
+const filterId = ref<number | undefined>(undefined)
 const filterKeyword = ref('')
 const filterGender = ref<number | undefined>(undefined)
 const filterDateRange = ref<string[]>([])
@@ -190,6 +200,7 @@ const fetchUsers = async () => {
       pageSize.value,
       filterKeyword.value || undefined,
       filterGender.value,
+      filterId.value,
       startDate,
       endDate
     )
@@ -204,6 +215,7 @@ const fetchUsers = async () => {
 }
 
 const resetFilter = () => {
+  filterId.value = undefined
   filterKeyword.value = ''
   filterGender.value = undefined
   filterDateRange.value = []
