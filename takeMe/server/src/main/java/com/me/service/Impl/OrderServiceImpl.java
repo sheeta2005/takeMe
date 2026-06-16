@@ -14,6 +14,7 @@ import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.ReviewMapper;
 import com.me.redis.annotation.RedisCache;
+import com.me.redis.annotation.RedisLock;
 import com.me.service.MessageService;
 import com.me.service.OrderService;
 import com.me.vo.OrderItemVO;
@@ -198,6 +199,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @RedisLock(prefix = "order:create:lock", keyArgs = {0}, timeout = 5)
     @Transactional(rollbackFor = Exception.class)
     public OrderVO createOrder(Long userId, OrderDTO orderDTO, List<OrderItemDTO> itemDTOList) {
         if (itemDTOList == null || itemDTOList.isEmpty()) {

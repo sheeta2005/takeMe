@@ -1,2 +1,3 @@
 com.me.redis.config.RedisConfig
 com.me.redis.aspect.RedisCacheAspect
+com.me.redis.aspect.RedisLockAspect
