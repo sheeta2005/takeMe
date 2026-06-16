@@ -3,6 +3,7 @@ package com.me.controller.volunteer;
 import com.me.dto.LoginDTO;
 import com.me.dto.UserRegisterDTO;
 import com.me.entity.Volunteer;
+import com.me.redis.annotation.RateLimit;
 import com.me.result.Result;
 import com.me.service.VolunteerService;
 import com.me.utils.JwtUtil;
@@ -21,9 +22,7 @@ public class VolunteerLoginController {
     private final VolunteerService volunteerService;
     private final JwtUtil jwtUtil;
 
-    /**
-     * 志愿者登录接口
-     */
+    @RateLimit(prefix = "rate:volunteer:login", count = 10, period = 60)
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
         Volunteer volunteer = volunteerService.login(loginDTO);

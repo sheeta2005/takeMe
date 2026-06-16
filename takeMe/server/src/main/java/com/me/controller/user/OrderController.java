@@ -2,6 +2,7 @@ package com.me.controller.user;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.PageResultDTO;
+import com.me.redis.annotation.RateLimit;
 import com.me.result.Result;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
@@ -54,6 +55,7 @@ public class OrderController {
     }
 
     // ===================== 创建订单 =====================
+    @RateLimit(prefix = "rate:user:order:create", count = 10, period = 60)
     @PostMapping("/create")
     public Result<OrderVO> create(
             @RequestHeader("Authorization") String authHeader,

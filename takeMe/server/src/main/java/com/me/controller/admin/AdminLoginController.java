@@ -2,6 +2,7 @@ package com.me.controller.admin;
 
 import com.me.dto.LoginDTO;
 import com.me.entity.Admin;
+import com.me.redis.annotation.RateLimit;
 import com.me.result.Result;
 import com.me.service.AdminService;
 import com.me.utils.JwtUtil;
@@ -23,6 +24,7 @@ public class AdminLoginController {
         this.jwtUtil = jwtUtil;
     }
 
+    @RateLimit(prefix = "rate:admin:login", count = 10, period = 60)
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
         Admin admin = adminService.login(loginDTO);

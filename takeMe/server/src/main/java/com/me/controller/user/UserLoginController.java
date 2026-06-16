@@ -4,6 +4,7 @@ import com.me.dto.LoginDTO;
 import com.me.dto.PasswordUpdateDTO;
 import com.me.dto.UserRegisterDTO;
 import com.me.entity.User;
+import com.me.redis.annotation.RateLimit;
 import com.me.result.Result;
 import com.me.service.UserService;
 import com.me.utils.JwtUtil;
@@ -23,6 +24,7 @@ public class UserLoginController {
     private final UserService userService;
     private final JwtUtil jwtUtil;
 
+    @RateLimit(prefix = "rate:user:login", count = 10, period = 60)
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
         User user = userService.login(loginDTO);
