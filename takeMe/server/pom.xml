@@ -87,7 +87,6 @@
         <dependency>
             <groupId>com.me</groupId>
             <artifactId>redis-starter</artifactId>
-            <scope>test</scope>
         </dependency>
 
     </dependencies>

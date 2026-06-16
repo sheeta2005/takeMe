@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.dto.PageResultDTO;
 import com.me.entity.ServicePackage;
 import com.me.mapper.ServicePackageMapper;
+import com.me.redis.annotation.RedisCache;
 import com.me.service.ServicePackageService;
 import org.springframework.stereotype.Service;
 
@@ -40,6 +41,7 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
     }
 
     @Override
+    @RedisCache(prefix = "service:available", expire = 120, nullExpire = 2)
     public List<ServicePackage> getAvailableServiceByType(Integer type) {
         LambdaQueryWrapper<ServicePackage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ServicePackage::getType, type);

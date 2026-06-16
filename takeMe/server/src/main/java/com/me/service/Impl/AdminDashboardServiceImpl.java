@@ -7,6 +7,7 @@ import com.me.entity.Volunteer;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.UserMapper;
 import com.me.mapper.VolunteerMapper;
+import com.me.redis.annotation.RedisCache;
 import com.me.service.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final VolunteerMapper volunteerMapper;
 
     @Override
+    @RedisCache(prefix = "admin:dashboard:data", expire = 10, nullExpire = 2)
     public Map<String, Object> getDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
@@ -57,6 +59,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     }
 
     @Override
+    @RedisCache(prefix = "admin:dashboard:trend:7d", expire = 30, nullExpire = 5)
     public List<Integer> getOrderTrend7d() {
         List<Integer> trend = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {

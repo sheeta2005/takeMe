@@ -12,6 +12,8 @@ public class RedisUtil {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
+    private static final String NULL_CACHE_PREFIX = "null:";
+
     public void set(String key, Object value) {
         redisTemplate.opsForValue().set(key, value);
     }
@@ -46,5 +48,17 @@ public class RedisUtil {
 
     public void decrement(String key, long delta) {
         redisTemplate.opsForValue().decrement(key, delta);
+    }
+
+    public Boolean setIfAbsent(String key, Object value, long timeout, TimeUnit unit) {
+        return redisTemplate.opsForValue().setIfAbsent(key, value, timeout, unit);
+    }
+
+    public void setNull(String key, long timeout, TimeUnit unit) {
+        redisTemplate.opsForValue().set(NULL_CACHE_PREFIX + key, "", timeout, unit);
+    }
+
+    public boolean isNullCached(String key) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(NULL_CACHE_PREFIX + key));
     }
 }

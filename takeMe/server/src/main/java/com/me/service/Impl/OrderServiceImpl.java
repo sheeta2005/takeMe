@@ -13,6 +13,7 @@ import com.me.entity.Review;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.ReviewMapper;
+import com.me.redis.annotation.RedisCache;
 import com.me.service.MessageService;
 import com.me.service.OrderService;
 import com.me.vo.OrderItemVO;
@@ -153,6 +154,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @RedisCache(prefix = "order:detail", keyArgs = {1}, expire = 120, nullExpire = 2)
     public OrderVO getOrderDetail(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -174,6 +176,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @RedisCache(prefix = "order:detail", keyArgs = {1}, expire = 120, nullExpire = 2)
     public OrderVO getVolunteerOrderDetail(Long volunteerId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null) {
@@ -606,6 +609,7 @@ public class OrderServiceImpl implements OrderService {
     }
     
     @Override
+    @RedisCache(prefix = "order:detail", keyArgs = {0}, expire = 120, nullExpire = 2)
     public OrderVO getAdminOrderDetailVO(Long id) {
         Order order = orderMapper.selectById(id);
         if (order == null) {

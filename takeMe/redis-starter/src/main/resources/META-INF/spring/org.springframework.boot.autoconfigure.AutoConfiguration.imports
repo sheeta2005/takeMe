@@ -1,1 +1,2 @@
 com.me.redis.config.RedisConfig
+com.me.redis.aspect.RedisCacheAspect
