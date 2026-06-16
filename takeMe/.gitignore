@@ -42,3 +42,4 @@ build/
 application-dev.yml
 *.yml
 *.yaml
+/优化方向/

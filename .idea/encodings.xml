@@ -3,6 +3,7 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/takeMe/common/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/takeMe/pojo/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/takeMe/redis-starter/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/takeMe/server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/takeMe/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/takeMe/src/main/resources" charset="UTF-8" />

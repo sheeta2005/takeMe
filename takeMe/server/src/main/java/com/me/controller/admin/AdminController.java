@@ -14,6 +14,7 @@ public class AdminController {
 
     private final AdminService adminService;
 
+    //获取管理员信息
     @GetMapping("/info")
     public Result<Admin> getAdminInfo() {
         Long adminId = BaseContext.getLoginId();
@@ -26,6 +27,7 @@ public class AdminController {
         return Result.success(admin);
     }
 
+    //更新管理员信息
     @PostMapping("/update")
     public Result<Void> updateAdminInfo(@RequestBody Admin admin) {
         Long adminId = BaseContext.getLoginId();

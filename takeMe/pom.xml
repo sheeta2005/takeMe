@@ -21,6 +21,7 @@
     <modules>
         <module>common</module>
         <module>pojo</module>
+        <module>redis-starter</module>
         <module>server</module>
     </modules>
 
@@ -32,16 +33,12 @@
 
         <lombok.version>1.18.32</lombok.version>
         <mysql.version>8.0.33</mysql.version>
-        <!-- MyBatis-Plus 版本统一管理 -->
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
-        <!-- JSqlParser 版本统一管理 -->
         <jsqlparser.version>4.6</jsqlparser.version>
     </properties>
 
-    <!-- 重点：这里必须把所有要在子模块里“不写版本”的依赖全部列出来 -->
     <dependencyManagement>
         <dependencies>
-            <!-- 内部模块 -->
             <dependency>
                 <groupId>com.me</groupId>
                 <artifactId>common</artifactId>
@@ -52,8 +49,11 @@
                 <artifactId>pojo</artifactId>
                 <version>${project.version}</version>
             </dependency>
-
-            <!-- 第三方 -->
+            <dependency>
+                <groupId>com.me</groupId>
+                <artifactId>redis-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -66,14 +66,12 @@
                 <scope>runtime</scope>
             </dependency>
 
-            <!-- MyBatis-Plus Boot3 Starter -->
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
 
-            <!-- JSqlParser SQL 解析器 -->
             <dependency>
                 <groupId>com.github.jsqlparser</groupId>
                 <artifactId>jsqlparser</artifactId>
