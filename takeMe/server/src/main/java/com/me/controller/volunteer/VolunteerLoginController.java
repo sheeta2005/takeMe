@@ -5,6 +5,7 @@ import com.me.dto.UserRegisterDTO;
 import com.me.entity.Volunteer;
 import com.me.redis.annotation.RateLimit;
 import com.me.result.Result;
+import com.me.service.OnlineUserService;
 import com.me.service.VolunteerService;
 import com.me.utils.JwtUtil;
 import com.me.vo.LoginVO;
@@ -21,6 +22,7 @@ public class VolunteerLoginController {
 
     private final VolunteerService volunteerService;
     private final JwtUtil jwtUtil;
+    private final OnlineUserService onlineUserService;
 
     @RateLimit(prefix = "rate:volunteer:login", count = 10, period = 60)
     @PostMapping("/login")
@@ -29,7 +31,7 @@ public class VolunteerLoginController {
         if (volunteer == null) {
             return Result.error("账号或密码错误");
         }
-        // 1 = 志愿者
+        onlineUserService.userOnline(volunteer.getId(), 1);
         LoginVO loginVO = jwtUtil.buildLoginVO(
                 volunteer.getId(),
                 1,
@@ -39,9 +41,6 @@ public class VolunteerLoginController {
         return Result.success(loginVO);
     }
 
-    /**
-     * 志愿者注册接口
-     */
     @PostMapping("/register")
     public Result<Void> register(@RequestBody UserRegisterDTO registerDTO) {
         boolean success = volunteerService.register(registerDTO);
@@ -51,11 +50,13 @@ public class VolunteerLoginController {
         return Result.success();
     }
 
-    /**
-     * 退出登录（前端删 token 即可，后端无需复杂逻辑）
-     */
     @PostMapping("/logout")
     public Result<Void> logout() {
+        Long userId = com.me.context.BaseContext.getLoginId();
+        Integer role = com.me.context.BaseContext.getLoginType();
+        if (userId != null) {
+            onlineUserService.userOffline(userId, role);
+        }
         return Result.success();
     }
 }

@@ -2,6 +2,7 @@ package com.me.controller.admin;
 
 import com.me.result.Result;
 import com.me.service.AdminDashboardService;
+import com.me.service.OnlineUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class AdminDashboardController {
 
     private final AdminDashboardService adminDashboardService;
+    private final OnlineUserService onlineUserService;
 
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> getDashboardData() {
@@ -33,5 +35,11 @@ public class AdminDashboardController {
     public Result<List<Map<String, Object>>> getServiceTypeDist() {
         List<Map<String, Object>> dist = adminDashboardService.getServiceTypeDist();
         return Result.success(dist);
+    }
+
+    @GetMapping("/online")
+    public Result<Map<String, Object>> getOnlineStats() {
+        Map<String, Object> stats = onlineUserService.getOnlineStats();
+        return Result.success(stats);
     }
 }
