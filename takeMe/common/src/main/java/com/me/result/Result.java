@@ -1,11 +1,18 @@
 package com.me.result;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
+@Schema(description = "统一API响应结果")
 public class Result<T> {
+    @Schema(description = "响应码（200-成功 500-失败）", example = "200")
     private Integer code;
+    
+    @Schema(description = "响应消息", example = "操作成功")
     private String msg;
+    
+    @Schema(description = "响应数据")
     private T data;
 
     // 成功响应（带数据）
