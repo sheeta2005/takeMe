@@ -4,25 +4,31 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.me.dto.ApprovalResultMessage;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Approval;
 import com.me.entity.Message;
 import com.me.entity.VolunteerLeave;
 import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerLeaveMapper;
+import com.me.mq.config.RabbitMQConfig;
+import com.me.mq.producer.MessageProducer;
 import com.me.service.ApprovalService;
 import com.me.service.MessageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> implements ApprovalService {
 
     private final MessageService messageService;
     private final VolunteerLeaveMapper volunteerLeaveMapper;
+    private final MessageProducer messageProducer;
 
     @Override
     public IPage<Approval> getApprovalPage(
@@ -106,6 +112,8 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
             String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
             sendMessage(approval.getApplicantId(), 1, 0,
                     title, String.format("您的%s申请已通过审批", typeText), approval.getId());
+
+            sendApprovalResultMessage(approval, "approved", remark);
         }
 
         return success;
@@ -145,6 +153,8 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
             String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
             sendMessage(approval.getApplicantId(), 1, 0,
                     title, String.format("您的%s申请被拒绝，原因：%s", typeText, remark), approval.getId());
+
+            sendApprovalResultMessage(approval, "rejected", remark);
         }
 
         return success;
@@ -163,5 +173,30 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         message.setRelatedOrderId(relatedOrderId);
         message.setCreateTime(LocalDateTime.now());
         messageService.save(message);
+    }
+
+    private void sendApprovalResultMessage(Approval approval, String result, String remark) {
+        ApprovalResultMessage resultMessage = ApprovalResultMessage.builder()
+            .approvalId(approval.getId())
+            .type(approval.getType())
+            .applicantId(approval.getApplicantId())
+            .applicantName(approval.getApplicantName())
+            .result(result)
+            .remark(remark)
+            .approveTime(LocalDateTime.now())
+            .build();
+
+        try {
+            String routingKey = RabbitMQConfig.APPROVAL_RESULT_ROUTING_KEY_PREFIX + approval.getApplicantId();
+            messageProducer.sendMessage(
+                RabbitMQConfig.APPROVAL_RESULT_DIRECT_EXCHANGE,
+                routingKey,
+                resultMessage
+            );
+            log.info("审批结果消息发送成功: approvalId={}, applicantId={}, result={}", 
+                approval.getId(), approval.getApplicantId(), result);
+        } catch (Exception e) {
+            log.error("审批结果消息发送失败: approvalId={}", approval.getId(), e);
+        }
     }
 }

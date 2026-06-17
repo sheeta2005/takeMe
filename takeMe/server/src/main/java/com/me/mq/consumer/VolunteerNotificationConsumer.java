@@ -6,7 +6,6 @@ import com.me.service.MessageService;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -32,7 +31,7 @@ public class VolunteerNotificationConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_VOLUNTEER_QUEUE)
-    public void handleVolunteerNotification(OrderStatusChangeMessage message, Message msg, Channel channel) {
+    public void handleVolunteerNotification(OrderStatusChangeMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
         try {
             if (message == null) {
                 log.warn("收到空消息，跳过处理");

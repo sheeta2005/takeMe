@@ -1,6 +1,7 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.me.dto.ApprovalSubmitMessage;
 import com.me.entity.Approval;
 import com.me.entity.Message;
 import com.me.entity.Volunteer;
@@ -8,10 +9,13 @@ import com.me.entity.VolunteerLeave;
 import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerLeaveMapper;
 import com.me.mapper.VolunteerMapper;
+import com.me.mq.config.RabbitMQConfig;
+import com.me.mq.producer.MessageProducer;
 import com.me.service.MessageService;
 import com.me.service.VolunteerLeaveService;
 import com.me.vo.VolunteerLeaveVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
@@ -27,6 +32,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
     private final ApprovalMapper approvalMapper;
     private final VolunteerMapper volunteerMapper;
     private final MessageService messageService;
+    private final MessageProducer messageProducer;
 
     @Override
     public List<VolunteerLeaveVO> getListByVolunteerId(Long volunteerId) {
@@ -44,7 +50,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
 
     @Override
     public void submit(VolunteerLeave leave) {
-        leave.setStatus((byte) 0d);
+        leave.setStatus((byte) 0);
         leave.setCreateTime(LocalDateTime.now());
         volunteerLeaveMapper.insert(leave);
 
@@ -62,14 +68,31 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
         approval.setCreateTime(LocalDateTime.now());
         approvalMapper.insert(approval);
 
-        // 通知志愿者本人请假申请已提交
         sendMessage(leave.getVolunteerId(), 1, 1, "请假申请已提交",
                 applicantName + "的请假申请已提交，等待管理员审批", null);
+
+        ApprovalSubmitMessage submitMessage = ApprovalSubmitMessage.builder()
+            .approvalId(approval.getId())
+            .type("leave")
+            .applicantId(leave.getVolunteerId())
+            .applicantName(applicantName)
+            .content(approval.getContent())
+            .submitTime(LocalDateTime.now())
+            .build();
+
+        try {
+            messageProducer.sendMessage(
+                RabbitMQConfig.APPROVAL_SUBMIT_FANOUT_EXCHANGE,
+                "",
+                submitMessage
+            );
+            log.info("请假申请提交消息发送成功: approvalId={}, applicantId={}", 
+                approval.getId(), leave.getVolunteerId());
+        } catch (Exception e) {
+            log.error("请假申请提交消息发送失败: approvalId={}", approval.getId(), e);
+        }
     }
 
-    /**
-     * 封装消息发送方法
-     */
     private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
                              String title, String content, Long relatedOrderId) {
         Message msg = new Message();

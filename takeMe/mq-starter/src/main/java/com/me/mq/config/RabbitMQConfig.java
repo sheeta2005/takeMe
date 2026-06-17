@@ -35,6 +35,12 @@ public class RabbitMQConfig {
     public static final String NOTIFICATION_VOLUNTEER_QUEUE = "notification.volunteer.queue";
     public static final String NOTIFICATION_ADMIN_QUEUE = "notification.admin.queue";
 
+    public static final String APPROVAL_SUBMIT_FANOUT_EXCHANGE = "approval.submit.fanout.exchange";
+    public static final String APPROVAL_ADMIN_QUEUE = "approval.admin.queue";
+    
+    public static final String APPROVAL_RESULT_DIRECT_EXCHANGE = "approval.result.direct.exchange";
+    public static final String APPROVAL_RESULT_ROUTING_KEY_PREFIX = "approval.result.";
+
     @Bean
     public RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
@@ -76,6 +82,16 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public FanoutExchange approvalSubmitFanoutExchange() {
+        return new FanoutExchange(APPROVAL_SUBMIT_FANOUT_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public DirectExchange approvalResultDirectExchange() {
+        return new DirectExchange(APPROVAL_RESULT_DIRECT_EXCHANGE, true, false);
+    }
+
+    @Bean
     public Queue orderDelayQueue() {
         Map<String, Object> args = new HashMap<>();
         args.put("x-dead-letter-exchange", ORDER_DEAD_LETTER_EXCHANGE);
@@ -108,6 +124,16 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue approvalAdminQueue() {
+        return QueueBuilder.durable(APPROVAL_ADMIN_QUEUE).build();
+    }
+
+    @Bean
+    public Queue volunteerApprovalQueue() {
+        return QueueBuilder.durable("approval.result.volunteer.queue").build();
+    }
+
+    @Bean
     public Binding orderDelayBinding(Queue orderDelayQueue, DirectExchange orderExchange) {
         return BindingBuilder.bind(orderDelayQueue)
             .to(orderExchange)
@@ -134,5 +160,17 @@ public class RabbitMQConfig {
     @Bean
     public Binding notificationAdminBinding(Queue notificationAdminQueue, FanoutExchange orderStatusFanoutExchange) {
         return BindingBuilder.bind(notificationAdminQueue).to(orderStatusFanoutExchange);
+    }
+
+    @Bean
+    public Binding approvalAdminBinding(Queue approvalAdminQueue, FanoutExchange approvalSubmitFanoutExchange) {
+        return BindingBuilder.bind(approvalAdminQueue).to(approvalSubmitFanoutExchange);
+    }
+
+    @Bean
+    public Binding volunteerApprovalBinding(Queue volunteerApprovalQueue, DirectExchange approvalResultDirectExchange) {
+        return BindingBuilder.bind(volunteerApprovalQueue)
+            .to(approvalResultDirectExchange)
+            .with(APPROVAL_RESULT_ROUTING_KEY_PREFIX + "*");
     }
 }
