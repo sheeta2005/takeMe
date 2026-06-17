@@ -34,6 +34,28 @@ export function updateAdminInfo(data: any) {
   })
 }
 
+// 上传管理员头像
+export const uploadAvatar = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/api/admin/avatar/upload',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+// 删除管理员头像
+export const deleteAvatar = () => {
+  return request({
+    url: '/api/admin/avatar',
+    method: 'delete'
+  })
+}
+
 // ========================= 工作台 =========================
 export const getDashboardData = () => {
   return request({

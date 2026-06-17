@@ -10,17 +10,19 @@ import com.me.entity.User;
 import com.me.mapper.UserMapper;
 import com.me.service.UserService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.me.util.OssUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final PasswordEncoder passwordEncoder;
-
-    public UserServiceImpl(PasswordEncoder passwordEncoder) {
-        this.passwordEncoder = passwordEncoder;
-    }
+    private final OssUtil ossUtil;
 
     @Override
     public User login(LoginDTO loginDTO) {
@@ -105,5 +107,41 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
 
         wrapper.orderByDesc(User::getCreateTime);
         return this.page(pageParam, wrapper);
+    }
+
+    @Override
+    public void updateAvatar(Long userId, String avatarUrl) {
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+
+        String oldAvatar = user.getAvatar();
+        if (oldAvatar != null && !oldAvatar.isEmpty()) {
+            ossUtil.deleteFile(oldAvatar);
+        }
+
+        user.setAvatar(avatarUrl);
+        this.updateById(user);
+        
+        log.info("User {} avatar updated: {}", userId, avatarUrl);
+    }
+
+    @Override
+    public void deleteAvatar(Long userId) {
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+
+        String oldAvatar = user.getAvatar();
+        if (oldAvatar != null && !oldAvatar.isEmpty()) {
+            ossUtil.deleteFile(oldAvatar);
+        }
+
+        user.setAvatar(null);
+        this.updateById(user);
+        
+        log.info("User {} avatar deleted", userId);
     }
 }

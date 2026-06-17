@@ -4,7 +4,7 @@
 
     <div class="info-card">
       <div class="avatar-section">
-        <img :src="volunteerStore.avatar || defaultAvatar" class="avatar" alt="头像" />
+        <Avatar :src="volunteerStore.avatar" :size="120" />
       </div>
 
       <div class="info-list">
@@ -71,12 +71,10 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useVolunteerStore } from '@/stores/volunteer'
+import Avatar from '@/components/Avatar.vue'
 
 const router = useRouter()
 const volunteerStore = useVolunteerStore()
-
-// 静态资源
-const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
 
 // 跳转修改页
 const goEdit = () => router.push('/volunteer/info/edit')
@@ -112,14 +110,6 @@ onMounted(() => {
 .avatar-section {
   text-align: center;
   margin-bottom: 30px;
-}
-
-.avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #00b899;
 }
 
 .info-list {

@@ -4,7 +4,7 @@
 
     <div class="info-card" v-loading="loading">
       <div class="avatar-section">
-        <img :src="userStore.avatar || defaultAvatar" class="avatar" alt="头像" />
+        <Avatar :src="userStore.avatar" :size="120" />
       </div>
 
       <div class="info-list">
@@ -55,12 +55,12 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getUserAddressList } from '@/api/user'
 import { ElMessage } from 'element-plus'
+import Avatar from '@/components/Avatar.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
 
-const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
 const addressList = ref<any[]>([])
 
 const defaultAddress = computed(() => {
@@ -116,14 +116,6 @@ onMounted(async () => {
 .avatar-section {
   text-align: center;
   margin-bottom: 30px;
-}
-
-.avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #00b899;
 }
 
 .info-list {

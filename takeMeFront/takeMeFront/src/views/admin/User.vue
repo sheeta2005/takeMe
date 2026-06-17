@@ -183,7 +183,7 @@ const addForm = ref({
   phone: ''
 })
 
-const defaultAvatar = ref('/default-avatar.png')
+const defaultAvatar = ref('/佐仓杏子.png')
 
 onMounted(() => {
   fetchUsers()

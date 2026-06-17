@@ -14,7 +14,9 @@ import com.me.mapper.ApprovalMapper;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
+import com.me.util.OssUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer> implements VolunteerService {
@@ -29,6 +32,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     private final PasswordEncoder passwordEncoder;
     private final ApprovalMapper approvalMapper;
     private final OrderItemMapper orderItemMapper;
+    private final OssUtil ossUtil;
 
     @Override
     public Volunteer login(LoginDTO loginDTO) {
@@ -102,7 +106,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         volunteer.setTotalServiceHours(0);
         volunteer.setEmergencyName(null);
         volunteer.setEmergencyPhone(null);
-        volunteer.setAvatar("http://localhost:8080/uploads/default-volunteer-avatar.png"); // 设置默认头像
+        volunteer.setAvatar(null);
         
         // 保存到数据库
         boolean saved = this.save(volunteer);
@@ -150,5 +154,41 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         }
         
         return count;
+    }
+
+    @Override
+    public void updateAvatar(Long volunteerId, String avatarUrl) {
+        Volunteer volunteer = this.getById(volunteerId);
+        if (volunteer == null) {
+            throw new IllegalArgumentException("志愿者不存在");
+        }
+
+        String oldAvatar = volunteer.getAvatar();
+        if (oldAvatar != null && !oldAvatar.isEmpty()) {
+            ossUtil.deleteFile(oldAvatar);
+        }
+
+        volunteer.setAvatar(avatarUrl);
+        this.updateById(volunteer);
+        
+        log.info("Volunteer {} avatar updated: {}", volunteerId, avatarUrl);
+    }
+
+    @Override
+    public void deleteAvatar(Long volunteerId) {
+        Volunteer volunteer = this.getById(volunteerId);
+        if (volunteer == null) {
+            throw new IllegalArgumentException("志愿者不存在");
+        }
+
+        String oldAvatar = volunteer.getAvatar();
+        if (oldAvatar != null && !oldAvatar.isEmpty()) {
+            ossUtil.deleteFile(oldAvatar);
+        }
+
+        volunteer.setAvatar(null);
+        this.updateById(volunteer);
+        
+        log.info("Volunteer {} avatar deleted", volunteerId);
     }
 }

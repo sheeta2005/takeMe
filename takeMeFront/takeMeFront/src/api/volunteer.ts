@@ -67,12 +67,22 @@ export const uploadAvatar = (file: File) => {
   const formData = new FormData()
   formData.append('file', file)
   return request({
-    url: '/api/volunteer/uploadAvatar',
+    url: '/api/volunteer/avatar/upload',
     method: 'post',
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data'
     }
+  })
+}
+
+/**
+ * 删除志愿者头像
+ */
+export const deleteAvatar = () => {
+  return request({
+    url: '/api/volunteer/avatar',
+    method: 'delete'
   })
 }
 

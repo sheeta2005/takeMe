@@ -41,4 +41,8 @@ public interface VolunteerService extends IService<Volunteer> {
      * @return 释放的服务数量
      */
     int releaseVolunteerServices(Long volunteerId);
+
+    void updateAvatar(Long volunteerId, String avatarUrl);
+
+    void deleteAvatar(Long volunteerId);
 }

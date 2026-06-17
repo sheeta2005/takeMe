@@ -311,7 +311,7 @@ const currentService = ref<any>(null)
 
 const volunteerDetailVisible = ref(false)
 const volunteerDetail = ref<any>(null)
-const defaultAvatar = ref('/src/assets/default-avatar.png')
+const defaultAvatar = ref('/src/assets/佐仓杏子.png')
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',

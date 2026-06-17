@@ -19,11 +19,24 @@ export function updateUserInfo(data: any) {
 }
 
 // 头像上传
-export function uploadAvatar(data: any) {
+export function uploadAvatar(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
   return request({
-    url: '/api/user/uploadAvatar',
+    url: '/api/user/avatar/upload',
     method: 'post',
-    data
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+// 删除头像
+export function deleteAvatar() {
+  return request({
+    url: '/api/user/avatar',
+    method: 'delete'
   })
 }
 

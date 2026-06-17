@@ -121,7 +121,7 @@ import { getVolunteerDetail } from '@/api/admin'
 const route = useRoute()
 const loading = ref(true)
 const volunteerDetail = ref<any>(null)
-const defaultAvatar = ref('/default-avatar.png')
+const defaultAvatar = ref('/佐仓杏子.png')
 
 onMounted(() => {
   const volunteerId = Number(route.params.id)

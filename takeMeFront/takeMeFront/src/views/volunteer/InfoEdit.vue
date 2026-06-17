@@ -74,14 +74,18 @@
       </el-form-item>
 
       <el-form-item label="头像">
-        <el-upload
-          class="avatar-upload"
-          :show-file-list="false"
-          :before-upload="handleBeforeUpload"
-        >
-          <img v-if="form.avatar" :src="form.avatar" class="avatar" />
-          <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-        </el-upload>
+        <div class="avatar-upload-wrapper">
+          <Avatar :src="form.avatar" :size="120" />
+          <el-upload
+            class="avatar-uploader"
+            :show-file-list="false"
+            :before-upload="handleBeforeUpload"
+            :http-request="handleAvatarUpload"
+          >
+            <el-button type="primary" size="small">更换头像</el-button>
+          </el-upload>
+          <div class="upload-tip">支持 jpg/png/webp，最大 5MB</div>
+        </div>
       </el-form-item>
 
       <el-form-item class="btn-group">
@@ -102,6 +106,9 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, InfoFilled } from '@element-plus/icons-vue'
 import { useVolunteerStore } from '@/stores/volunteer'
+import { uploadAvatar } from '@/api/volunteer'
+import { compressImage } from '@/utils/imageCompress'
+import Avatar from '@/components/Avatar.vue'
 
 const router = useRouter()
 const volunteerStore = useVolunteerStore()
@@ -181,24 +188,42 @@ onMounted(async () => {
 })
 
 // 头像上传前校验
-const handleBeforeUpload = async (file: File) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt2M = file.size / 1024 / 1024 < 2
+const handleBeforeUpload = (file: File) => {
+  const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
+  const isValidSize = file.size / 1024 / 1024 < 5
 
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
+  if (!isValidType) {
+    ElMessage.error('只支持 JPG/PNG/WEBP 格式')
     return false
   }
-  if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!')
+  if (!isValidSize) {
+    ElMessage.error('图片大小不能超过 5MB')
     return false
   }
+  return true
+}
 
-  const url = await volunteerStore.uploadAvatar(file)
-  if (url) {
-    form.value.avatar = url
+const handleAvatarUpload = async (options: any) => {
+  const { file } = options
+
+  try {
+    ElMessage.info('正在压缩图片...')
+    const compressedFile = await compressImage(file, 800, 0.8)
+
+    ElMessage.info('正在上传...')
+    const res = await uploadAvatar(compressedFile)
+
+    if (res.code === 200) {
+      form.value.avatar = res.data
+      volunteerStore.avatar = res.data
+      ElMessage.success('上传成功')
+    } else {
+      ElMessage.error(res.msg || '上传失败')
+    }
+  } catch (err: any) {
+    console.error('上传失败:', err)
+    ElMessage.error(err.message || '上传失败')
   }
-  return false // 阻止默认上传行为
 }
 
 // 提交
@@ -291,29 +316,15 @@ const back = () => {
   margin-top: 30px;
 }
 
-.avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  cursor: pointer;
+.avatar-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
-
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 120px;
-  height: 120px;
-  text-align: center;
-  line-height: 120px;
-  border: 1px dashed #d9d9d9;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.avatar-uploader-icon:hover {
-  border-color: #00b899;
+.upload-tip {
+  font-size: 12px;
+  color: #999;
 }
 
 :deep(.el-form-item__label) {
@@ -357,3 +368,4 @@ const back = () => {
 .days-tip .el-icon {
   font-size: 16px;
 }
+</style>

@@ -22,4 +22,8 @@ public interface UserService extends IService<User> {
             String endDate,
             PageResultDTO pageResultDTO
     );
+
+    void updateAvatar(Long userId, String avatarUrl);
+
+    void deleteAvatar(Long userId);
 }

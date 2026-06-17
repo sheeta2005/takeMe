@@ -25,4 +25,8 @@ public interface AdminService extends IService<Admin> {
      * @return 是否更新成功
      */
     boolean updateAdminInfo(Admin admin);
+
+    void updateAvatar(Long adminId, String avatarUrl);
+
+    void deleteAvatar(Long adminId);
 }

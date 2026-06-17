@@ -131,7 +131,7 @@ import { getUserDetail } from '@/api/admin'
 const route = useRoute()
 const loading = ref(true)
 const userDetail = ref<any>(null)
-const defaultAvatar = ref('/default-avatar.png')
+const defaultAvatar = ref('/佐仓杏子.png')
 
 onMounted(() => {
   const userId = Number(route.params.id)
