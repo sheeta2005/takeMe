@@ -32,34 +32,33 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { Warning, SwitchButton } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'
-import { adminLogout } from '@/api/admin'
 
 const adminStore = useAdminStore()
 
-const handleLogout = () => {
-  ElMessageBox.confirm(
-    '确定要退出当前账号吗？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要退出登录吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await adminStore.logout()
+
+  } catch (err: any) {
+    if (err === 'cancel') {
+      return
     }
-  ).then(async () => {
-    try {
-      await adminLogout()
-      adminStore.logout()
-      ElMessage.success('已安全退出登录')
-    } catch (err) {
-      console.error('退出接口异常，继续本地退出', err)
-      ElMessage.warning('网络异常，已本地退出')
-    } finally {
-      window.location.href = '/login'
-    }
-  })
+  }
+
+  window.location.href = '/login'
 }
 </script>
 
