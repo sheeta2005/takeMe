@@ -3,6 +3,7 @@ package com.me.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.me.annotation.BizLog;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
 import com.me.dto.OrderStatusChangeMessage;
@@ -206,6 +207,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @RedisLock(prefix = "order:create:lock", keyArgs = {0}, timeout = 5)
     @Transactional(rollbackFor = Exception.class)
+    @BizLog(value = "创建订单", logParams = true)
     public OrderVO createOrder(Long userId, OrderDTO orderDTO, List<OrderItemDTO> itemDTOList) {
         if (itemDTOList == null || itemDTOList.isEmpty()) {
             throw new RuntimeException("订单商品不能为空");
@@ -281,6 +283,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @BizLog(value = "取消订单", logParams = true)
     public void cancelOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -573,6 +576,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @BizLog(value = "志愿者接单", logParams = true)
     public void confirmOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
