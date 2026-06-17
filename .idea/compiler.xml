@@ -9,6 +9,7 @@
         <module name="pojo" />
         <module name="server" />
         <module name="common" />
+        <module name="mq-starter" />
         <module name="redis-starter" />
       </profile>
     </annotationProcessing>
@@ -16,6 +17,7 @@
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="common" options="-parameters" />
+      <module name="mq-starter" options="-parameters" />
       <module name="pojo" options="-parameters" />
       <module name="redis-starter" options="-parameters" />
       <module name="server" options="-parameters" />
