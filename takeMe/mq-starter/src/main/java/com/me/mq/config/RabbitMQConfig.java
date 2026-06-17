@@ -9,9 +9,11 @@ import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,9 +44,14 @@ public class RabbitMQConfig {
     public static final String APPROVAL_RESULT_ROUTING_KEY_PREFIX = "approval.result.";
 
     @Bean
+    public MessageConverter messageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+
+    @Bean
     public RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(new Jackson2JsonMessageConverter());
+        template.setMessageConverter(messageConverter());
         
         template.setConfirmCallback((correlationData, ack, cause) -> {
             if (ack) {
@@ -65,6 +72,12 @@ public class RabbitMQConfig {
         
         return template;
     }
+
+    @Bean
+    public RabbitAdmin rabbitAdmin(RabbitTemplate rabbitTemplate) {
+        return new RabbitAdmin(rabbitTemplate);
+    }
+
 
     @Bean
     public DirectExchange orderExchange() {
