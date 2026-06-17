@@ -164,21 +164,20 @@ public class OrderTimeoutMqTest {
     @Test
     @Transactional
     @Rollback
-    public void testOrderTimeoutConsumerLogic() throws Exception {
+    public void testOrderTimeoutConsumerLogic() {
         Order order = new Order();
         order.setUserId(testUserId);
         order.setOrderNo("TEST_TIMEOUT_" + System.currentTimeMillis());
         order.setTotalPrice(100);
         order.setStatus(0);
-        order.setAddress("qwe");
         order.setIsReviewed(0);
         order.setCreateTime(LocalDateTime.now());
         order.setServiceDate(LocalDate.now().toString());
-        order.setServiceTime(LocalDateTime.now().toString());
+        order.setServiceTime("10:00");
         orderMapper.insert(order);
         testOrderId = order.getId();
         testOrderNo = order.getOrderNo();
-
+        
         OrderItem item = new OrderItem();
         item.setOrderId(testOrderId);
         item.setServiceId(1L);
@@ -189,41 +188,38 @@ public class OrderTimeoutMqTest {
         item.setItemStatus(0);
         item.setCreateTime(LocalDateTime.now());
         orderItemMapper.insert(item);
-
+        
         OrderTimeoutMessage timeoutMessage = new OrderTimeoutMessage(testOrderId, testOrderNo, testUserId);
-        Message emptyMsg = new Message(new byte[0], new MessageProperties());
-        // 获取真实Channel替代null
-        Channel channel = getTestChannel();
-        orderTimeoutConsumer.handleOrderTimeout(timeoutMessage, emptyMsg, channel);
-
+        
+        orderTimeoutConsumer.handleOrderTimeout(timeoutMessage, null, null);
+        
         Order updatedOrder = orderMapper.selectById(testOrderId);
         assertNotNull(updatedOrder, "订单不存在");
         assertEquals(5, updatedOrder.getStatus(), "订单状态应更新为已取消");
-
+        
         OrderItem updatedItem = orderItemMapper.selectById(item.getId());
         assertNotNull(updatedItem, "订单项不存在");
         assertEquals(5, updatedItem.getItemStatus(), "订单项状态应更新为已取消");
-
+        
         System.out.println("✅ 订单超时消费者逻辑测试通过: orderId=" + testOrderId);
     }
 
     @Test
     @Transactional
     @Rollback
-    public void testIdempotency() throws Exception {
+    public void testIdempotency() {
         Order order = new Order();
         order.setUserId(testUserId);
         order.setOrderNo("TEST_IDEMPOTENCY_" + System.currentTimeMillis());
         order.setTotalPrice(100);
         order.setStatus(0);
-        order.setAddress("qwe");
         order.setIsReviewed(0);
         order.setCreateTime(LocalDateTime.now());
         order.setServiceDate(LocalDate.now().toString());
-        order.setServiceTime(LocalDateTime.now().toString());
+        order.setServiceTime("10:00");
         orderMapper.insert(order);
         testOrderId = order.getId();
-
+        
         OrderItem item = new OrderItem();
         item.setOrderId(testOrderId);
         item.setServiceId(1L);
@@ -234,26 +230,25 @@ public class OrderTimeoutMqTest {
         item.setItemStatus(0);
         item.setCreateTime(LocalDateTime.now());
         orderItemMapper.insert(item);
-
+        
         OrderTimeoutMessage timeoutMessage = new OrderTimeoutMessage(testOrderId, order.getOrderNo(), testUserId);
-        Message emptyMsg = new Message(new byte[0], new MessageProperties());
-        Channel channel = getTestChannel();
-        orderTimeoutConsumer.handleOrderTimeout(timeoutMessage, emptyMsg, channel);
-
+        
+        orderTimeoutConsumer.handleOrderTimeout(timeoutMessage, null, null);
+        
         String lockKey = "mq:idempotent:order:timeout:" + testOrderId;
         Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 300, TimeUnit.SECONDS);
         assertFalse(isLocked, "幂等锁应已存在，第二次消费应被阻止");
-
+        
         Order updatedOrder = orderMapper.selectById(testOrderId);
         assertEquals(5, updatedOrder.getStatus(), "订单应保持已取消状态");
-
+        
         System.out.println("✅ 幂等性测试通过: 重复消息已被阻止");
     }
 
     @Test
     @Transactional
     @Rollback
-    public void testCancelAlreadyAcceptedOrder() throws Exception {
+    public void testCancelAlreadyAcceptedOrder() {
         Order order = new Order();
         order.setUserId(testUserId);
         order.setOrderNo("TEST_ACCEPTED_" + System.currentTimeMillis());
@@ -262,11 +257,10 @@ public class OrderTimeoutMqTest {
         order.setIsReviewed(0);
         order.setCreateTime(LocalDateTime.now());
         order.setServiceDate(LocalDate.now().toString());
-        order.setServiceTime(LocalDateTime.now().toString());
-        order.setAddress("qwe");
+        order.setServiceTime("10:00");
         orderMapper.insert(order);
         testOrderId = order.getId();
-
+        
         OrderItem item = new OrderItem();
         item.setOrderId(testOrderId);
         item.setVolunteerId(999L);
@@ -278,15 +272,14 @@ public class OrderTimeoutMqTest {
         item.setItemStatus(1);
         item.setCreateTime(LocalDateTime.now());
         orderItemMapper.insert(item);
-
+        
         OrderTimeoutMessage timeoutMessage = new OrderTimeoutMessage(testOrderId, order.getOrderNo(), testUserId);
-        Message emptyMsg = new Message(new byte[0], new MessageProperties());
-        Channel channel = getTestChannel();
-        orderTimeoutConsumer.handleOrderTimeout(timeoutMessage, emptyMsg, channel);
-
+        
+        orderTimeoutConsumer.handleOrderTimeout(timeoutMessage, null, null);
+        
         Order updatedOrder = orderMapper.selectById(testOrderId);
         assertEquals(1, updatedOrder.getStatus(), "已接单的订单不应被取消");
-
+        
         System.out.println("✅ 已接单订单保护测试通过: 订单未被错误取消");
     }
 }

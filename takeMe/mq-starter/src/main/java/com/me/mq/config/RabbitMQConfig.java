@@ -3,16 +3,15 @@ package com.me.mq.config;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +29,11 @@ public class RabbitMQConfig {
     public static final String ORDER_DELAY_QUEUE = "order.create.delay.queue";
     public static final String ORDER_CANCEL_DLX_QUEUE = "order.cancel.dlx.queue";
     public static final String ORDER_DEAD_LETTER_EXCHANGE = "order.dlx.exchange";
+
+    public static final String ORDER_STATUS_FANOUT_EXCHANGE = "order.status.fanout.exchange";
+    public static final String NOTIFICATION_USER_QUEUE = "notification.user.queue";
+    public static final String NOTIFICATION_VOLUNTEER_QUEUE = "notification.volunteer.queue";
+    public static final String NOTIFICATION_ADMIN_QUEUE = "notification.admin.queue";
 
     @Bean
     public RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory) {
@@ -67,6 +71,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public FanoutExchange orderStatusFanoutExchange() {
+        return new FanoutExchange(ORDER_STATUS_FANOUT_EXCHANGE, true, false);
+    }
+
+    @Bean
     public Queue orderDelayQueue() {
         Map<String, Object> args = new HashMap<>();
         args.put("x-dead-letter-exchange", ORDER_DEAD_LETTER_EXCHANGE);
@@ -84,6 +93,21 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue notificationUserQueue() {
+        return QueueBuilder.durable(NOTIFICATION_USER_QUEUE).build();
+    }
+
+    @Bean
+    public Queue notificationVolunteerQueue() {
+        return QueueBuilder.durable(NOTIFICATION_VOLUNTEER_QUEUE).build();
+    }
+
+    @Bean
+    public Queue notificationAdminQueue() {
+        return QueueBuilder.durable(NOTIFICATION_ADMIN_QUEUE).build();
+    }
+
+    @Bean
     public Binding orderDelayBinding(Queue orderDelayQueue, DirectExchange orderExchange) {
         return BindingBuilder.bind(orderDelayQueue)
             .to(orderExchange)
@@ -98,8 +122,17 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
-        return new RabbitAdmin(connectionFactory);
+    public Binding notificationUserBinding(Queue notificationUserQueue, FanoutExchange orderStatusFanoutExchange) {
+        return BindingBuilder.bind(notificationUserQueue).to(orderStatusFanoutExchange);
     }
 
+    @Bean
+    public Binding notificationVolunteerBinding(Queue notificationVolunteerQueue, FanoutExchange orderStatusFanoutExchange) {
+        return BindingBuilder.bind(notificationVolunteerQueue).to(orderStatusFanoutExchange);
+    }
+
+    @Bean
+    public Binding notificationAdminBinding(Queue notificationAdminQueue, FanoutExchange orderStatusFanoutExchange) {
+        return BindingBuilder.bind(notificationAdminQueue).to(orderStatusFanoutExchange);
+    }
 }

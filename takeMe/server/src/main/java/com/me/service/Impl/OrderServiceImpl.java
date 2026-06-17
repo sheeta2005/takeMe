@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
+import com.me.dto.OrderStatusChangeMessage;
 import com.me.dto.OrderTimeoutMessage;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Message;
@@ -14,6 +15,7 @@ import com.me.entity.Review;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.ReviewMapper;
+import com.me.mq.config.RabbitMQConfig;
 import com.me.mq.producer.MessageProducer;
 import com.me.redis.annotation.RedisCache;
 import com.me.redis.annotation.RedisLock;
@@ -288,8 +290,11 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("仅待接单/已接单可取消");
         }
 
+        Integer oldStatus = order.getStatus();
         order.setStatus(5);
         orderMapper.updateById(order);
+
+        sendStatusChangeMessage(order, oldStatus, 5, "用户取消订单");
     }
 
     @Override
@@ -316,11 +321,12 @@ public class OrderServiceImpl implements OrderService {
         orderItemMapper.updateById(item);
         
         updateOrderVolunteerIds(item.getOrderId());
-        updateOrderStatus(item.getOrderId());
+        Integer oldStatus = updateOrderStatus(item.getOrderId());
 
         Order order = orderMapper.selectById(item.getOrderId());
         if (order != null) {
             sendMessage(order.getUserId(), 2, 2, "服务已接单", "您的订单服务已被志愿者接取，请耐心等待服务", order.getId());
+            sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者接单", volunteerId);
         }
     }
 
@@ -374,7 +380,12 @@ public class OrderServiceImpl implements OrderService {
         item.setItemStatus(2);
         orderItemMapper.updateById(item);
         
-        updateOrderStatus(item.getOrderId());
+        Integer oldStatus = updateOrderStatus(item.getOrderId());
+        
+        Order order = orderMapper.selectById(item.getOrderId());
+        if (order != null) {
+            sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者开始服务", volunteerId);
+        }
     }
 
     @Override
@@ -394,11 +405,12 @@ public class OrderServiceImpl implements OrderService {
         item.setItemStatus(3);
         orderItemMapper.updateById(item);
         
-        checkAndCompleteOrder(item.getOrderId());
+        Integer oldStatus = checkAndCompleteOrder(item.getOrderId());
 
         Order order = orderMapper.selectById(item.getOrderId());
         if (order != null) {
             sendMessage(order.getUserId(), 2, 0, "服务已完成", "您的订单服务已完成，请前往确认", order.getId());
+            sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者完成服务", volunteerId);
         }
     }
 
@@ -450,25 +462,29 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private void updateOrderStatus(Long orderId) {
+    private Integer updateOrderStatus(Long orderId) {
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrderItem::getOrderId, orderId);
         List<OrderItem> items = orderItemMapper.selectList(wrapper);
         
-        if (items.isEmpty()) return;
+        if (items.isEmpty()) return null;
+        
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) return null;
+        
+        Integer oldStatus = order.getStatus();
         
         boolean allCompleted = items.stream().allMatch(item -> 
             item.getItemStatus() == 4
         );
         
         if (allCompleted) {
-            Order order = orderMapper.selectById(orderId);
-            if (order != null && order.getStatus() != 4) {
+            if (order.getStatus() != 4) {
                 order.setStatus(4);
                 order.setCompleteTime(LocalDateTime.now());
                 orderMapper.updateById(order);
-                return;
             }
+            return oldStatus;
         }
         
         boolean anyPendingConfirm = items.stream().anyMatch(item -> 
@@ -483,9 +499,6 @@ public class OrderServiceImpl implements OrderService {
             item.getItemStatus() == 1
         );
         
-        Order order = orderMapper.selectById(orderId);
-        if (order == null) return;
-        
         if (anyPendingConfirm) {
             order.setStatus(3);
         } else if (anyInProgress) {
@@ -497,10 +510,65 @@ public class OrderServiceImpl implements OrderService {
         }
         
         orderMapper.updateById(order);
+        return oldStatus;
     }
 
-    private void checkAndCompleteOrder(Long orderId) {
-        updateOrderStatus(orderId);
+    private Integer checkAndCompleteOrder(Long orderId) {
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderItem::getOrderId, orderId);
+        List<OrderItem> items = orderItemMapper.selectList(wrapper);
+        
+        if (items.isEmpty()) return null;
+        
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) return null;
+        
+        Integer oldStatus = order.getStatus();
+        
+        boolean allCompleted = items.stream().allMatch(item -> 
+            item.getItemStatus() == 4
+        );
+        
+        if (allCompleted) {
+            if (order.getStatus() != 4) {
+                order.setStatus(4);
+                order.setCompleteTime(LocalDateTime.now());
+                orderMapper.updateById(order);
+            }
+        }
+        
+        return oldStatus;
+    }
+
+    private void sendStatusChangeMessage(Order order, Integer oldStatus, Integer newStatus, String remark) {
+        sendStatusChangeMessage(order, oldStatus, newStatus, remark, null);
+    }
+
+    private void sendStatusChangeMessage(Order order, Integer oldStatus, Integer newStatus, String remark, Long volunteerId) {
+        if (oldStatus == null || oldStatus.equals(newStatus)) {
+            return;
+        }
+
+        OrderStatusChangeMessage statusMessage = OrderStatusChangeMessage.builder()
+            .orderId(order.getId())
+            .orderNo(order.getOrderNo())
+            .oldStatus(oldStatus)
+            .newStatus(newStatus)
+            .userId(order.getUserId())
+            .volunteerId(volunteerId)
+            .changeTime(LocalDateTime.now())
+            .remark(remark)
+            .build();
+
+        try {
+            messageProducer.sendMessage(
+                RabbitMQConfig.ORDER_STATUS_FANOUT_EXCHANGE,
+                "",
+                statusMessage
+            );
+        } catch (Exception e) {
+
+        }
     }
 
     @Override

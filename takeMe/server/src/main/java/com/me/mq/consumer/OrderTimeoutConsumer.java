@@ -29,6 +29,18 @@ public class OrderTimeoutConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.ORDER_CANCEL_DLX_QUEUE)
     public void handleOrderTimeout(OrderTimeoutMessage message, Message msg, Channel channel) {
+        if (message == null) {
+            log.warn("收到空消息，跳过处理");
+            if (msg != null && channel != null) {
+                try {
+                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
+                } catch (IOException e) {
+                    log.error("ACK失败", e);
+                }
+            }
+            return;
+        }
+
         String lockKey = "mq:idempotent:order:timeout:" + message.getOrderId();
 
         Boolean isLocked = redisTemplate.opsForValue()
@@ -37,7 +49,9 @@ public class OrderTimeoutConsumer {
         if (Boolean.FALSE.equals(isLocked)) {
             log.warn("订单超时消息重复消费，已跳过: orderId={}", message.getOrderId());
             try {
-                channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
+                if (msg != null && channel != null) {
+                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
+                }
             } catch (IOException e) {
                 log.error("ACK失败", e);
             }
@@ -46,17 +60,22 @@ public class OrderTimeoutConsumer {
 
         try {
             cancelOrderIfNeeded(message);
-            channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
+            if (msg != null && channel != null) {
+                channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
+            }
             log.info("订单超时处理完成: orderId={}", message.getOrderId());
         } catch (Exception e) {
             log.error("订单超时处理失败: orderId={}", message.getOrderId(), e);
             try {
-                channel.basicNack(msg.getMessageProperties().getDeliveryTag(), false, true);
+                if (msg != null && channel != null) {
+                    channel.basicNack(msg.getMessageProperties().getDeliveryTag(), false, true);
+                }
             } catch (IOException ioException) {
                 log.error("NACK失败", ioException);
             }
         }
     }
+
 
     private void cancelOrderIfNeeded(OrderTimeoutMessage timeoutMessage) {
         Long orderId = timeoutMessage.getOrderId();
