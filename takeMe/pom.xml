@@ -24,7 +24,6 @@
         <module>redis-starter</module>
         <module>mq-starter</module>
         <module>server</module>
-        <module>mq-starter</module>
     </modules>
 
     <properties>

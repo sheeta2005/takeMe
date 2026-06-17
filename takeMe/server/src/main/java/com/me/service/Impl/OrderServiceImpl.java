@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
+import com.me.dto.OrderTimeoutMessage;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Message;
 import com.me.entity.Order;
@@ -13,6 +14,7 @@ import com.me.entity.Review;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.ReviewMapper;
+import com.me.mq.producer.MessageProducer;
 import com.me.redis.annotation.RedisCache;
 import com.me.redis.annotation.RedisLock;
 import com.me.service.MessageService;
@@ -38,6 +40,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemMapper orderItemMapper;
     private final ReviewMapper reviewMapper;
     private final MessageService messageService;
+    private final MessageProducer messageProducer;
 
     @Override
     public IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
@@ -260,6 +263,17 @@ public class OrderServiceImpl implements OrderService {
         orderVO.setItems(itemVOList);
 
         sendMessage(userId, 2, 1, "订单已提交", "您的订单已成功提交，等待志愿者接单", order.getId());
+
+        OrderTimeoutMessage timeoutMessage = new OrderTimeoutMessage(
+            order.getId(), 
+            order.getOrderNo(), 
+            order.getUserId()
+        );
+        messageProducer.sendMessage(
+            "order.exchange",
+            "order.create",
+            timeoutMessage
+        );
 
         return orderVO;
     }

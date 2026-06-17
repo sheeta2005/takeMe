@@ -89,6 +89,14 @@
             <artifactId>redis-starter</artifactId>
         </dependency>
 
+        <!-- RabbitMQ -->
+        <dependency>
+            <groupId>com.me</groupId>
+            <artifactId>mq-starter</artifactId>
+        </dependency>
+
     </dependencies>
+
+
 
 </project>
