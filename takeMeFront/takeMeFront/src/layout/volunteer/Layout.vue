@@ -5,7 +5,7 @@
       <div class="header-left">takeMe 志愿者服务平台</div>
       <div class="header-right">
         <div class="user-box">
-          <img class="user-avatar" :src="volunteerStore.avatar" alt="头像" />
+          <Avatar :src="volunteerStore.avatar" :size="46" />
           <span>您好，{{ userName }} 志愿者</span>
         </div>
       </div>
@@ -81,6 +81,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useVolunteerStore } from '@/stores/volunteer'
+import Avatar from '@/components/Avatar.vue'
 import {
   House, User, Setting, Clock, Calendar,
   ChatDotRound, Coin, Reading, List, DocumentChecked

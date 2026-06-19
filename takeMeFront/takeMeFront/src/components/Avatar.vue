@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import defaultAvatar from '@/assets/佐仓杏子.png'
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const props = withDefaults(defineProps<{
   src?: string
