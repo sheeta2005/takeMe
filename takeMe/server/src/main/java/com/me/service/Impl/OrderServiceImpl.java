@@ -490,9 +490,17 @@ public class OrderServiceImpl implements OrderService {
             return oldStatus;
         }
         
-        boolean anyPendingConfirm = items.stream().anyMatch(item -> 
-            item.getItemStatus() == 3
+        boolean allPendingConfirm = items.stream().allMatch(item -> 
+            item.getItemStatus() >= 3
         );
+        
+        if (allPendingConfirm) {
+            if (order.getStatus() != 3) {
+                order.setStatus(3);
+                orderMapper.updateById(order);
+            }
+            return oldStatus;
+        }
         
         boolean anyInProgress = items.stream().anyMatch(item -> 
             item.getItemStatus() == 2
@@ -502,9 +510,7 @@ public class OrderServiceImpl implements OrderService {
             item.getItemStatus() == 1
         );
         
-        if (anyPendingConfirm) {
-            order.setStatus(3);
-        } else if (anyInProgress) {
+        if (anyInProgress) {
             order.setStatus(2);
         } else if (anyAccepted) {
             order.setStatus(1);
@@ -582,21 +588,16 @@ public class OrderServiceImpl implements OrderService {
         if (order == null || !order.getUserId().equals(userId)) {
             throw new RuntimeException("订单不存在");
         }
-        if (order.getStatus() != 2) {
+        if (order.getStatus() != 3) {
             throw new RuntimeException("订单状态不允许确认");
         }
 
-        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(OrderItem::getOrderId, orderId);
-        wrapper.eq(OrderItem::getItemStatus, 2);
-        List<OrderItem> items = orderItemMapper.selectList(wrapper);
-        
-        for (OrderItem item : items) {
-            item.setItemStatus(3);
-            orderItemMapper.updateById(item);
-        }
-        
-        updateOrderStatus(orderId);
+        Integer oldStatus = order.getStatus();
+        order.setStatus(4);
+        order.setCompleteTime(LocalDateTime.now());
+        orderMapper.updateById(order);
+
+        sendStatusChangeMessage(order, oldStatus, 4, "用户确认服务完成");
     }
 
     @Override

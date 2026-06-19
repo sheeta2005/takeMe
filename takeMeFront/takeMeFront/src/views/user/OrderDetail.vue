@@ -84,6 +84,9 @@
                   <el-icon><User /></el-icon>
                   查看志愿者
                 </el-link>
+                <span v-else class="no-volunteer-tip">
+                  <el-tag type="info" size="small">等待接取</el-tag>
+                </span>
               </div>
             </template>
           </el-table-column>
@@ -217,11 +220,11 @@
       width="700px"
       :close-on-click-modal="false"
     >
-      <div v-if="volunteerDetail" class="volunteer-detail">
+      <div v-if="volunteerDetail && volunteerDetail.volunteer" class="volunteer-detail">
         <div class="volunteer-header">
-          <el-avatar :size="80" :src="volunteerDetail.avatar || defaultAvatar" />
+          <el-avatar :size="80" :src="volunteerDetail.volunteer.avatar || defaultAvatar" />
           <div class="volunteer-info">
-            <h3 class="volunteer-name">{{ volunteerDetail.realName }}</h3>
+            <h3 class="volunteer-name">{{ volunteerDetail.volunteer.realName }}</h3>
             <div class="volunteer-stats">
               <el-tag type="success" size="large">
                 完成服务 {{ volunteerDetail.completedCount }} 次
@@ -237,19 +240,19 @@
 
         <el-descriptions :column="2" border>
           <el-descriptions-item label="联系电话">
-            {{ volunteerDetail.volunteer?.phone }}
+            {{ volunteerDetail.volunteer.phone }}
           </el-descriptions-item>
           <el-descriptions-item label="性别">
-            {{ volunteerDetail.volunteer?.gender === 1 ? '男' : volunteerDetail.volunteer?.gender === 2 ? '女' : '未知' }}
+            {{ volunteerDetail.volunteer.gender === 1 ? '男' : volunteerDetail.volunteer.gender === 2 ? '女' : '未知' }}
           </el-descriptions-item>
           <el-descriptions-item label="年龄">
-            {{ volunteerDetail.volunteer?.age || '未填写' }}
+            {{ volunteerDetail.volunteer.age || '未填写' }}
           </el-descriptions-item>
           <el-descriptions-item label="地址">
-            {{ volunteerDetail.volunteer?.address || '未填写' }}
+            {{ volunteerDetail.volunteer.address || '未填写' }}
           </el-descriptions-item>
           <el-descriptions-item label="服务总时长">
-            {{ volunteerDetail.volunteer?.totalServiceHours || 0 }} 小时
+            {{ volunteerDetail.volunteer.totalServiceHours || 0 }} 小时
           </el-descriptions-item>
         </el-descriptions>
 
@@ -397,6 +400,7 @@ const showVolunteerDetail = async (volunteerId: number) => {
   try {
     const res = await getVolunteerDetail(volunteerId)
     if (res.code === 200) {
+      console.log('志愿者详情数据:', res.data)
       volunteerDetail.value = res.data
       volunteerDetailVisible.value = true
     }
@@ -542,6 +546,10 @@ const back = () => {
 
 .service-name-link:hover {
   opacity: 0.8;
+}
+
+.no-volunteer-tip {
+  margin-left: 8px;
 }
 
 .volunteer-link {

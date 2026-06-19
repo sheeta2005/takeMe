@@ -88,6 +88,9 @@
                   class="service-tag-item"
                 >
                   {{ item.serviceName }} ×{{ item.quantity }}
+                  <span v-if="item.volunteerId" class="volunteer-indicator">
+                    👤 已接取
+                  </span>
                 </el-tag>
               </div>
             </div>
@@ -353,6 +356,15 @@ onMounted(() => {
 
 .service-tag-item {
   margin-right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.volunteer-indicator {
+  font-size: 12px;
+  margin-left: 4px;
+  opacity: 0.8;
 }
 
 .order-card-footer {
