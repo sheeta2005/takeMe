@@ -222,13 +222,18 @@ const loadMyServices = async () => {
     })
     if (res.code === 200) {
       const services: any[] = []
+      const currentVolunteerId = Number(volunteerStore.userId)
+
       res.data?.records?.forEach((order: any) => {
         order.items?.forEach((item: any) => {
-          if (item.volunteerId && [1, 2, 3].includes(item.itemStatus)) {
+          // 严格匹配：只显示当前志愿者自己的订单
+          if (item.volunteerId === currentVolunteerId && [1, 2, 3].includes(item.itemStatus)) {
             services.push({
               ...item,
               orderNo: order.orderNo,
-              orderId: order.id
+              orderId: order.id,
+              userName: order.userName,
+              userPhone: order.userPhone
             })
           }
         })

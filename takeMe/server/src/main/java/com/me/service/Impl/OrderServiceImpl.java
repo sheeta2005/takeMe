@@ -84,6 +84,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public IPage<OrderVO> getVolunteerOrderList(Long volunteerId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
+        if (volunteerId == null) {
+            throw new RuntimeException("志愿者ID不能为空");
+        }
+        
         LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
         itemWrapper.eq(OrderItem::getVolunteerId, volunteerId);
         if (status != null) {
@@ -101,7 +105,6 @@ public class OrderServiceImpl implements OrderService {
                 OrderVO vo = new OrderVO();
                 BeanUtils.copyProperties(order, vo);
                 
-                // 填充用户信息
                 if (order.getUserId() != null) {
                     User user = userMapper.selectById(order.getUserId());
                     if (user != null) {
