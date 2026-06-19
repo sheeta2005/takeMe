@@ -10,6 +10,7 @@ import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,6 +43,11 @@ public class RabbitMQConfig {
     
     public static final String APPROVAL_RESULT_DIRECT_EXCHANGE = "approval.result.direct.exchange";
     public static final String APPROVAL_RESULT_ROUTING_KEY_PREFIX = "approval.result.";
+
+    // 志愿者启动服务超时队列配置
+    public static final String VOLUNTEER_START_TIMEOUT_EXCHANGE = "volunteer.start.timeout.exchange";
+    public static final String VOLUNTEER_START_TIMEOUT_QUEUE = "volunteer.start.timeout.queue";
+    public static final String VOLUNTEER_START_TIMEOUT_ROUTING_KEY = "volunteer.start.timeout";
 
     @Bean
     public MessageConverter messageConverter() {
@@ -105,6 +111,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public DirectExchange volunteerStartTimeoutExchange() {
+        return new DirectExchange(VOLUNTEER_START_TIMEOUT_EXCHANGE, true, false);
+    }
+
+    @Bean
     public Queue orderDelayQueue() {
         Map<String, Object> args = new HashMap<>();
         args.put("x-dead-letter-exchange", ORDER_DEAD_LETTER_EXCHANGE);
@@ -147,6 +158,25 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue volunteerStartTimeoutQueue() {
+        Map<String, Object> args = new HashMap<>();
+        // 设置消息TTL为30分钟（1800000毫秒）
+        args.put("x-message-ttl", 30 * 60 * 1000);
+        // 设置死信交换机
+        args.put("x-dead-letter-exchange", VOLUNTEER_START_TIMEOUT_EXCHANGE);
+        args.put("x-dead-letter-routing-key", VOLUNTEER_START_TIMEOUT_ROUTING_KEY);
+        
+        return QueueBuilder.durable("volunteer.start.timeout.delay.queue")
+            .withArguments(args)
+            .build();
+    }
+
+    @Bean
+    public Queue volunteerStartTimeoutDlxQueue() {
+        return QueueBuilder.durable(VOLUNTEER_START_TIMEOUT_QUEUE).build();
+    }
+
+    @Bean
     public Binding orderDelayBinding(Queue orderDelayQueue, DirectExchange orderExchange) {
         return BindingBuilder.bind(orderDelayQueue)
             .to(orderExchange)
@@ -185,5 +215,23 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(volunteerApprovalQueue)
             .to(approvalResultDirectExchange)
             .with(APPROVAL_RESULT_ROUTING_KEY_PREFIX + "*");
+    }
+
+    @Bean
+    public Binding volunteerStartTimeoutDelayBinding(
+            @Qualifier("volunteerStartTimeoutQueue") Queue volunteerStartTimeoutDelayQueue, 
+            DirectExchange volunteerStartTimeoutExchange) {
+        return BindingBuilder.bind(volunteerStartTimeoutDelayQueue)
+            .to(volunteerStartTimeoutExchange)
+            .with("volunteer.start.timeout.delay");
+    }
+
+    @Bean
+    public Binding volunteerStartTimeoutDlxBinding(
+            @Qualifier("volunteerStartTimeoutDlxQueue") Queue volunteerStartTimeoutDlxQueue, 
+            DirectExchange volunteerStartTimeoutExchange) {
+        return BindingBuilder.bind(volunteerStartTimeoutDlxQueue)
+            .to(volunteerStartTimeoutExchange)
+            .with(VOLUNTEER_START_TIMEOUT_ROUTING_KEY);
     }
 }

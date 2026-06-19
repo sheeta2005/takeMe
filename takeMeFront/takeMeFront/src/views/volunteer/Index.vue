@@ -187,6 +187,9 @@ const volunteerData = ref({
 })
 
 onMounted(async () => {
+  // 先获取志愿者最新信息（包括头像等）
+  await volunteerStore.fetchVolunteerInfo()
+
   userName.value = volunteerStore.realName || '尊敬的志愿者'
   serviceHours.value = volunteerStore.totalServiceHours || 0
 

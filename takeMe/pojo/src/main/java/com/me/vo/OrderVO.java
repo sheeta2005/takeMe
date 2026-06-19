@@ -53,6 +53,12 @@ public class OrderVO {
     @Schema(description = "是否已评价（0-否 1-是）", example = "0")
     private Integer isReviewed;
 
+    @Schema(description = "下单用户姓名", example = "张三")
+    private String userName;
+    
+    @Schema(description = "下单用户电话", example = "13800138000")
+    private String userPhone;
+
     @Schema(description = "订单项列表")
     private List<OrderItemVO> items;
 }

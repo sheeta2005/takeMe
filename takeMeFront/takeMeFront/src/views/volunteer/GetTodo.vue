@@ -115,6 +115,18 @@
                 </div>
 
                 <div class="info-item">
+                  <el-icon class="info-icon"><User/></el-icon>
+                  <span class="info-label">联系人：</span>
+                  <span class="info-value">{{ service.userName || '未知' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <el-icon class="info-icon"><Phone/></el-icon>
+                  <span class="info-label">联系电话：</span>
+                  <span class="info-value">{{ service.userPhone || '未提供' }}</span>
+                </div>
+
+                <div class="info-item">
                   <el-icon class="info-icon"><Calendar/></el-icon>
                   <span class="info-label">服务时间：</span>
                   <span class="info-value">{{ service.serviceDate }} {{ service.serviceTime }}</span>
@@ -171,7 +183,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {Bell, Calendar, Check, Document, Location, Refresh, Search, Ticket} from '@element-plus/icons-vue'
+import {Bell, Calendar, Check, Document, Location, Refresh, Search, Ticket, User, Phone} from '@element-plus/icons-vue'
 import {confirmOrder, getAvailableOrderList, getVolunteerOrderList} from '@/api/volunteer'
 import {useVolunteerStore} from '@/stores/volunteer'
 
@@ -262,7 +274,15 @@ const loadAvailableServices = async () => {
     })
     if (res.code === 200) {
       const services: any[] = []
+      const seenOrderIds = new Set<number>() // 用于去重：记录已处理的订单ID
+
       res.data?.records?.forEach((order: any) => {
+        // 如果该订单已处理过，跳过（避免同一订单的多个服务项目导致重复渲染）
+        if (seenOrderIds.has(order.id)) {
+          return
+        }
+        seenOrderIds.add(order.id)
+
         order.items?.forEach((item: any) => {
           if (!item.volunteerId && item.itemStatus === 0) {
             services.push({

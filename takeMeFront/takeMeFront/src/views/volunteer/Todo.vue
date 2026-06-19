@@ -67,6 +67,18 @@
                       <span class="service-detail">×{{ service.quantity }}</span>
                     </div>
                   </el-descriptions-item>
+                  <el-descriptions-item label="联系人">
+                    <div class="contact-info">
+                      <el-icon><User /></el-icon>
+                      <span>{{ service.userName || '未知' }}</span>
+                    </div>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="联系电话">
+                    <div class="contact-info">
+                      <el-icon><Phone /></el-icon>
+                      <span>{{ service.userPhone || '未提供' }}</span>
+                    </div>
+                  </el-descriptions-item>
                   <el-descriptions-item label="服务时间">
                     <div class="time-info">
                       <el-icon><Calendar /></el-icon>
@@ -135,7 +147,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Refresh, Calendar, Location, VideoPlay, CircleCheck, CloseBold
+  Refresh, Calendar, Location, VideoPlay, CircleCheck, CloseBold, User, Phone
 } from '@element-plus/icons-vue'
 import {
   getVolunteerOrderList,
@@ -396,14 +408,16 @@ onMounted(async () => {
 }
 
 .time-info,
-.address-info {
+.address-info,
+.contact-info {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .time-info .el-icon,
-.address-info .el-icon {
+.address-info .el-icon,
+.contact-info .el-icon {
   color: #00b899;
 }
 

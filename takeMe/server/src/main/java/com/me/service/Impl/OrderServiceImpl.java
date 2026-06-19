@@ -8,14 +8,13 @@ import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
 import com.me.dto.OrderStatusChangeMessage;
 import com.me.dto.OrderTimeoutMessage;
+import com.me.dto.VolunteerStartTimeoutMessage;
 import com.me.dto.PageResultDTO;
-import com.me.entity.Message;
-import com.me.entity.Order;
-import com.me.entity.OrderItem;
-import com.me.entity.Review;
+import com.me.entity.*;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.ReviewMapper;
+import com.me.mapper.UserMapper;
 import com.me.mq.config.RabbitMQConfig;
 import com.me.mq.producer.MessageProducer;
 import com.me.redis.annotation.RedisCache;
@@ -41,9 +40,10 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
+    private final UserMapper userMapper;
     private final ReviewMapper reviewMapper;
-    private final MessageService messageService;
     private final MessageProducer messageProducer;
+    private final MessageService messageService;
 
     @Override
     public IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
@@ -101,6 +101,15 @@ public class OrderServiceImpl implements OrderService {
                 OrderVO vo = new OrderVO();
                 BeanUtils.copyProperties(order, vo);
                 
+                // 填充用户信息
+                if (order.getUserId() != null) {
+                    User user = userMapper.selectById(order.getUserId());
+                    if (user != null) {
+                        vo.setUserName(user.getRealName());
+                        vo.setUserPhone(user.getPhone());
+                    }
+                }
+                
                 LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
                 wrapper.eq(OrderItem::getOrderId, order.getId());
                 List<OrderItem> items = orderItemMapper.selectList(wrapper);
@@ -138,6 +147,15 @@ public class OrderServiceImpl implements OrderService {
                 
                 OrderVO vo = new OrderVO();
                 BeanUtils.copyProperties(order, vo);
+                
+                // 填充用户信息
+                if (order.getUserId() != null) {
+                    User user = userMapper.selectById(order.getUserId());
+                    if (user != null) {
+                        vo.setUserName(user.getRealName());
+                        vo.setUserPhone(user.getPhone());
+                    }
+                }
                 
                 LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
                 itemWrapper.eq(OrderItem::getOrderId, order.getId());
@@ -284,6 +302,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @BizLog(value = "取消订单", logParams = true)
+    @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -296,6 +315,28 @@ public class OrderServiceImpl implements OrderService {
         Integer oldStatus = order.getStatus();
         order.setStatus(5);
         orderMapper.updateById(order);
+
+        // 同步处理该订单下所有已分配志愿者的服务项目
+        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+        itemWrapper.eq(OrderItem::getOrderId, orderId);
+        itemWrapper.isNotNull(OrderItem::getVolunteerId);
+        List<OrderItem> assignedItems = orderItemMapper.selectList(itemWrapper);
+        
+        for (OrderItem item : assignedItems) {
+            // 清空志愿者ID，设置为已放弃状态（5）
+            item.setVolunteerId(null);
+            item.setItemStatus(5);
+            orderItemMapper.updateById(item);
+            
+            // 发送通知给志愿者：订单已被用户取消
+            sendMessageToVolunteer(item.getVolunteerId(), 1, 0, 
+                "订单已取消", 
+                "您接取的订单（订单号：" + order.getOrderNo() + "）已被用户取消，服务自动终止", 
+                item.getId());
+        }
+        
+        // 更新订单的志愿者ID列表
+        updateOrderVolunteerIds(orderId);
 
         sendStatusChangeMessage(order, oldStatus, 5, "用户取消订单");
     }
@@ -330,6 +371,20 @@ public class OrderServiceImpl implements OrderService {
         if (order != null) {
             sendMessage(order.getUserId(), 2, 2, "服务已接单", "您的订单服务已被志愿者接取，请耐心等待服务", order.getId());
             sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者接单", volunteerId);
+            
+            // 发送30分钟超时延迟消息
+            VolunteerStartTimeoutMessage timeoutMessage = VolunteerStartTimeoutMessage.builder()
+                .orderItemId(orderItemId)
+                .volunteerId(volunteerId)
+                .orderId(order.getId())
+                .orderNo(order.getOrderNo())
+                .build();
+            
+            messageProducer.sendMessage(
+                RabbitMQConfig.VOLUNTEER_START_TIMEOUT_EXCHANGE,
+                "volunteer.start.timeout.delay",
+                timeoutMessage
+            );
         }
     }
 
@@ -750,17 +805,23 @@ public class OrderServiceImpl implements OrderService {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
     }
 
-    private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
-                             String title, String content, Long relatedOrderId) {
-        Message msg = new Message();
-        msg.setReceiverId(receiverId);
-        msg.setReceiverType(receiverType);
-        msg.setType(type);
-        msg.setTitle(title);
-        msg.setContent(content);
-        msg.setIsRead(0);
-        msg.setRelatedOrderId(relatedOrderId);
-        msg.setCreateTime(LocalDateTime.now());
-        messageService.sendMessage(msg);
+    private void sendMessage(Long receiverId, Integer receiverType, Integer type, String title, String content, Long relatedOrderId) {
+        com.me.entity.Message message = new com.me.entity.Message();
+        message.setReceiverId(receiverId);
+        message.setReceiverType(receiverType);
+        message.setType(type);
+        message.setTitle(title);
+        message.setContent(content);
+        message.setIsRead(0);
+        message.setRelatedOrderId(relatedOrderId);
+        message.setCreateTime(LocalDateTime.now());
+        messageService.sendMessage(message);
+    }
+
+    private void sendMessageToVolunteer(Long volunteerId, Integer receiverType, Integer type, String title, String content, Long relatedOrderId) {
+        if (volunteerId == null) {
+            return;
+        }
+        sendMessage(volunteerId, receiverType, type, title, content, relatedOrderId);
     }
 }
