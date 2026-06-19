@@ -13,7 +13,6 @@
           <template #reference>
             <div class="cart-icon-wrapper">
               <el-icon size="28" class="cart-icon"><ShoppingCart /></el-icon>
-              <el-badge :value="cartStore.totalCount" class="cart-badge" />
             </div>
           </template>
 
@@ -93,12 +92,10 @@
           <el-menu-item index="/user/cart">
             <el-icon><ShoppingCart /></el-icon>
             <span>我的购物车</span>
-            <el-badge :value="cartStore.totalCount" class="menu-badge" />
           </el-menu-item>
           <el-menu-item index="/user/message">
             <el-icon><Message /></el-icon>
             <span>消息中心</span>
-            <el-badge :value="unreadMessageCount" :hidden="unreadMessageCount === 0" class="menu-badge" />
           </el-menu-item>
           <el-menu-item index="/user/info">
             <el-icon><User /></el-icon>

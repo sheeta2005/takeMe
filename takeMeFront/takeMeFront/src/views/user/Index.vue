@@ -197,7 +197,9 @@ const newsList = [
 ]
 
 onMounted(async () => {
-  userName.value = userStore.username || '尊敬的用户'
+  // 先加载用户基本信息
+  await userStore.getUserInfo()
+  userName.value = userStore.realName || userStore.username || '尊敬的用户'
 
   try {
     // 获取用户统计数据

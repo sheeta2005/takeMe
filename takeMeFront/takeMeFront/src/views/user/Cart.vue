@@ -188,11 +188,11 @@
           </div>
           <div class="info-row">
             <span class="info-label">订单金额</span>
-            <span class="info-value price">¥{{ createdOrder.totalAmount }}</span>
+            <span class="info-value price">¥{{ createdOrder.totalPrice }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">服务项目</span>
-            <span class="info-value">{{ createdOrder.itemCount }} 项</span>
+            <span class="info-value">{{ createdOrder.items ? createdOrder.items.length : 0 }} 项</span>
           </div>
         </div>
 
