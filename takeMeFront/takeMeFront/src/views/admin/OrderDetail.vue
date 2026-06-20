@@ -30,7 +30,7 @@
             {{ order.userId }}
           </el-descriptions-item>
           <el-descriptions-item label="志愿者ID">
-            {{ order.volunteerId || '未分配' }}
+            {{ parseVolunteerId(order.volunteerIds) }}
           </el-descriptions-item>
           <el-descriptions-item label="服务时间" v-if="order.serviceDate">
             {{ order.serviceDate }} {{ order.serviceTime || '' }}
@@ -106,7 +106,7 @@
         <div class="total-summary">
           <div class="total-row">
             <span class="total-label">订单总计：</span>
-            <span class="total-value">¥{{ order.totalAmount || order.totalPrice }}</span>
+            <span class="total-value">¥{{ order.totalPrice }}</span>
           </div>
         </div>
       </el-card>
@@ -163,6 +163,13 @@ const loading = ref(true)
 const completeLoading = ref(false)
 const cancelLoading = ref(false)
 const order = ref<any>(null)
+
+// 解析志愿者ID（volunteerIds是字符串格式）
+const parseVolunteerId = (volunteerIds: string) => {
+  if (!volunteerIds) return '未分配'
+  const ids = volunteerIds.split(',')
+  return ids[0] || '未分配'
+}
 
 const serviceTypeMap: Record<number, string> = {
   0: '代购服务',

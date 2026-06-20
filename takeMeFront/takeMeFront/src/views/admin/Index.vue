@@ -260,7 +260,7 @@ import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { getDashboardData, getOrderTrend7d, getServiceTypeDist, searchOrder } from '@/api/admin'
 import { useAdminStore } from '@/stores/admin'
-import defaultAvatar from '@/assets/佐仓杏子.png'
+import defaultAvatar from '@/assets/default-avatar.png'
 import {
   UserFilled, Bell, Document, Loading, Money, User, Coin,
   CaretTop, Minus, Plus, TrendCharts, PieChart, Grid, Check,

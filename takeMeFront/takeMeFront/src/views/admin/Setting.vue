@@ -17,7 +17,7 @@
 
       <div class="profile-content">
         <div class="avatar-section">
-          <Avatar :src="adminStore.avatar" :size="100" />
+          <Avatar :src="adminStore.avatar || defaultAvatar" :size="100" />
           <div class="avatar-actions">
             <el-upload
               :show-file-list="false"
@@ -74,6 +74,7 @@ import { useAdminStore } from '@/stores/admin'
 import { uploadAvatar } from '@/api/admin'
 import { compressImage } from '@/utils/imageCompress'
 import Avatar from '@/components/Avatar.vue'
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const adminStore = useAdminStore()
 

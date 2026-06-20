@@ -150,6 +150,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Refresh, User, View, Switch, Delete } from '@element-plus/icons-vue'
 import { searchVolunteer, addVolunteer, deleteVolunteer, updateVolunteerStatus } from '@/api/admin'
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const router = useRouter()
 const loading = ref(false)
@@ -167,8 +168,6 @@ const addForm = ref({
   username: '',
   phone: ''
 })
-
-const defaultAvatar = ref('/佐仓杏子.png')
 
 onMounted(() => {
   fetchVolunteers()

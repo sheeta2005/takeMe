@@ -27,14 +27,14 @@
         </template>
 
         <div class="user-header">
-          <el-avatar :size="100" :src="userDetail.user?.avatar || defaultAvatar" />
+          <el-avatar :size="100" :src="userDetail.avatar || defaultAvatar" />
           <div class="user-info">
-            <h3 class="user-name">{{ userDetail.user?.realName }}</h3>
+            <h3 class="user-name">{{ userDetail.realName }}</h3>
             <div class="user-meta">
-              <el-tag :type="userDetail.user?.gender === 0 ? '' : 'danger'" size="small">
-                {{ userDetail.user?.gender === 0 ? '男' : '女' }}
+              <el-tag :type="userDetail.gender === 0 ? '' : 'danger'" size="small">
+                {{ userDetail.gender === 0 ? '男' : '女' }}
               </el-tag>
-              <span class="meta-text">{{ userDetail.user?.age }}岁</span>
+              <span class="meta-text">{{ userDetail.age }}岁</span>
             </div>
           </div>
         </div>
@@ -43,22 +43,22 @@
 
         <el-descriptions :column="2" border>
           <el-descriptions-item label="用户ID">
-            <span class="value-text">{{ userDetail.user?.id }}</span>
+            <span class="value-text">{{ userDetail.id }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="账号">
-            <span class="value-text">{{ userDetail.user?.username }}</span>
+            <span class="value-text">{{ userDetail.username }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="手机号">
-            <span class="value-text">{{ userDetail.user?.phone }}</span>
+            <span class="value-text">{{ userDetail.phone }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="居住地址" :span="2">
-            <span class="value-text">{{ userDetail.user?.address || '-' }}</span>
+            <span class="value-text">{{ userDetail.address || '-' }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="注册时间">
-            <span class="time-text">{{ userDetail.user?.createTime }}</span>
+            <span class="time-text">{{ formatTime(userDetail.createTime) }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="最后登录">
-            <span class="time-text">{{ userDetail.user?.lastLoginTime || '-' }}</span>
+            <span class="time-text">{{ userDetail.lastLoginTime || '-' }}</span>
           </el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -127,11 +127,11 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Back, User, ShoppingCart, ChatDotRound } from '@element-plus/icons-vue'
 import { getUserDetail } from '@/api/admin'
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const route = useRoute()
 const loading = ref(true)
 const userDetail = ref<any>(null)
-const defaultAvatar = ref('/佐仓杏子.png')
 
 onMounted(() => {
   const userId = Number(route.params.id)
@@ -180,7 +180,7 @@ const getOrderStatusType = (status: number) => {
 }
 
 const formatTime = (time: string) => {
-  if (!time) return ''
+  if (!time) return '-'
   return new Date(time).toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',

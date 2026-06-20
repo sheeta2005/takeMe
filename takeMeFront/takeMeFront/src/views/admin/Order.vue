@@ -58,7 +58,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="userId" label="用户ID" width="100" />
-        <el-table-column prop="volunteerId" label="志愿者ID" width="120" />
+<!--        <el-table-column label="志愿者ID" width="120">-->
+<!--          <template #default="{ row }">-->
+<!--            <span>{{ parseVolunteerId(row.volunteerIds) }}</span>-->
+<!--          </template>-->
+<!--        </el-table-column>-->
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="default">
@@ -68,7 +72,7 @@
         </el-table-column>
         <el-table-column label="总金额" width="120">
           <template #default="{ row }">
-            <span class="amount">¥{{ row.totalAmount?.toFixed(2) }}</span>
+            <span class="amount">¥{{ row.totalPrice?.toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180" />
@@ -124,6 +128,14 @@ const filterForm = reactive({
   orderNo: '',
   dateRange: [] as string[]
 })
+
+// 解析志愿者ID（volunteerIds是字符串格式）
+const parseVolunteerId = (volunteerIds: string) => {
+  if (!volunteerIds) return '未分配'
+  // 如果包含逗号，取第一个ID
+  const ids = volunteerIds.split(',')
+  return ids[0] || '未分配'
+}
 
 const getStatusName = (status: number) => {
   const names = ['待接单', '已接单', '服务中', '待确认', '已完成', '已取消', '已放弃']

@@ -192,30 +192,29 @@ const handleSend = async () => {
 
   try {
     if (form.receiverType === 'spec_volunteer' && form.volunteerIds.length > 0) {
-      await sendBatchMessage({
-        receiverIds: form.volunteerIds,
-        message: {
-          receiverType: 1,
-          type: form.type,
-          title: form.title,
-          content: form.content
-        }
-      })
+      // 批量发送给指定志愿者 - 构造MessageDTO数组
+      const messages = form.volunteerIds.map(volunteerId => ({
+        receiverId: volunteerId,
+        receiverType: 1,
+        type: form.type,
+        title: form.title,
+        content: form.content
+      }))
+      await sendBatchMessage(messages)
     } else if (form.receiverType === 'spec_elder' && form.elderIds.length > 0) {
-      await sendBatchMessage({
-        receiverIds: form.elderIds,
-        message: {
-          receiverType: 0,
-          type: form.type,
-          title: form.title,
-          content: form.content
-        }
-      })
+      // 批量发送给指定老人 - 构造MessageDTO数组
+      const messages = form.elderIds.map(elderId => ({
+        receiverId: elderId,
+        receiverType: 2,
+        type: form.type,
+        title: form.title,
+        content: form.content
+      }))
+      await sendBatchMessage(messages)
     } else {
-      let receiverType = 2
-      if (form.receiverType === 'all_volunteer') {
-        receiverType = 1
-      } else if (form.receiverType === 'all_elder') {
+      // 群发消息给所有志愿者或所有老人
+      let receiverType = 1
+      if (form.receiverType === 'all_elder') {
         receiverType = 2
       }
       await sendMessage({

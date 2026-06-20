@@ -117,11 +117,11 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Back, User, ChatDotRound } from '@element-plus/icons-vue'
 import { getVolunteerDetail } from '@/api/admin'
+import defaultAvatar from '@/assets/default-avatar.png'
 
 const route = useRoute()
 const loading = ref(true)
 const volunteerDetail = ref<any>(null)
-const defaultAvatar = ref('/佐仓杏子.png')
 
 onMounted(() => {
   const volunteerId = Number(route.params.id)

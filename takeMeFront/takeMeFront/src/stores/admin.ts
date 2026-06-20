@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { getAdminInfo, updateAdminInfo, adminLogout } from '@/api'
 import { ElMessage } from 'element-plus'
-
 export const useAdminStore = defineStore('admin', {
   state: () => ({
     token: localStorage.getItem('adminToken') || '',
@@ -9,6 +8,7 @@ export const useAdminStore = defineStore('admin', {
     username: '',
     role: 0,
     realName: '',
+    avatar: '',
     createTime: '',
     lastLoginTime: ''
   }),
@@ -56,6 +56,7 @@ export const useAdminStore = defineStore('admin', {
         this.adminId = ''
         this.username = ''
         this.realName = ''
+        this.avatar = ''
         this.createTime = ''
         this.lastLoginTime = ''
         this.role = 0
