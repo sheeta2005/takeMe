@@ -28,4 +28,6 @@ public interface UserService extends IService<User> {
     void deleteAvatar(Long userId);
 
     java.util.List<Long> getAllUserIds(int pageNum, int pageSize);
+
+    boolean logicalDeleteUser(Long userId);
 }

@@ -64,15 +64,14 @@ public class AdminUserController {
         return Result.success(user);
     }
 
-    @PostMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     public Result<Void> deleteUser(@PathVariable Long id) {
         User user = userService.getById(id);
         if (user == null) {
             return Result.error("用户不存在");
         }
         
-        user.setStatus(0);
-        boolean success = userService.updateById(user);
+        boolean success = userService.logicalDeleteUser(id);
         
         if (!success) {
             return Result.error("删除失败");

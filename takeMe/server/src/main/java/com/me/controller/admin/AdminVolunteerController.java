@@ -101,18 +101,18 @@ public class AdminVolunteerController {
         return Result.success(result);
     }
 
-    @PostMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     public Result<Void> deleteVolunteer(@PathVariable Long id) {
         Volunteer volunteer = volunteerService.getById(id);
         if (volunteer == null) {
             return Result.error("志愿者不存在");
         }
         
-        volunteer.setStatus(0);
-        volunteerService.updateById(volunteer);
+        boolean success = volunteerService.logicalDeleteVolunteer(id);
         
-        int releasedCount = volunteerService.releaseVolunteerServices(id);
-        
+        if (!success) {
+            return Result.error("删除失败");
+        }
         return Result.success();
     }
     

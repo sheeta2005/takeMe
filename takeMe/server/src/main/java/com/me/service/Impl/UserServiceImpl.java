@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -157,5 +159,36 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         return resultPage.getRecords().stream()
                 .map(User::getId)
                 .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public boolean logicalDeleteUser(Long userId) {
+        User user = this.getById(userId);
+        if (user == null) {
+            return false;
+        }
+        
+        String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        
+        user.setStatus(0);
+        user.setRealName("已删除用户" + randomSuffix);
+        user.setUsername("deleted_" + userId + "_" + randomSuffix);
+        user.setPhone("00000000000");
+        user.setPassword("DELETED");
+        user.setAvatar(null);
+        user.setGender(0);
+        user.setAge(1);
+        user.setEmergencyName("sseehee");
+        user.setEmergencyPhone("00000000000");
+        
+        boolean success = this.updateById(user);
+        
+        if (success) {
+            log.info("用户 {} 已被逻辑删除，敏感字段已脱敏", userId);
+        } else {
+            log.error("用户 {} 逻辑删除失败", userId);
+        }
+        
+        return success;
     }
 }

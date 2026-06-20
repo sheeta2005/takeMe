@@ -47,4 +47,6 @@ public interface VolunteerService extends IService<Volunteer> {
     void deleteAvatar(Long volunteerId);
 
     java.util.List<Long> getAllVolunteerIds(int pageNum, int pageSize);
+
+    boolean logicalDeleteVolunteer(Long volunteerId);
 }

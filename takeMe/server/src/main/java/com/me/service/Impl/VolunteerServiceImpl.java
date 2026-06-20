@@ -1,9 +1,8 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.LoginDTO;
 import com.me.dto.PageResultDTO;
 import com.me.dto.UserRegisterDTO;
@@ -14,6 +13,7 @@ import com.me.mapper.ApprovalMapper;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.util.OssUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -30,9 +31,10 @@ import java.util.List;
 public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer> implements VolunteerService {
 
     private final PasswordEncoder passwordEncoder;
-    private final ApprovalMapper approvalMapper;
     private final OrderItemMapper orderItemMapper;
+    private final ApprovalMapper approvalMapper;
     private final OssUtil ossUtil;
+
 
     @Override
     public Volunteer login(LoginDTO loginDTO) {
@@ -204,5 +206,38 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         return resultPage.getRecords().stream()
                 .map(Volunteer::getId)
                 .collect(java.util.stream.Collectors.toList());
+    }
+
+    //志愿者逻辑删除
+    @Override
+    public boolean logicalDeleteVolunteer(Long volunteerId) {
+        Volunteer volunteer = this.getById(volunteerId);
+        if (volunteer == null) {
+            return false;
+        }
+        
+        String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        
+        volunteer.setStatus(0);
+        volunteer.setRealName("已删除志愿者" + randomSuffix);
+        volunteer.setUsername("deleted_" + volunteerId + "_" + randomSuffix);
+        volunteer.setPhone("00000000000");
+        volunteer.setPassword("sheeeeta");
+        volunteer.setAvatar(null);
+        volunteer.setGender(0);
+        volunteer.setAge(0);
+        volunteer.setAddress("西安邮电大学");
+        volunteer.setEmergencyName("sshheettaa");
+        volunteer.setEmergencyPhone("00000000000");
+        volunteer.setServiceDays(null);
+        volunteer.setWorkStatus(null);
+        
+        this.updateById(volunteer);
+        
+        int releasedCount = this.releaseVolunteerServices(volunteerId);
+        
+        log.info("志愿者 {} 已被逻辑删除，敏感字段已脱敏，释放了 {} 个进行中的服务", volunteerId, releasedCount);
+        
+        return true;
     }
 }
