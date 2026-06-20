@@ -437,7 +437,7 @@ onMounted(async () => {
   try {
     const res = await getDashboardData()
     dashboardData.value = res.data
-    pendingCount.value = res.data.activeOrders || 0
+    pendingCount.value = res.data.pendingCount || res.data.activeOrders || 0
 
     const orderRes = await searchOrder(1, 5)
     if (orderRes.data) {

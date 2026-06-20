@@ -1,9 +1,11 @@
 package com.me.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.me.entity.Approval;
 import com.me.entity.Order;
 import com.me.entity.User;
 import com.me.entity.Volunteer;
+import com.me.mapper.ApprovalMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.UserMapper;
 import com.me.mapper.VolunteerMapper;
@@ -23,6 +25,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final OrderMapper orderMapper;
     private final UserMapper userMapper;
     private final VolunteerMapper volunteerMapper;
+    private final ApprovalMapper approvalMapper;
 
     @Override
     @RedisCache(prefix = "admin:dashboard:data", expire = 10, nullExpire = 2)
@@ -37,6 +40,13 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         activeWrapper.in(Order::getStatus, 1, 2);
         Long activeOrders = orderMapper.selectCount(activeWrapper);
         data.put("activeOrders", activeOrders);
+
+        LambdaQueryWrapper<Approval> pendingApprovalWrapper = new LambdaQueryWrapper<>();
+        pendingApprovalWrapper.eq(Approval::getStatus, "PENDING");
+        Long pendingApprovalCount = approvalMapper.selectCount(pendingApprovalWrapper);
+        
+        Long pendingCount = activeOrders + pendingApprovalCount;
+        data.put("pendingCount", pendingCount);
 
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LambdaQueryWrapper<Order> todayWrapper = new LambdaQueryWrapper<>();

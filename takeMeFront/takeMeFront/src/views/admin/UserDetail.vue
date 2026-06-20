@@ -51,8 +51,25 @@
           <el-descriptions-item label="手机号">
             <span class="value-text">{{ userDetail.phone }}</span>
           </el-descriptions-item>
+          <el-descriptions-item label="性别">
+            <span class="value-text">{{ userDetail.gender === 0 ? '男' : '女' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="年龄">
+            <span class="value-text">{{ userDetail.age || '-' }}岁</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="userDetail.status === 1 ? 'success' : 'danger'" size="small">
+              {{ userDetail.status === 1 ? '正常' : '禁用' }}
+            </el-tag>
+          </el-descriptions-item>
           <el-descriptions-item label="居住地址" :span="2">
             <span class="value-text">{{ userDetail.address || '-' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="紧急联系人" v-if="userDetail.emergencyName">
+            <span class="value-text">{{ userDetail.emergencyName }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="紧急联系电话" v-if="userDetail.emergencyPhone">
+            <span class="value-text">{{ userDetail.emergencyPhone }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="注册时间">
             <span class="time-text">{{ formatTime(userDetail.createTime) }}</span>
