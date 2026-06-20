@@ -95,6 +95,18 @@ public class OrderController {
         return Result.success();
     }
 
+    @PostMapping("/evaluateItem")
+    public Result<Void> evaluateItem(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam Long orderItemId,
+            @RequestParam Integer rating,
+            @RequestParam(required = false) String comment
+    ) {
+        Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
+        orderService.evaluateOrderItem(userId, orderItemId, rating, comment);
+        return Result.success();
+    }
+
     // ===================== 确认开始服务 =====================
     @PostMapping("/startService")
     public Result<Void> startService(
@@ -106,16 +118,13 @@ public class OrderController {
         return Result.success();
     }
 
-    // ===================== 评价订单 =====================
-    @PostMapping("/evaluate")
-    public Result<Void> evaluate(
+    @PostMapping("/cancelItem")
+    public Result<Void> cancelItem(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam Long orderId,
-            @RequestParam Integer rating,
-            @RequestParam(required = false) String comment
+            @RequestParam Long orderItemId
     ) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
-        orderService.evaluateOrder(userId, orderId, rating, comment);
+        orderService.cancelOrderItem(userId, orderItemId);
         return Result.success();
     }
 }

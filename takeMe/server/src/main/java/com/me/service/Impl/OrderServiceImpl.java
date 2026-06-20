@@ -24,6 +24,7 @@ import com.me.service.OrderService;
 import com.me.vo.OrderItemVO;
 import com.me.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     private final OrderMapper orderMapper;
@@ -44,6 +46,7 @@ public class OrderServiceImpl implements OrderService {
     private final ReviewMapper reviewMapper;
     private final MessageProducer messageProducer;
     private final MessageService messageService;
+    private final com.me.redis.utils.RedisUtil redisUtil;
 
     @Override
     public IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
@@ -342,6 +345,8 @@ public class OrderServiceImpl implements OrderService {
         updateOrderVolunteerIds(orderId);
 
         sendStatusChangeMessage(order, oldStatus, 5, "用户取消订单");
+        
+        redisUtil.deleteByPattern("order:detail:" + orderId);
     }
 
     @Override
@@ -363,6 +368,10 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("该服务项目已被接取");
         }
 
+        com.me.utils.ServiceTimeValidator.validateCanViewService(
+            orderItemId, item.getServiceDate(), item.getServiceTime()
+        );
+
         item.setVolunteerId(volunteerId);
         item.setItemStatus(1);
         orderItemMapper.updateById(item);
@@ -375,7 +384,6 @@ public class OrderServiceImpl implements OrderService {
             sendMessage(order.getUserId(), 2, 2, "服务已接单", "您的订单服务已被志愿者接取，请耐心等待服务", order.getId());
             sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者接单", volunteerId);
             
-            // 发送30分钟超时延迟消息
             VolunteerStartTimeoutMessage timeoutMessage = VolunteerStartTimeoutMessage.builder()
                 .orderItemId(orderItemId)
                 .volunteerId(volunteerId)
@@ -438,6 +446,10 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("当前状态不允许开始服务");
         }
 
+        com.me.utils.ServiceTimeValidator.validateCanStartService(
+            item.getServiceDate(), item.getServiceTime()
+        );
+
         item.setItemStatus(2);
         orderItemMapper.updateById(item);
         
@@ -492,10 +504,64 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("当前状态不允许开始服务");
         }
 
-        item.setItemStatus(1);
+        item.setItemStatus(2);
         orderItemMapper.updateById(item);
         
-        updateOrderStatus(item.getOrderId());
+        Integer oldStatus = updateOrderStatus(item.getOrderId());
+        
+        sendStatusChangeMessage(order, oldStatus, order.getStatus(), "用户确认开始服务");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelOrderItem(Long userId, Long orderItemId) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            throw new RuntimeException("服务项目不存在");
+        }
+        
+        Order order = orderMapper.selectById(item.getOrderId());
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此服务");
+        }
+        
+        if (item.getItemStatus() != 0 && item.getItemStatus() != 1) {
+            throw new RuntimeException("当前状态不允许取消，仅待接单或已接单状态可取消");
+        }
+        
+        Integer oldItemStatus = item.getItemStatus();
+        item.setVolunteerId(null);
+        item.setItemStatus(5);
+        orderItemMapper.updateById(item);
+        
+        updateOrderVolunteerIds(item.getOrderId());
+        
+        boolean allCancelled = checkAllItemsCancelled(item.getOrderId());
+        
+        if (allCancelled) {
+            order.setStatus(5);
+            orderMapper.updateById(order);
+            
+            if (oldItemStatus == 1 && item.getVolunteerId() != null) {
+                sendMessageToVolunteer(item.getVolunteerId(), 1, 0, 
+                    "服务项已取消", 
+                    "您接取的服务项（订单号：" + order.getOrderNo() + "）已被用户取消", 
+                    item.getId());
+            }
+            
+            sendStatusChangeMessage(order, order.getStatus(), 5, "所有服务项已取消，订单自动取消");
+        } else {
+            Integer oldOrderStatus = updateOrderStatus(item.getOrderId());
+            
+            if (oldItemStatus == 1 && item.getVolunteerId() != null) {
+                sendMessageToVolunteer(item.getVolunteerId(), 1, 0, 
+                    "服务项已取消", 
+                    "您接取的服务项（订单号：" + order.getOrderNo() + "）已被用户取消", 
+                    item.getId());
+            }
+            
+            sendStatusChangeMessage(order, oldOrderStatus, order.getStatus(), "用户取消单项服务");
+        }
     }
 
     private void updateOrderVolunteerIds(Long orderId) {
@@ -549,7 +615,7 @@ public class OrderServiceImpl implements OrderService {
         }
         
         boolean allPendingConfirm = items.stream().allMatch(item -> 
-            item.getItemStatus() >= 3
+            item.getItemStatus() >= 3 && item.getItemStatus() != 5
         );
         
         if (allPendingConfirm) {
@@ -607,6 +673,18 @@ public class OrderServiceImpl implements OrderService {
         return oldStatus;
     }
 
+    private boolean checkAllItemsCancelled(Long orderId) {
+        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderItem::getOrderId, orderId);
+        List<OrderItem> items = orderItemMapper.selectList(wrapper);
+        
+        if (items.isEmpty()) {
+            return true;
+        }
+        
+        return items.stream().allMatch(item -> item.getItemStatus() == 5);
+    }
+
     private void sendStatusChangeMessage(Order order, Integer oldStatus, Integer newStatus, String remark) {
         sendStatusChangeMessage(order, oldStatus, newStatus, remark, null);
     }
@@ -633,8 +711,11 @@ public class OrderServiceImpl implements OrderService {
                 "",
                 statusMessage
             );
+            log.info("订单状态变更消息发送成功: orderId={}, status={}→{}", 
+                order.getId(), oldStatus, newStatus);
         } catch (Exception e) {
-
+            log.error("订单状态变更消息发送失败: orderId={}, status={}→{}", 
+                order.getId(), oldStatus, newStatus, e);
         }
     }
 
@@ -651,6 +732,18 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Integer oldStatus = order.getStatus();
+        
+        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+        itemWrapper.eq(OrderItem::getOrderId, orderId);
+        List<OrderItem> items = orderItemMapper.selectList(itemWrapper);
+        
+        for (OrderItem item : items) {
+            if (item.getItemStatus() == 3) {
+                item.setItemStatus(4);
+                orderItemMapper.updateById(item);
+            }
+        }
+        
         order.setStatus(4);
         order.setCompleteTime(LocalDateTime.now());
         orderMapper.updateById(order);
@@ -660,17 +753,23 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void evaluateOrder(Long userId, Long orderId, Integer rating, String comment) {
-        Order order = orderMapper.selectById(orderId);
+    public void evaluateOrderItem(Long userId, Long orderItemId, Integer rating, String comment) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            throw new RuntimeException("服务项目不存在");
+        }
+        
+        Order order = orderMapper.selectById(item.getOrderId());
         if (order == null || !order.getUserId().equals(userId)) {
-            throw new RuntimeException("订单不存在");
+            throw new RuntimeException("无权评价此服务");
         }
-        if (order.getStatus() != 2 && order.getStatus() != 3) {
-            throw new RuntimeException("订单状态不允许评价");
+        
+        if (item.getItemStatus() != 3 && item.getItemStatus() != 4) {
+            throw new RuntimeException("服务未完成，无法评价");
         }
-
+        
         LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
-        reviewWrapper.eq(Review::getOrderId, orderId);
+        reviewWrapper.eq(Review::getOrderItemId, orderItemId);
         Review existingReview = reviewMapper.selectOne(reviewWrapper);
         
         if (existingReview != null) {
@@ -679,28 +778,57 @@ public class OrderServiceImpl implements OrderService {
             reviewMapper.updateById(existingReview);
         } else {
             Review review = new Review();
-            review.setOrderId(orderId);
+            review.setOrderId(item.getOrderId());
+            review.setOrderItemId(orderItemId);
             review.setUserId(userId);
-            review.setVolunteerId(order.getVolunteerIds() != null ? 
-                Long.parseLong(order.getVolunteerIds().split(",")[0]) : null);
+            review.setVolunteerId(item.getVolunteerId());
             review.setRating(rating);
             review.setComment(comment);
             review.setCreateTime(LocalDateTime.now());
             reviewMapper.insert(review);
             
-            order.setIsReviewed(1);
-            orderMapper.updateById(order);
+            sendMessageToVolunteer(item.getVolunteerId(), 1, 0, 
+                "收到新评价", 
+                "您的服务（" + item.getServiceName() + "）收到了用户评价，评分：" + rating + " 星", 
+                item.getId());
+        }
+    }
 
-            if (order.getVolunteerIds() != null && !order.getVolunteerIds().isEmpty()) {
-                String[] ids = order.getVolunteerIds().split(",");
-                for (String id : ids) {
-                    try {
-                        Long vid = Long.parseLong(id.trim());
-                        sendMessage(vid, 1, 0, "收到新评价", "您的服务收到了用户的评价，评分：" + rating + " 星", orderId);
-                    } catch (NumberFormatException e) {
-                        // ignore
-                    }
-                }
+    private void autoEvaluateUnreviewedItems(Long orderId) {
+        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+        itemWrapper.eq(OrderItem::getOrderId, orderId);
+        itemWrapper.in(OrderItem::getItemStatus, 3, 4);
+        List<OrderItem> items = orderItemMapper.selectList(itemWrapper);
+        
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) {
+            return;
+        }
+        
+        for (OrderItem item : items) {
+            if (item.getVolunteerId() == null) {
+                continue;
+            }
+            
+            LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
+            reviewWrapper.eq(Review::getOrderItemId, item.getId());
+            Long count = reviewMapper.selectCount(reviewWrapper);
+            
+            if (count == 0) {
+                Review review = new Review();
+                review.setOrderId(item.getOrderId());
+                review.setOrderItemId(item.getId());
+                review.setUserId(order.getUserId());
+                review.setVolunteerId(item.getVolunteerId());
+                review.setRating(5);
+                review.setComment("系统默认好评");
+                review.setCreateTime(LocalDateTime.now());
+                reviewMapper.insert(review);
+                
+                sendMessageToVolunteer(item.getVolunteerId(), 1, 0, 
+                    "收到新评价", 
+                    "您的服务（" + item.getServiceName() + "）收到了用户评价，评分：5 星", 
+                    item.getId());
             }
         }
     }
@@ -784,10 +912,96 @@ public class OrderServiceImpl implements OrderService {
             return false;
         }
         
+        Integer oldStatus = order.getStatus();
         order.setStatus(5);
-        return orderMapper.updateById(order) > 0;
+        int updateCount = orderMapper.updateById(order);
+        
+        if (updateCount > 0) {
+            LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
+            itemWrapper.eq(OrderItem::getOrderId, id);
+            List<OrderItem> items = orderItemMapper.selectList(itemWrapper);
+            
+            for (OrderItem item : items) {
+                if (item.getItemStatus() != 4 && item.getItemStatus() != 5) {
+                    Long previousVolunteerId = item.getVolunteerId();
+                    item.setVolunteerId(null);
+                    item.setItemStatus(5);
+                    orderItemMapper.updateById(item);
+                    
+                    if (previousVolunteerId != null) {
+                        sendMessageToVolunteer(previousVolunteerId, 1, 0, 
+                            "订单已取消", 
+                            "管理员取消了订单（订单号：" + order.getOrderNo() + "），服务自动终止", 
+                            item.getId());
+                    }
+                }
+            }
+            
+            updateOrderVolunteerIds(id);
+            sendStatusChangeMessage(order, oldStatus, 5, "管理员取消订单");
+        }
+        
+        return updateCount > 0;
     }
-    
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean adminCancelOrderItem(Long orderItemId) {
+        OrderItem item = orderItemMapper.selectById(orderItemId);
+        if (item == null) {
+            return false;
+        }
+        
+        if (item.getItemStatus() != 0 && item.getItemStatus() != 1) {
+            return false;
+        }
+        
+        Order order = orderMapper.selectById(item.getOrderId());
+        if (order == null) {
+            return false;
+        }
+        
+        Integer oldItemStatus = item.getItemStatus();
+        Long previousVolunteerId = item.getVolunteerId();
+        
+        item.setVolunteerId(null);
+        item.setItemStatus(5);
+        int updateCount = orderItemMapper.updateById(item);
+        
+        if (updateCount > 0) {
+            updateOrderVolunteerIds(item.getOrderId());
+            
+            boolean allCancelled = checkAllItemsCancelled(item.getOrderId());
+            
+            if (allCancelled) {
+                order.setStatus(5);
+                orderMapper.updateById(order);
+                
+                if (oldItemStatus == 1 && previousVolunteerId != null) {
+                    sendMessageToVolunteer(previousVolunteerId, 1, 0, 
+                        "服务项已取消", 
+                        "管理员取消了服务项（订单号：" + order.getOrderNo() + "）", 
+                        item.getId());
+                }
+                
+                sendStatusChangeMessage(order, order.getStatus(), 5, "所有服务项已取消，订单自动取消");
+            } else {
+                Integer oldOrderStatus = updateOrderStatus(item.getOrderId());
+                
+                if (oldItemStatus == 1 && previousVolunteerId != null) {
+                    sendMessageToVolunteer(previousVolunteerId, 1, 0, 
+                        "服务项已取消", 
+                        "管理员取消了服务项（订单号：" + order.getOrderNo() + "）", 
+                        item.getId());
+                }
+                
+                sendStatusChangeMessage(order, oldOrderStatus, order.getStatus(), "管理员取消单项服务");
+            }
+        }
+        
+        return updateCount > 0;
+    }
+
     @Override
     public boolean adminCompleteOrder(Long id) {
         Order order = orderMapper.selectById(id);

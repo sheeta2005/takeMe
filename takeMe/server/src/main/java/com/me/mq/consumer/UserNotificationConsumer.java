@@ -66,6 +66,19 @@ public class UserNotificationConsumer {
 
             messageService.sendMessage(notification);
 
+            com.me.dto.OrderStatusChangeWsMessage wsMessage = com.me.dto.OrderStatusChangeWsMessage.builder()
+                .orderId(message.getOrderId())
+                .orderNo(message.getOrderNo())
+                .oldStatus(message.getOldStatus())
+                .newStatus(message.getNewStatus())
+                .userId(message.getUserId())
+                .volunteerId(message.getVolunteerId())
+                .message(content)
+                .changeTime(message.getChangeTime())
+                .build();
+            
+            com.me.websocket.OrderWebSocketEndpoint.sendMessageToUser(userId.toString(), wsMessage);
+
             if (msg != null && channel != null) {
                 channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
             }

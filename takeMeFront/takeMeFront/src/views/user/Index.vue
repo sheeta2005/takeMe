@@ -158,8 +158,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import wsManager from '@/utils/websocket'
 import { useUserStore } from '@/stores/user'
 import { getUserStatistics } from '@/api/user'
 import { getMyOrderList } from '@/api/order'
@@ -196,31 +197,55 @@ const newsList = [
   { title: '代购服务支持生活用品、药品代买', date: '2025-01-04' },
 ]
 
-onMounted(async () => {
-  // 先加载用户基本信息
-  await userStore.getUserInfo()
-  userName.value = userStore.realName || userStore.username || '尊敬的用户'
-
+const loadUserData = async () => {
   try {
-    // 获取用户统计数据
-    const statsRes = await getUserStatistics()
-    if (statsRes.data) {
-      serviceStats.value = statsRes.data
+    await userStore.getUserInfo()
+
+    const res = await getUserStatistics(userStore.userId)
+    if (res.code === 200 && res.data) {
+      serviceStats.value = res.data
     }
-  } catch (e) {
-    console.error('获取统计数据失败', e)
-  }
 
-  try {
-    // 获取订单总数
     const orderRes = await getMyOrderList({ pageNum: 1, pageSize: 1 })
-    if (orderRes.data) {
+    if (orderRes.code === 200 && orderRes.data) {
       orderCount.value = orderRes.data.total || 0
     }
-  } catch (e) {
-    console.error('获取订单数失败', e)
+
+    userName.value = userStore.realName || '用户'
+  } catch (error) {
+    console.error('加载用户数据失败', error)
   }
+}
+
+onMounted(() => {
+  if (userStore.userId) {
+    wsManager.connect('user', userStore.userId.toString())
+  }
+
+  window.addEventListener('orderStatusChange', handleOrderStatusChange)
+
+  loadUserData()
 })
+
+onUnmounted(() => {
+  window.removeEventListener('orderStatusChange', handleOrderStatusChange)
+})
+
+const handleOrderStatusChange = (event: CustomEvent) => {
+  const data = event.detail
+
+  if (data.newStatus === 5) {
+    ElMessage.warning('订单已被取消')
+  }
+
+  const route = useRoute()
+  if (route.path.includes('/order')) {
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
+  }
+}
+
 </script>
 
 <style scoped>

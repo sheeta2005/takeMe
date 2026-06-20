@@ -161,8 +161,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import wsManager from '@/utils/websocket'
 import { useVolunteerStore } from '@/stores/volunteer'
 import { getVolunteerOrderList, getPointsSummary } from '@/api/volunteer'
 import * as echarts from 'echarts'
@@ -186,66 +187,47 @@ const volunteerData = ref({
   rating: '0.0'
 })
 
-onMounted(async () => {
-  // 先获取志愿者最新信息（包括头像等）
-  await volunteerStore.fetchVolunteerInfo()
-
-  userName.value = volunteerStore.realName || '尊敬的志愿者'
-  serviceHours.value = volunteerStore.totalServiceHours || 0
-
+const loadVolunteerData = async () => {
   try {
-    const orderRes = await getVolunteerOrderList({ pageNum: 1, pageSize: 1 })
-    if (orderRes.data) {
-      volunteerData.value.totalOrders = orderRes.data.total || 0
-    }
-  } catch (e) {
-    console.error('获取订单总数失败', e)
-  }
+    await volunteerStore.fetchVolunteerInfo()
 
-  try {
-    const completedRes = await getVolunteerOrderList({ pageNum: 1, pageSize: 1, status: 4 })
-    if (completedRes.data) {
-      volunteerData.value.completedOrders = completedRes.data.total || 0
-    }
-  } catch (e) {
-    console.error('获取已完成订单数失败', e)
-  }
+    userName.value = volunteerStore.realName || '志愿者'
+    serviceHours.value = volunteerStore.totalServiceHours || 0
 
-  try {
-    const pointsRes = await getPointsSummary()
-    if (pointsRes.data) {
-      volunteerData.value.points = pointsRes.data.totalPoints || 0
-    }
-  } catch (e) {
-    console.error('获取积分失败', e)
-  }
+    const orderRes = await getVolunteerOrderList({ pageNum: 1, pageSize: 100 })
+    if (orderRes.code === 200 && orderRes.data?.records) {
+      const records = orderRes.data.records
+      volunteerData.value.totalOrders = records.length
 
-  initChart()
-})
+      const completed = records.filter((o: any) => o.status === 4).length
+      volunteerData.value.completedOrders = completed
 
-const newsList = ref([
-  { title: '助餐服务：每日10点前接单，优先配送', date: '2025-01-01' },
-  { title: '助洁服务：请按预约时间上门，提前10分钟联系老人', date: '2025-01-02' },
-  { title: '助医服务：陪同就诊请提前熟悉医院流程，协助老人挂号', date: '2025-01-03' },
-  { title: '代购服务：请核对药品/生活用品清单，确保无遗漏', date: '2025-01-04' },
-])
-
-const initChart = async () => {
-  if (!serviceChart.value) return
-
-  try {
-    const res = await getVolunteerOrderList({ pageNum: 1, pageSize: 100 })
-    const typeCounts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 }
-    if (res.data?.records) {
-      res.data.records.forEach((order: any) => {
+      const typeCounts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 }
+      records.forEach((order: any) => {
         order.items?.forEach((item: any) => {
           if (typeCounts[item.serviceType] !== undefined) {
             typeCounts[item.serviceType]++
           }
         })
       })
+
+      initChart(typeCounts)
     }
 
+    const pointsRes = await getPointsSummary(volunteerStore.userId)
+    if (pointsRes.code === 200 && pointsRes.data) {
+      volunteerData.value.points = pointsRes.data.currentPoints || 0
+      volunteerData.value.rating = pointsRes.data.averageRating || '0.0'
+    }
+  } catch (error) {
+    console.error('加载志愿者数据失败', error)
+  }
+}
+
+const initChart = async (typeCounts: Record<number, number>) => {
+  if (!serviceChart.value) return
+
+  try {
     const chart = echarts.init(serviceChart.value)
     chart.setOption({
       tooltip: { trigger: 'item' },
@@ -287,6 +269,43 @@ const initChart = async () => {
     console.error('加载图表数据失败', e)
   }
 }
+
+onMounted(() => {
+  if (volunteerStore.userId) {
+    wsManager.connect('volunteer', volunteerStore.userId.toString())
+  }
+
+  window.addEventListener('orderStatusChange', handleOrderStatusChange)
+
+  loadVolunteerData()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('orderStatusChange', handleOrderStatusChange)
+})
+
+const handleOrderStatusChange = (event: CustomEvent) => {
+  const data = event.detail
+
+  if (data.newStatus === 5) {
+    ElMessage.warning('订单已被取消')
+  }
+
+  const route = useRoute()
+  if (route.path.includes('/order') || route.path.includes('/getTodo')) {
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
+  }
+}
+
+const newsList = ref([
+  { title: '助餐服务：每日10点前接单，优先配送', date: '2025-01-01' },
+  { title: '助洁服务：请按预约时间上门，提前10分钟联系老人', date: '2025-01-02' },
+  { title: '助医服务：陪同就诊请提前熟悉医院流程，协助老人挂号', date: '2025-01-03' },
+  { title: '代购服务：请核对药品/生活用品清单，确保无遗漏', date: '2025-01-04' },
+])
+
 </script>
 
 <style scoped>

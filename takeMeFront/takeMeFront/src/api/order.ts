@@ -110,3 +110,19 @@ export function clearCart() {
     method: 'post'
   })
 }
+
+export function cancelOrderItem(orderItemId: number) {
+  return request({
+    url: '/api/user/order/cancelItem',
+    method: 'post',
+    params: { orderItemId }
+  })
+}
+
+export function evaluateOrderItem(orderItemId: number, rating: number, comment: string) {
+  return request({
+    url: '/api/user/order/evaluateItem',
+    method: 'post',
+    params: { orderItemId, rating, comment }
+  })
+}

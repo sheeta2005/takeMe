@@ -1,6 +1,7 @@
 package com.me.redis.utils;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -12,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class RedisUtil {
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -88,6 +90,14 @@ public class RedisUtil {
 
     public Set<String> keys(String pattern) {
         return redisTemplate.keys(pattern);
+    }
+
+    public void deleteByPattern(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            log.info("批量删除缓存: pattern={}, count={}", pattern, keys.size());
+        }
     }
 
     public void setNull(String key, long timeout, TimeUnit unit) {

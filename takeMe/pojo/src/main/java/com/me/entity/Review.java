@@ -19,8 +19,12 @@ public class Review {
     private Long id;
 
     private Long orderId;
+    
+    private Long orderItemId;
+
     private Long userId;
     private Long volunteerId;
+
     private Integer rating;
     private String comment;
 

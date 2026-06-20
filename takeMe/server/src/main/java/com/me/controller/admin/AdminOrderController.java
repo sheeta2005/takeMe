@@ -78,12 +78,22 @@ public class AdminOrderController {
         return Result.success(order);
     }
 
-    @Operation(summary = "取消订单", description = "管理员强制取消订单")
+    @Operation(summary = "取消订单", description = "管理员取消指定订单")
     @PostMapping("/cancel/{id}")
-    public Result<Void> cancelOrder(@Parameter(description = "订单ID", required = true) @PathVariable Long id) {
+    public Result<Void> cancelOrder(@PathVariable Long id) {
         boolean success = orderService.adminCancelOrder(id);
         if (!success) {
-            return Result.error("订单不存在");
+            return Result.error("取消订单失败");
+        }
+        return Result.success();
+    }
+
+    @Operation(summary = "取消单项服务", description = "管理员取消订单中的某个服务项")
+    @PostMapping("/cancelItem/{orderItemId}")
+    public Result<Void> cancelOrderItem(@PathVariable Long orderItemId) {
+        boolean success = orderService.adminCancelOrderItem(orderItemId);
+        if (!success) {
+            return Result.error("取消服务项失败，可能该服务项已开始服务或不存在");
         }
         return Result.success();
     }

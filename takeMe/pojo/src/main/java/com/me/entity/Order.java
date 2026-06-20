@@ -28,6 +28,14 @@ public class Order {
     private String address;
     private String remark;
 
+    /**
+     * 0: 待接单 - 刚创建或所有服务项都被放弃
+     * 1: 已接单 - 至少有一个服务项被接单
+     * 2: 服务中 - 至少有一个服务项正在服务中
+     * 3: 待确认 - 所有服务项都已完成(状态≥3)
+     * 4: 已完成 - 用户确认完成
+     * 5: 已取消 - 用户/系统取消
+     */
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime completeTime;

@@ -21,9 +21,11 @@ public interface OrderService {
 
     void confirmOrder(Long userId, Long orderId);
 
-    void evaluateOrder(Long userId, Long orderId, Integer rating, String comment);
+    void evaluateOrderItem(Long userId, Long orderItemId, Integer rating, String comment);
 
     void userStartService(Long userId, Long orderItemId);
+
+    void cancelOrderItem(Long userId, Long orderItemId);
 
     void volunteerStartService(Long volunteerId, Long orderItemId);
 
@@ -34,6 +36,7 @@ public interface OrderService {
     void volunteerConfirmOrder(Long volunteerId, Long orderItemId);
 
     void volunteerAbandonOrder(Long volunteerId, Long orderItemId);
+
     void volunteerCompleteOrder(Long volunteerId, Long orderItemId);
 
     IPage<OrderVO> getAvailableOrderList(PageResultDTO pageResultDTO);
@@ -47,9 +50,11 @@ public interface OrderService {
 
     OrderVO getAdminOrderDetailVO(Long id);
 
+    boolean adminCompleteOrder(Long id);
+
     boolean adminCancelOrder(Long id);
 
-    boolean adminCompleteOrder(Long id);
+    boolean adminCancelOrderItem(Long orderItemId);
 
     Long countOrders(LambdaQueryWrapper<Order> wrapper);
 }

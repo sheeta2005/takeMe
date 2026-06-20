@@ -256,9 +256,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { getDashboardData, getOrderTrend7d, getServiceTypeDist, searchOrder } from '@/api/admin'
+import wsManager from '@/utils/websocket'
 import { useAdminStore } from '@/stores/admin'
 import defaultAvatar from '@/assets/default-avatar.png'
 import {
@@ -323,6 +324,22 @@ const getRecent7Days = () => {
     days.push(`${date.getMonth() + 1}/${date.getDate()}`)
   }
   return days
+}
+
+const loadDashboardData = async () => {
+  try {
+    const res = await getDashboardData()
+    if (res.code === 200 && res.data) {
+      dashboardData.value = res.data
+    }
+
+    const orderRes = await searchOrder({ pageNum: 1, pageSize: 5 })
+    if (orderRes.code === 200 && orderRes.data?.records) {
+      recentOrders.value = orderRes.data.records
+    }
+  } catch (error) {
+    console.error('加载仪表盘数据失败', error)
+  }
 }
 
 const initCharts = async () => {
@@ -433,27 +450,35 @@ const initCharts = async () => {
   }
 }
 
-onMounted(async () => {
-  try {
-    const res = await getDashboardData()
-    dashboardData.value = res.data
-    pendingCount.value = res.data.pendingCount || res.data.activeOrders || 0
-
-    const orderRes = await searchOrder(1, 5)
-    if (orderRes.data) {
-      recentOrders.value = orderRes.data.records || []
-    }
-  } catch (err) {
-    console.error('获取工作台数据失败', err)
+onMounted(() => {
+  if (adminStore.userId) {
+    wsManager.connect('admin', adminStore.userId.toString())
   }
 
-  initCharts()
+  window.addEventListener('orderStatusChange', handleOrderStatusChange)
+
+  loadDashboardData()
+  setTimeout(() => {
+    initCharts()
+  }, 100)
 })
 
 onUnmounted(() => {
-  if (orderTrendChart.value) echarts.dispose(orderTrendChart.value)
-  if (serviceTypeChart.value) echarts.dispose(serviceTypeChart.value)
+  window.removeEventListener('orderStatusChange', handleOrderStatusChange)
 })
+
+const handleOrderStatusChange = (event: CustomEvent) => {
+  const data = event.detail
+  ElMessage.info(`订单 ${data.orderNo} 状态变更`)
+
+  const route = useRoute()
+  if (route.path.includes('/order')) {
+    setTimeout(() => {
+      loadDashboardData()
+    }, 500)
+  }
+}
+
 </script>
 
 <style scoped>

@@ -292,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -303,6 +303,24 @@ import { getVolunteerDetail } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
+const orderId = Number(route.params.id)
+
+onMounted(() => {
+  window.addEventListener(`orderStatusChange_${orderId}`, handleOrderStatusChange)
+})
+
+onUnmounted(() => {
+  window.removeEventListener(`orderStatusChange_${orderId}`, handleOrderStatusChange)
+})
+
+const handleOrderStatusChange = (event: CustomEvent) => {
+  const data = event.detail
+  ElMessage.success(`订单状态已更新: ${getStatusText(data.newStatus)}`)
+
+  setTimeout(() => {
+    loadOrderDetail()
+  }, 500)
+}
 
 const loading = ref(true)
 const cancelLoading = ref(false)
@@ -375,10 +393,10 @@ const formatTime = (time: string) => {
   })
 }
 
-const loadOrderDetail = async (id: number) => {
+const loadOrderDetail = async () => {
   loading.value = true
   try {
-    const res = await getUserOrderDetail(id)
+    const res = await getUserOrderDetail(orderId)
     if (res.code === 200) {
       order.value = res.data || {}
     }
