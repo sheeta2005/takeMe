@@ -461,9 +461,14 @@ const handleConfirmOrder = async () => {
     })
 
     confirmLoading.value = true
+
     await confirmOrder(order.value.id)
+
     ElMessage.success('已确认服务完成')
-    await loadOrderDetail(order.value.id)
+
+    setTimeout(() => {
+      router.push('/user/order')
+    }, 500)
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error(error.message || '确认完成失败')

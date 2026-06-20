@@ -219,7 +219,9 @@ const allTimeSlots = [
   { value: '14:00', label: '下午 2点' },
   { value: '15:00', label: '下午 3点' },
   { value: '16:00', label: '下午 4点' },
-  { value: '17:00', label: '下午 5点' }
+  { value: '17:00', label: '下午 5点' },
+  { value: '19:00', label: '晚上 7点' },
+  { value: '23:00', label: '晚上 11点 (测试用)' }
 ]
 
 const availableTimeSlots = computed(() => {

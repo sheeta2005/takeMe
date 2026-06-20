@@ -18,7 +18,14 @@ import java.time.LocalDateTime;
 @ServerEndpoint("/ws/order/{userType}/{userId}")
 public class OrderWebSocketEndpoint {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static ObjectMapper objectMapper;
+
+    private static ObjectMapper getObjectMapper() {
+        if (objectMapper == null) {
+            objectMapper = SpringContextUtil.getBean(ObjectMapper.class);
+        }
+        return objectMapper;
+    }
 
     @OnOpen
     public void onOpen(Session session, @PathParam("userType") String userType, @PathParam("userId") String userId) {
@@ -88,7 +95,7 @@ public class OrderWebSocketEndpoint {
                     .timestamp(LocalDateTime.now())
                     .build();
 
-            String jsonMessage = objectMapper.writeValueAsString(wsMessage);
+            String jsonMessage = getObjectMapper().writeValueAsString(wsMessage);
 
             Session session = SpringContextUtil.getBean(WebSocketSessionManager.class).getUserSession(userId);
             if (session != null && session.isOpen()) {
@@ -110,7 +117,7 @@ public class OrderWebSocketEndpoint {
                     .timestamp(LocalDateTime.now())
                     .build();
 
-            String jsonMessage = objectMapper.writeValueAsString(wsMessage);
+            String jsonMessage = getObjectMapper().writeValueAsString(wsMessage);
 
             Session session = SpringContextUtil.getBean(WebSocketSessionManager.class).getVolunteerSession(volunteerId);
             if (session != null && session.isOpen()) {
@@ -132,7 +139,7 @@ public class OrderWebSocketEndpoint {
                     .timestamp(LocalDateTime.now())
                     .build();
 
-            String jsonMessage = objectMapper.writeValueAsString(wsMessage);
+            String jsonMessage = getObjectMapper().writeValueAsString(wsMessage);
 
             Session session = SpringContextUtil.getBean(WebSocketSessionManager.class).getAdminSession(adminId);
             if (session != null && session.isOpen()) {
