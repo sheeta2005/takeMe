@@ -29,7 +29,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -177,6 +180,14 @@ public class OrderServiceImpl implements OrderService {
                 return vo;
             })
             .filter(vo -> vo != null)
+            .filter(vo -> {
+                if (vo.getServiceDate() != null && vo.getServiceTime() != null) {
+                    return com.me.utils.ServiceTimeValidator.isWithinVisibleRange(
+                        vo.getServiceDate(), vo.getServiceTime()
+                    );
+                }
+                return true;
+            })
             .collect(Collectors.toList());
         
         Page<OrderVO> voPage = new Page<>(itemPage.getCurrent(), itemPage.getSize(), itemPage.getTotal());
@@ -368,8 +379,8 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("该服务项目已被接取");
         }
 
-        com.me.utils.ServiceTimeValidator.validateCanViewService(
-            orderItemId, item.getServiceDate(), item.getServiceTime()
+        com.me.utils.ServiceTimeValidator.validateCanAcceptOrder(
+            item.getServiceDate(), item.getServiceTime()
         );
 
         item.setVolunteerId(volunteerId);
@@ -384,18 +395,27 @@ public class OrderServiceImpl implements OrderService {
             sendMessage(order.getUserId(), 2, 2, "服务已接单", "您的订单服务已被志愿者接取，请耐心等待服务", order.getId());
             sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者接单", volunteerId);
             
-            VolunteerStartTimeoutMessage timeoutMessage = VolunteerStartTimeoutMessage.builder()
-                .orderItemId(orderItemId)
-                .volunteerId(volunteerId)
-                .orderId(order.getId())
-                .orderNo(order.getOrderNo())
-                .build();
-            
-            messageProducer.sendMessage(
-                RabbitMQConfig.VOLUNTEER_START_TIMEOUT_EXCHANGE,
-                "volunteer.start.timeout.delay",
-                timeoutMessage
+            LocalDateTime serviceDateTime = LocalDateTime.of(
+                LocalDate.parse(item.getServiceDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                LocalTime.parse(item.getServiceTime(), DateTimeFormatter.ofPattern("HH:mm"))
             );
+            
+            long delayMinutes = java.time.Duration.between(LocalDateTime.now(), serviceDateTime).toMinutes() - 10;
+            
+            if (delayMinutes > 0) {
+                VolunteerStartTimeoutMessage timeoutMessage = VolunteerStartTimeoutMessage.builder()
+                    .orderItemId(orderItemId)
+                    .volunteerId(volunteerId)
+                    .orderId(order.getId())
+                    .orderNo(order.getOrderNo())
+                    .build();
+                
+                messageProducer .sendMessage(
+                    RabbitMQConfig.VOLUNTEER_START_TIMEOUT_EXCHANGE,
+                    "volunteer.start.timeout.delay",
+                    timeoutMessage
+                );
+            }
         }
     }
 

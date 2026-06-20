@@ -16,6 +16,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -91,20 +95,45 @@ public class OrderTimeoutConsumer {
             return;
         }
 
-        order.setStatus(5);
-        orderMapper.updateById(order);
-
         LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
         itemWrapper.eq(OrderItem::getOrderId, orderId);
         itemWrapper.eq(OrderItem::getItemStatus, 0);
-        OrderItem item = orderItemMapper.selectOne(itemWrapper);
+        Long pendingItemCount = orderItemMapper.selectCount(itemWrapper);
+
+        if (pendingItemCount == 0) {
+            log.info("订单所有服务项均已接单，无需取消: orderId={}", orderId);
+            return;
+        }
+
+        if (order.getServiceDate() != null && order.getServiceTime() != null) {
+            try {
+                LocalDate serviceDate = LocalDate.parse(order.getServiceDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                LocalTime serviceTime = LocalTime.parse(order.getServiceTime(), DateTimeFormatter.ofPattern("HH:mm"));
+                LocalDateTime serviceDateTime = LocalDateTime.of(serviceDate, serviceTime);
+
+                if (LocalDateTime.now().isBefore(serviceDateTime)) {
+                    log.info("未到预约服务时间，暂不取消: orderId={}, serviceDateTime={}", orderId, serviceDateTime);
+                    return;
+                }
+            } catch (Exception e) {
+                log.error("解析服务时间失败: orderId={}", orderId, e);
+            }
+        }
+
+        order.setStatus(5);
+        orderMapper.updateById(order);
+
+        LambdaQueryWrapper<OrderItem> allItemsWrapper = new LambdaQueryWrapper<>();
+        allItemsWrapper.eq(OrderItem::getOrderId, orderId);
+        allItemsWrapper.eq(OrderItem::getItemStatus, 0);
+        OrderItem item = orderItemMapper.selectOne(allItemsWrapper);
 
         if (item != null) {
             item.setItemStatus(5);
             orderItemMapper.updateById(item);
         }
 
-        log.info("订单超时自动取消成功: orderId={}, orderNo={}", orderId, timeoutMessage.getOrderNo());
+        log.info("订单到达预约时间无人接单，自动取消成功: orderId={}, orderNo={}", orderId, timeoutMessage.getOrderNo());
     }
 }
 

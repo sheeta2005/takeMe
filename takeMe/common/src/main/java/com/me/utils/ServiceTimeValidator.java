@@ -10,7 +10,7 @@ public class ServiceTimeValidator {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
-    public static void validateCanViewService(Long orderItemId, String serviceDate, String serviceTime) {
+    public static void validateCanAcceptOrder(String serviceDate, String serviceTime) {
         if (serviceDate == null || serviceTime == null) {
             return;
         }
@@ -22,12 +22,19 @@ public class ServiceTimeValidator {
             LocalDateTime serviceDateTime = LocalDateTime.of(serviceLocalDate, serviceLocalTime);
             LocalDateTime now = LocalDateTime.now();
 
-            LocalDateTime earliestVisibleTime = serviceDateTime.minusHours(4);
+            LocalDateTime earliestAcceptTime = serviceDateTime.minusHours(4);
+            LocalDateTime latestAcceptTime = serviceDateTime.minusHours(1);
 
-            if (now.isBefore(earliestVisibleTime)) {
+            if (now.isBefore(earliestAcceptTime)) {
                 throw new RuntimeException("服务尚未开放接取，预约时间为" + serviceDate + " " + serviceTime +
-                        "，将于" + earliestVisibleTime.format(DATE_FORMATTER) + " " +
-                        earliestVisibleTime.format(TIME_FORMATTER) + "后开放");
+                        "，将于" + earliestAcceptTime.format(DATE_FORMATTER) + " " +
+                        earliestAcceptTime.format(TIME_FORMATTER) + "后开放接单");
+            }
+
+            if (now.isAfter(latestAcceptTime)) {
+                throw new RuntimeException("已超过接单截止时间，预约时间为" + serviceDate + " " + serviceTime +
+                        "，接单截止时间为" + latestAcceptTime.format(DATE_FORMATTER) + " " +
+                        latestAcceptTime.format(TIME_FORMATTER));
             }
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
@@ -49,23 +56,38 @@ public class ServiceTimeValidator {
             LocalDateTime serviceDateTime = LocalDateTime.of(serviceLocalDate, serviceLocalTime);
             LocalDateTime now = LocalDateTime.now();
 
-            LocalDateTime earliestStartTime = serviceDateTime.minusHours(2);
-            LocalDateTime latestStartTime = serviceDateTime.plusHours(1);
+            LocalDateTime earliestStartTime = serviceDateTime.minusHours(1);
 
             if (now.isBefore(earliestStartTime)) {
                 throw new RuntimeException("服务尚未到达可开始时间，预约时间为" + serviceDate + " " + serviceTime +
                         "，最早可于" + earliestStartTime.format(DATE_FORMATTER) + " " +
                         earliestStartTime.format(TIME_FORMATTER) + "开始服务");
             }
-
-            if (now.isAfter(latestStartTime)) {
-                throw new RuntimeException("已超过预约时间，请联系用户协商修改服务时间");
-            }
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;
             }
             throw new RuntimeException("服务时间格式错误");
+        }
+    }
+
+    public static boolean isWithinVisibleRange(String serviceDate, String serviceTime) {
+        if (serviceDate == null || serviceTime == null) {
+            return true;
+        }
+
+        try {
+            LocalDate serviceLocalDate = LocalDate.parse(serviceDate, DATE_FORMATTER);
+            LocalTime serviceLocalTime = LocalTime.parse(serviceTime, TIME_FORMATTER);
+
+            LocalDateTime serviceDateTime = LocalDateTime.of(serviceLocalDate, serviceLocalTime);
+            LocalDateTime now = LocalDateTime.now();
+
+            LocalDateTime earliestVisibleTime = serviceDateTime.minusHours(4);
+
+            return !now.isBefore(earliestVisibleTime);
+        } catch (Exception e) {
+            return false;
         }
     }
 }

@@ -75,13 +75,13 @@ public class VolunteerStartTimeoutConsumer {
                 if (order != null) {
                     sendMessage(order.getUserId(), 2, 0,
                             "志愿者超时未启动服务",
-                            "您订单的志愿者接单后超过30分钟未启动服务，系统已自动取消该志愿者的接取，将重新安排接单",
+                            "您订单的志愿者接单后超过预约时间10分钟仍未启动服务，系统已自动取消该志愿者的接取，将重新安排接单",
                             orderItemId);
 
                     // 发送通知给志愿者
                     sendMessage(volunteerId, 1, 0,
                             "服务超时自动取消",
-                            "您接取的服务（订单号：" + message.getOrderNo() + "）已超过30分钟未启动，系统已自动取消您的接取",
+                            "您接取的服务（订单号：" + message.getOrderNo() + "）已超过预约时间10分钟未启动，系统已自动取消您的接取",
                             orderItemId);
                 }
 

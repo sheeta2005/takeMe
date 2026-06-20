@@ -133,6 +133,15 @@ public class GlobalExceptionHandler {
         return Result.error(ex.getMessage());
     }
 
+    /**
+     * 捕获业务运行时异常（如ServiceTimeValidator抛出的异常）
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public Result<Void> handleRuntimeException(RuntimeException ex) {
+        log.warn("【业务校验失败】{}", ex.getMessage());
+        return Result.error(ex.getMessage());
+    }
+
     // ======================== 2. 参数校验异常 ========================
 
     /**

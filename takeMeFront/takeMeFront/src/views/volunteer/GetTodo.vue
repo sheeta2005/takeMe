@@ -151,10 +151,21 @@
                   <span class="price-value">¥{{ service.itemPrice }}</span>
                 </div>
                 <div class="action-buttons">
-                  <el-button type="primary" size="large" @click="acceptService(service)">
-                    <el-icon><Check/></el-icon>
-                    确认接取
-                  </el-button>
+                  <el-tooltip
+                    :content="getAcceptButtonTip(service)"
+                    :disabled="canAcceptService(service)"
+                    placement="top"
+                  >
+                    <el-button
+                      type="primary"
+                      size="large"
+                      @click="acceptService(service)"
+                      :disabled="!canAcceptService(service)"
+                    >
+                      <el-icon><Check/></el-icon>
+                      确认接取
+                    </el-button>
+                  </el-tooltip>
                 </div>
               </div>
             </el-card>
@@ -197,6 +208,52 @@ const hasInProgressService = ref(false)
 
 const filterServiceType = ref<number | undefined>(undefined)
 const filterServiceId = ref<string>('')
+
+const canAcceptService = (service: any): boolean => {
+  if (!service.serviceDate || !service.serviceTime) {
+    return true
+  }
+
+  try {
+    const serviceDateTime = new Date(`${service.serviceDate} ${service.serviceTime}`)
+    const now = new Date()
+
+    const fourHoursBefore = new Date(serviceDateTime.getTime() - 4 * 60 * 60 * 1000)
+    const oneHourBefore = new Date(serviceDateTime.getTime() - 1 * 60 * 60 * 1000)
+
+    return now >= fourHoursBefore && now <= oneHourBefore
+  } catch (error) {
+    return false
+  }
+}
+
+const getAcceptButtonTip = (service: any): string => {
+  if (!service.serviceDate || !service.serviceTime) {
+    return ''
+  }
+
+  try {
+    const serviceDateTime = new Date(`${service.serviceDate} ${service.serviceTime}`)
+    const now = new Date()
+
+    const fourHoursBefore = new Date(serviceDateTime.getTime() - 4 * 60 * 60 * 1000)
+    const oneHourBefore = new Date(serviceDateTime.getTime() - 1 * 60 * 60 * 1000)
+
+    if (now < fourHoursBefore) {
+      const hoursLeft = Math.floor((fourHoursBefore.getTime() - now.getTime()) / (60 * 60 * 1000))
+      const minutesLeft = Math.floor(((fourHoursBefore.getTime() - now.getTime()) % (60 * 60 * 1000)) / (60 * 1000))
+      return `服务尚未开放接取，还需等待 ${hoursLeft}小时${minutesLeft}分钟`
+    }
+
+    if (now > oneHourBefore) {
+      return '已超过接单截止时间，无法接取'
+    }
+
+    return ''
+  } catch (error) {
+    return '时间格式错误'
+  }
+}
 
 const filteredServices = computed(() => {
   let list = availableServices.value
@@ -334,9 +391,14 @@ const acceptService = async (service: any) => {
     return
   }
 
+  if (!canAcceptService(service)) {
+    ElMessage.warning(getAcceptButtonTip(service))
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
-      `确认接取服务 ${service.serviceName}？接取后将立即开始服务。`,
+      `确认接取服务 ${service.serviceName}？`,
       '确认接取',
       {
         confirmButtonText: '确认接取',

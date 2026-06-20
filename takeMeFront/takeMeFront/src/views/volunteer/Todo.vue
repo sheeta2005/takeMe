@@ -103,15 +103,22 @@
                   <span class="price-value">¥{{ service.itemPrice }}</span>
                 </div>
                 <div class="action-buttons">
-                  <el-button
+                  <el-tooltip
                     v-if="service.itemStatus === 1"
-                    type="success"
-                    size="large"
-                    @click="startService(service)"
+                    :content="getStartServiceTip(service)"
+                    :disabled="canStartService(service)"
+                    placement="top"
                   >
-                    <el-icon><VideoPlay /></el-icon>
-                    开始服务
-                  </el-button>
+                    <el-button
+                      type="success"
+                      size="large"
+                      @click="startService(service)"
+                      :disabled="!canStartService(service)"
+                    >
+                      <el-icon><VideoPlay /></el-icon>
+                      开始服务
+                    </el-button>
+                  </el-tooltip>
                   <el-button
                     v-if="service.itemStatus === 2"
                     type="primary"
@@ -162,6 +169,46 @@ const volunteerStore = useVolunteerStore()
 
 const loading = ref(true)
 const myServices = ref<any[]>([])
+
+const canStartService = (service: any): boolean => {
+  if (!service.serviceDate || !service.serviceTime) {
+    return true
+  }
+
+  try {
+    const serviceDateTime = new Date(`${service.serviceDate} ${service.serviceTime}`)
+    const now = new Date()
+
+    const oneHourBefore = new Date(serviceDateTime.getTime() - 1 * 60 * 60 * 1000)
+
+    return now >= oneHourBefore
+  } catch (error) {
+    return false
+  }
+}
+
+const getStartServiceTip = (service: any): string => {
+  if (!service.serviceDate || !service.serviceTime) {
+    return ''
+  }
+
+  try {
+    const serviceDateTime = new Date(`${service.serviceDate} ${service.serviceTime}`)
+    const now = new Date()
+
+    const oneHourBefore = new Date(serviceDateTime.getTime() - 1 * 60 * 60 * 1000)
+
+    if (now < oneHourBefore) {
+      const hoursLeft = Math.floor((oneHourBefore.getTime() - now.getTime()) / (60 * 60 * 1000))
+      const minutesLeft = Math.floor(((oneHourBefore.getTime() - now.getTime()) % (60 * 60 * 1000)) / (60 * 1000))
+      return `服务尚未到达可开始时间，还需等待 ${hoursLeft}小时${minutesLeft}分钟`
+    }
+
+    return ''
+  } catch (error) {
+    return '时间格式错误'
+  }
+}
 
 const statusMap: Record<number, string> = {
   0: '待接单',
@@ -252,10 +299,15 @@ const refreshData = () => {
 }
 
 const startService = async (service: any) => {
+  if (!canStartService(service)) {
+    ElMessage.warning(getStartServiceTip(service))
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
       `确认开始服务 ${service.serviceName}？`,
-      '开始服务',
+      '确认开始',
       {
         confirmButtonText: '确认开始',
         cancelButtonText: '取消',
@@ -268,7 +320,7 @@ const startService = async (service: any) => {
     await loadMyServices()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '开始服务失败')
+      ElMessage.error(error.message || '操作失败')
     }
   }
 }
