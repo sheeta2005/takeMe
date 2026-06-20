@@ -6,10 +6,6 @@
           <h2 class="page-title">志愿者管理</h2>
           <p class="page-subtitle">管理系统中的志愿者信息</p>
         </div>
-        <el-button type="primary" size="large" @click="handleAdd">
-          <el-icon><Plus /></el-icon>
-          添加志愿者
-        </el-button>
       </div>
     </div>
 
@@ -123,24 +119,6 @@
         style="margin-top: 24px; justify-content: flex-end"
       />
     </el-card>
-
-    <el-dialog v-model="addDialogVisible" title="添加志愿者" width="600px">
-      <el-form :model="addForm" label-width="100px">
-        <el-form-item label="姓名" required>
-          <el-input v-model="addForm.realName" placeholder="请输入姓名" />
-        </el-form-item>
-        <el-form-item label="账号" required>
-          <el-input v-model="addForm.username" placeholder="请输入账号" />
-        </el-form-item>
-        <el-form-item label="手机号" required>
-          <el-input v-model="addForm.phone" placeholder="请输入手机号" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="addDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmAdd">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -149,7 +127,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Refresh, User, View, Switch, Delete } from '@element-plus/icons-vue'
-import { searchVolunteer, addVolunteer, deleteVolunteer, updateVolunteerStatus } from '@/api/admin'
+import { searchVolunteer, deleteVolunteer, updateVolunteerStatus } from '@/api/admin'
 import defaultAvatar from '@/assets/default-avatar.png'
 
 const router = useRouter()
@@ -162,12 +140,6 @@ const pageSize = ref(10)
 const total = ref(0)
 
 const volunteerList = ref<any[]>([])
-const addDialogVisible = ref(false)
-const addForm = ref({
-  realName: '',
-  username: '',
-  phone: ''
-})
 
 onMounted(() => {
   fetchVolunteers()
@@ -211,27 +183,6 @@ const getWorkStatusTagType = (status: number) => {
 
 const handleView = (row: any) => {
   router.push(`/admin/volunteer/detail/${row.id}`)
-}
-
-const handleAdd = () => {
-  addForm.value = { realName: '', username: '', phone: '' }
-  addDialogVisible.value = true
-}
-
-const confirmAdd = async () => {
-  if (!addForm.value.realName || !addForm.value.username || !addForm.value.phone) {
-    ElMessage.warning('请填写完整信息')
-    return
-  }
-
-  try {
-    await addVolunteer(addForm.value)
-    ElMessage.success('添加成功')
-    addDialogVisible.value = false
-    fetchVolunteers()
-  } catch (err) {
-    ElMessage.error('添加失败')
-  }
 }
 
 const handleToggleStatus = async (row: any) => {

@@ -12,6 +12,7 @@ import com.me.result.Result;
 import com.me.service.VolunteerService;
 import com.me.vo.PageResultVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,9 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 @RestController
 @RequestMapping("/api/admin/volunteer")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminVolunteerController {
 
     private final VolunteerService volunteerService;
@@ -100,40 +103,34 @@ public class AdminVolunteerController {
 
     @PostMapping("/delete/{id}")
     public Result<Void> deleteVolunteer(@PathVariable Long id) {
-        boolean success = volunteerService.removeById(id);
-        if (!success) {
-            return Result.error("删除失败");
-        }
-        return Result.success();
-    }
-    
-    @PostMapping("/disable/{id}")
-    public Result<Void> disableVolunteer(@PathVariable Long id) {
         Volunteer volunteer = volunteerService.getById(id);
         if (volunteer == null) {
             return Result.error("志愿者不存在");
         }
         
-        // 设置状态为禁用
         volunteer.setStatus(0);
         volunteerService.updateById(volunteer);
         
-        // 释放该志愿者所有进行中的服务
         int releasedCount = volunteerService.releaseVolunteerServices(id);
         
         return Result.success();
     }
     
-    @PostMapping("/enable/{id}")
-    public Result<Void> enableVolunteer(@PathVariable Long id) {
+    @PostMapping("/status/{id}")
+
+    public Result<Void> updateVolunteerStatus(@PathVariable Long id, @RequestParam Integer status) {
         Volunteer volunteer = volunteerService.getById(id);
         if (volunteer == null) {
             return Result.error("志愿者不存在");
         }
         
-        // 设置状态为启用
-        volunteer.setStatus(1);
+        volunteer.setStatus(status);
         volunteerService.updateById(volunteer);
+        
+        if (status == 0) {
+            int releasedCount = volunteerService.releaseVolunteerServices(id);
+            log.info("志愿者 {} 被禁用，释放了 {} 个进行中的服务", id, releasedCount);
+        }
         
         return Result.success();
     }

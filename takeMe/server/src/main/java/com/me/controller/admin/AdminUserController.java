@@ -66,9 +66,33 @@ public class AdminUserController {
 
     @PostMapping("/delete/{id}")
     public Result<Void> deleteUser(@PathVariable Long id) {
-        boolean success = userService.removeById(id);
+        User user = userService.getById(id);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+        
+        user.setStatus(0);
+        boolean success = userService.updateById(user);
+        
         if (!success) {
             return Result.error("删除失败");
+        }
+        return Result.success();
+    }
+
+    @PostMapping("/status/{id}")
+
+    public Result<Void> updateUserStatus(@PathVariable Long id, @RequestParam Integer status) {
+        User user = userService.getById(id);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+        
+        user.setStatus(status);
+        boolean success = userService.updateById(user);
+        
+        if (!success) {
+            return Result.error("状态更新失败");
         }
         return Result.success();
     }
