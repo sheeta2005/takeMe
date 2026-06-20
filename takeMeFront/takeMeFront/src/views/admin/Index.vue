@@ -5,7 +5,7 @@
     <el-card class="welcome-banner" shadow="never">
       <div class="banner-content">
         <div class="banner-left">
-          <el-avatar :size="64" :src=" defaultAvatar" class="admin-avatar">
+          <el-avatar :size="64" :src="adminStore.avatar || defaultAvatar" class="admin-avatar">
             <el-icon :size="32"><UserFilled /></el-icon>
           </el-avatar>
           <div class="banner-text">
