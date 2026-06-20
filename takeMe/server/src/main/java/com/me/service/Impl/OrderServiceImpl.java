@@ -390,6 +390,8 @@ public class OrderServiceImpl implements OrderService {
         updateOrderVolunteerIds(item.getOrderId());
         Integer oldStatus = updateOrderStatus(item.getOrderId());
 
+        redisUtil.deleteByPattern("order:detail:" + item.getOrderId());
+
         Order order = orderMapper.selectById(item.getOrderId());
         if (order != null) {
             sendMessage(order.getUserId(), 2, 2, "服务已接单", "您的订单服务已被志愿者接取，请耐心等待服务", order.getId());
@@ -444,6 +446,8 @@ public class OrderServiceImpl implements OrderService {
         updateOrderVolunteerIds(item.getOrderId());
         updateOrderStatus(item.getOrderId());
 
+        redisUtil.deleteByPattern("order:detail:" + item.getOrderId());
+
         Order order = orderMapper.selectById(item.getOrderId());
         if (order != null) {
             sendMessage(order.getUserId(), 2, 0, "志愿者已放弃服务", "您订单的志愿者已放弃服务，系统将重新安排接单", item.getOrderId());
@@ -475,6 +479,8 @@ public class OrderServiceImpl implements OrderService {
         
         Integer oldStatus = updateOrderStatus(item.getOrderId());
         
+        redisUtil.deleteByPattern("order:detail:" + item.getOrderId());
+        
         Order order = orderMapper.selectById(item.getOrderId());
         if (order != null) {
             sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者开始服务", volunteerId);
@@ -499,6 +505,8 @@ public class OrderServiceImpl implements OrderService {
         orderItemMapper.updateById(item);
         
         Integer oldStatus = checkAndCompleteOrder(item.getOrderId());
+
+        redisUtil.deleteByPattern("order:detail:" + item.getOrderId());
 
         Order order = orderMapper.selectById(item.getOrderId());
         if (order != null) {
@@ -528,6 +536,8 @@ public class OrderServiceImpl implements OrderService {
         orderItemMapper.updateById(item);
         
         Integer oldStatus = updateOrderStatus(item.getOrderId());
+        
+        redisUtil.deleteByPattern("order:detail:" + item.getOrderId());
         
         sendStatusChangeMessage(order, oldStatus, order.getStatus(), "用户确认开始服务");
     }
@@ -582,6 +592,8 @@ public class OrderServiceImpl implements OrderService {
             
             sendStatusChangeMessage(order, oldOrderStatus, order.getStatus(), "用户取消单项服务");
         }
+        
+        redisUtil.deleteByPattern("order:detail:" + item.getOrderId());
     }
 
     private void updateOrderVolunteerIds(Long orderId) {

@@ -44,8 +44,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getCartList, checkoutCart } from '@/api/order'
+import { useCartStore } from '@/stores/cart'
 
 const router = useRouter()
+const cartStore = useCartStore()
 const loading = ref(false)
 const submitting = ref(false)
 
@@ -86,6 +88,9 @@ const submitOrder = async () => {
 
     if (res.code === 200) {
       ElMessage.success('订单提交成功')
+
+      cartStore.items = []
+
       router.replace('/user/order')
     }
   } catch (err: any) {

@@ -384,6 +384,8 @@ const handleImmediateCheckout = async () => {
       createdOrder.value = res.data
       orderSuccessVisible.value = true
 
+      cartStore.items = []
+
       ElMessage.success('订单提交成功！')
     } else {
       ElMessage.error(res.msg || '下单失败')
