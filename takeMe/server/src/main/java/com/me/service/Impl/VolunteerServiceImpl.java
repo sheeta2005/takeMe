@@ -65,19 +65,41 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     public IPage<Volunteer> searchVolunteer(
             String username,
             Long id,
-            PageResultDTO pageResultDTO
+            PageResultDTO pageResultDTO,
+            String keyword,
+            String sortBy,
+            String sortOrder
     ) {
         Page<Volunteer> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
 
-        if (username != null && !username.trim().isEmpty()) {
-            wrapper.like(Volunteer::getUsername, username);
-        }
+//        if (username != null && !username.trim().isEmpty()) {
+//            wrapper.like(Volunteer::getUsername, username);
+//        }
         if (id != null) {
             wrapper.eq(Volunteer::getId, id);
         }
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.and(w -> w.like(Volunteer::getUsername, keyword)
+                    .or()
+                    .like(Volunteer::getRealName, keyword)
+                    .or()
+                    .like(Volunteer::getPhone, keyword));
+        } else if (username != null && !username.trim().isEmpty()) {
+            wrapper.like(Volunteer::getUsername, username);
+        }
 
-        wrapper.orderByDesc(Volunteer::getCreateTime);
+        if ("lastLoginTime".equals(sortBy)) {
+            if ("asc".equalsIgnoreCase(sortOrder)) {
+                wrapper.orderByAsc(Volunteer::getLastLoginTime);
+            } else {
+                wrapper.orderByDesc(Volunteer::getLastLoginTime);
+            }
+        } else {
+            wrapper.orderByDesc(Volunteer::getCreateTime);
+        }
+        
         return this.page(pageParam, wrapper);
     }
     

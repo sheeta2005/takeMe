@@ -23,11 +23,38 @@
         <el-form-item label="关键词">
           <el-input
             v-model="filterKeyword"
-            placeholder="姓名/账号"
+            placeholder="姓名/账号/手机号"
             clearable
             style="width: 200px"
             @keyup.enter="fetchVolunteers"
           />
+        </el-form-item>
+        <el-form-item label="性别">
+          <el-select v-model="filterGender" placeholder="全部" style="width: 120px" @change="fetchVolunteers">
+            <el-option label="全部" :value="undefined" />
+            <el-option label="男" :value="0" />
+            <el-option label="女" :value="1" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="注册时间">
+          <el-date-picker
+            v-model="filterDateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            @change="fetchVolunteers"
+          />
+        </el-form-item>
+        <el-form-item label="最后登录">
+          <el-select v-model="sortBy" placeholder="默认排序" style="width: 140px" @change="fetchVolunteers">
+            <el-option label="默认排序" value="" />
+            <el-option label="升序 ↑" value="lastLoginTime-asc" />
+            <el-option label="降序 ↓" value="lastLoginTime-desc" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="fetchVolunteers">
@@ -134,6 +161,9 @@ const router = useRouter()
 const loading = ref(false)
 const filterId = ref<number | undefined>(undefined)
 const filterKeyword = ref('')
+const filterGender = ref<number | undefined>(undefined)
+const filterDateRange = ref<string[]>([])
+const sortBy = ref('')
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -148,11 +178,25 @@ onMounted(() => {
 const fetchVolunteers = async () => {
   loading.value = true
   try {
+    const startDate = filterDateRange.value?.[0] || undefined
+    const endDate = filterDateRange.value?.[1] || undefined
+
+    let sortField = ''
+    let sortOrder = ''
+    if (sortBy.value) {
+      const parts = sortBy.value.split('-')
+      sortField = parts[0]
+      sortOrder = parts[1]
+    }
+
     const res = await searchVolunteer(
       currentPage.value,
       pageSize.value,
+      undefined,
+      filterId.value,
       filterKeyword.value || undefined,
-      filterId.value
+      sortField,
+      sortOrder
     )
     volunteerList.value = res.data.records || []
     total.value = res.data.total || 0
@@ -167,6 +211,9 @@ const fetchVolunteers = async () => {
 const resetFilter = () => {
   filterId.value = undefined
   filterKeyword.value = ''
+  filterGender.value = undefined
+  filterDateRange.value = []
+  sortBy.value = ''
   currentPage.value = 1
   fetchVolunteers()
 }

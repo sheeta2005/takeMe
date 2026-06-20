@@ -137,12 +137,15 @@ export const searchVolunteer = (
   pageNum: number,
   pageSize: number,
   username?: string,
-  id?: number
+  id?: number,
+  keyword?: string,
+  sortBy?: string,
+  sortOrder?: string
 ) => {
   return request({
     url: '/api/admin/volunteer/search',
     method: 'get',
-    params: { pageNum, pageSize, username, id }
+    params: { pageNum, pageSize, username, id, keyword, sortBy, sortOrder }
   })
 }
 
@@ -192,12 +195,14 @@ export const searchUser = (
   gender?: number,
   id?: number,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  sortBy?: string,
+  sortOrder?: string
 ) => {
   return request({
     url: '/api/admin/user/search',
     method: 'get',
-    params: { pageNum, pageSize, keyword, gender, id, startDate, endDate }
+    params: { pageNum, pageSize, keyword, gender, id, startDate, endDate, sortBy, sortOrder }
   })
 }
 

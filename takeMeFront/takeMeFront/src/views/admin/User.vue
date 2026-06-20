@@ -23,7 +23,7 @@
         <el-form-item label="关键词">
           <el-input
             v-model="filterKeyword"
-            placeholder="姓名/手机号"
+            placeholder="姓名/账号/手机号"
             clearable
             style="width: 200px"
             @keyup.enter="fetchUsers"
@@ -48,6 +48,13 @@
             style="width: 240px"
             @change="fetchUsers"
           />
+        </el-form-item>
+        <el-form-item label="最后登录">
+          <el-select v-model="sortBy" placeholder="默认排序" style="width: 140px" @change="fetchUsers">
+            <el-option label="默认排序" value="" />
+            <el-option label="升序 ↑" value="lastLoginTime-asc" />
+            <el-option label="降序 ↓" value="lastLoginTime-desc" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="fetchUsers">
@@ -150,6 +157,7 @@ const filterId = ref<number | undefined>(undefined)
 const filterKeyword = ref('')
 const filterGender = ref<number | undefined>(undefined)
 const filterDateRange = ref<string[]>([])
+const sortBy = ref('')
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -167,6 +175,14 @@ const fetchUsers = async () => {
     const startDate = filterDateRange.value?.[0] || undefined
     const endDate = filterDateRange.value?.[1] || undefined
 
+    let sortField = ''
+    let sortOrder = ''
+    if (sortBy.value) {
+      const parts = sortBy.value.split('-')
+      sortField = parts[0]
+      sortOrder = parts[1]
+    }
+
     const res = await searchUser(
       currentPage.value,
       pageSize.value,
@@ -174,7 +190,9 @@ const fetchUsers = async () => {
       filterGender.value,
       filterId.value,
       startDate,
-      endDate
+      endDate,
+      sortField,
+      sortOrder
     )
     userList.value = res.data.records || []
     total.value = res.data.total || 0
@@ -191,6 +209,7 @@ const resetFilter = () => {
   filterKeyword.value = ''
   filterGender.value = undefined
   filterDateRange.value = []
+  sortBy.value = ''
   currentPage.value = 1
   fetchUsers()
 }

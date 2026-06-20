@@ -25,7 +25,10 @@ public interface VolunteerService extends IService<Volunteer> {
     IPage<Volunteer> searchVolunteer(
             String username,
             Long id,
-            PageResultDTO pageResultDTO
+            PageResultDTO pageResultDTO,
+            String keyword,
+            String sortBy,
+            String sortOrder
     );
     
     /**
@@ -34,7 +37,7 @@ public interface VolunteerService extends IService<Volunteer> {
      * @return 注册是否成功
      */
     boolean register(UserRegisterDTO registerDTO);
-    
+
     /**
      * 释放志愿者所有进行中的服务（itemStatus=1或2）
      * @param volunteerId 志愿者ID

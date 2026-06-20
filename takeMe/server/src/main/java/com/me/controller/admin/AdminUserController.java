@@ -32,7 +32,7 @@ public class AdminUserController {
         pageResultDTO.setPageNum(pageNum);
         pageResultDTO.setPageSize(pageSize);
         
-        IPage<User> iPage = userService.searchUser(null, null, null, null, null, pageResultDTO);
+        IPage<User> iPage = userService.searchUser(null, null, null, null, null, pageResultDTO, null, null);
         iPage.getRecords().forEach(u -> u.setPassword(null));
         
         IPage<Map<String, Object>> resultPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(iPage.getCurrent(), iPage.getSize(), iPage.getTotal());
@@ -71,13 +71,15 @@ public class AdminUserController {
             @RequestParam(required = false) Integer gender,
             @RequestParam(required = false) Long id,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder
     ) {
         PageResultDTO pageResultDTO = new PageResultDTO();
         pageResultDTO.setPageNum(pageNum);
         pageResultDTO.setPageSize(pageSize);
         
-        IPage<User> iPage = userService.searchUser(keyword, gender, id, startDate, endDate, pageResultDTO);
+        IPage<User> iPage = userService.searchUser(keyword, gender, id, startDate, endDate, pageResultDTO, sortBy, sortOrder);
         iPage.getRecords().forEach(u -> u.setPassword(null));
         
         IPage<Map<String, Object>> resultPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(iPage.getCurrent(), iPage.getSize(), iPage.getTotal());
@@ -92,6 +94,7 @@ public class AdminUserController {
             record.put("age", user.getAge());
             record.put("status", user.getStatus());
             record.put("createTime", user.getCreateTime());
+            record.put("lastLoginTime", user.getLastLoginTime());
             
             LambdaQueryWrapper<Address> addrWrapper = new LambdaQueryWrapper<>();
             addrWrapper.eq(Address::getUserId, user.getId())

@@ -82,7 +82,9 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             Long id,
             String startDate,
             String endDate,
-            PageResultDTO pageResultDTO
+            PageResultDTO pageResultDTO,
+            String sortBy,
+            String sortOrder
     ) {
         Page<User> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
@@ -107,7 +109,16 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             wrapper.le(User::getCreateTime, endDate + " 23:59:59");
         }
 
-        wrapper.orderByDesc(User::getCreateTime);
+        if ("lastLoginTime".equals(sortBy)) {
+            if ("asc".equalsIgnoreCase(sortOrder)) {
+                wrapper.orderByAsc(User::getLastLoginTime);
+            } else {
+                wrapper.orderByDesc(User::getLastLoginTime);
+            }
+        } else {
+            wrapper.orderByDesc(User::getCreateTime);
+        }
+        
         return this.page(pageParam, wrapper);
     }
 

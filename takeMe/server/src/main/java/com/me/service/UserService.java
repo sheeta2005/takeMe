@@ -20,7 +20,9 @@ public interface UserService extends IService<User> {
             Long id,
             String startDate,
             String endDate,
-            PageResultDTO pageResultDTO
+            PageResultDTO pageResultDTO,
+            String sortBy,
+            String sortOrder
     );
 
     void updateAvatar(Long userId, String avatarUrl);

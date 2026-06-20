@@ -41,7 +41,7 @@ public class AdminVolunteerController {
         pageResultDTO.setPageNum(pageNum);
         pageResultDTO.setPageSize(pageSize);
         
-        IPage<Volunteer> iPage = volunteerService.searchVolunteer(null, null, pageResultDTO);
+        IPage<Volunteer> iPage = volunteerService.searchVolunteer(null, null, pageResultDTO, null, null, null);
         iPage.getRecords().forEach(v -> v.setPassword(null));
         
         PageResultVO<Volunteer> result = PageResultVO.from(iPage);
@@ -53,13 +53,16 @@ public class AdminVolunteerController {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String username,
-            @RequestParam(required = false) Long id
+            @RequestParam(required = false) Long id,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder
     ) {
         PageResultDTO pageResultDTO = new PageResultDTO();
         pageResultDTO.setPageNum(pageNum);
         pageResultDTO.setPageSize(pageSize);
         
-        IPage<Volunteer> iPage = volunteerService.searchVolunteer(username, id, pageResultDTO);
+        IPage<Volunteer> iPage = volunteerService.searchVolunteer(username, id, pageResultDTO, keyword, sortBy, sortOrder);
         iPage.getRecords().forEach(v -> v.setPassword(null));
         
         PageResultVO<Volunteer> result = PageResultVO.from(iPage);
