@@ -31,4 +31,6 @@ public interface MessageService extends IService<Message> {
     boolean deleteMessage(Long messageId);
 
     java.util.Map<String, Object> getMessageStatistics();
+
+    void sendToAllUsersAsync(Integer receiverType, Message template);
 }

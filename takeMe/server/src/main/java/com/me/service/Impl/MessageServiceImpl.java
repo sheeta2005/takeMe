@@ -8,22 +8,36 @@ import com.me.dto.MessageDTO;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Message;
 import com.me.mapper.MessageMapper;
+import com.me.redis.utils.RedisUtil;
 import com.me.service.MessageService;
+import com.me.service.UserService;
+import com.me.service.VolunteerService;
 import com.me.vo.MessageVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> implements MessageService {
 
     private final MessageMapper messageMapper;
+    private final UserService userService;
+    private final VolunteerService volunteerService;
+    private final RedisUtil redisUtil;
+
+    private static final String TASK_PROGRESS_PREFIX = "message:task:";
+    private static final int BATCH_SIZE = 500;
 
     @Override
     public IPage<MessageVO> list(Long receiverId, Integer receiverType, Integer type, Integer isRead, PageResultDTO pageResultDTO) {
@@ -102,7 +116,12 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         if (message.getIsRead() == null) {
             message.setIsRead(0);
         }
-        this.save(message);
+        
+        if (message.getReceiverId() == null && message.getReceiverType() != null) {
+            sendToAllUsersAsync(message.getReceiverType(), message);
+        } else {
+            this.save(message);
+        }
     }
 
     @Override
@@ -193,5 +212,81 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         }
         
         return stats;
+    }
+
+    @Override
+    @Async("messageTaskExecutor")
+    public void sendToAllUsersAsync(Integer receiverType, Message template) {
+        String taskId = UUID.randomUUID().toString().replace("-", "");
+        String taskKey = TASK_PROGRESS_PREFIX + taskId;
+        
+        try {
+            log.info("开始异步群发消息任务: {}, receiverType: {}", taskId, receiverType);
+            
+            int pageNum = 1;
+            int totalProcessed = 0;
+            int totalPages = 0;
+            
+            while (true) {
+                List<Long> userIds;
+                if (receiverType == 1) {
+                    userIds = volunteerService.getAllVolunteerIds(pageNum, BATCH_SIZE);
+                } else if (receiverType == 2) {
+                    userIds = userService.getAllUserIds(pageNum, BATCH_SIZE);
+                } else {
+                    log.warn("不支持的receiverType: {}", receiverType);
+                    break;
+                }
+                
+                if (userIds == null || userIds.isEmpty()) {
+                    break;
+                }
+                
+                totalPages = pageNum;
+                
+                List<Message> messages = userIds.stream().map(userId -> {
+                    Message msg = new Message();
+                    msg.setReceiverId(userId);
+                    msg.setReceiverType(receiverType);
+                    msg.setType(template.getType());
+                    msg.setTitle(template.getTitle());
+                    msg.setContent(template.getContent());
+                    msg.setRelatedOrderId(template.getRelatedOrderId());
+                    msg.setRelatedUserId(template.getRelatedUserId());
+                    msg.setRelatedVolunteerId(template.getRelatedVolunteerId());
+                    msg.setRelatedUrl(template.getRelatedUrl());
+                    msg.setIsRead(0);
+                    msg.setCreateTime(LocalDateTime.now());
+                    return msg;
+                }).collect(Collectors.toList());
+                
+                this.saveBatch(messages, BATCH_SIZE);
+                
+                totalProcessed += messages.size();
+                
+                redisUtil.hSet(taskKey, "processed", totalProcessed);
+                
+                log.info("任务 {} 进度: 第{}批, 本批{}条, 累计{}条", 
+                        taskId, pageNum, messages.size(), totalProcessed);
+                
+                pageNum++;
+                
+                if (userIds.size() < BATCH_SIZE) {
+                    break;
+                }
+            }
+            
+            redisUtil.hSet(taskKey, "total", totalProcessed);
+            redisUtil.hSet(taskKey, "status", "SUCCESS");
+            redisUtil.expire(taskKey, 24, TimeUnit.HOURS);
+            
+            log.info("消息群发任务完成: {}, 总计{}条", taskId, totalProcessed);
+            
+        } catch (Exception e) {
+            log.error("消息群发任务失败: {}", taskId, e);
+            redisUtil.hSet(taskKey, "status", "FAILED");
+            redisUtil.hSet(taskKey, "error", e.getMessage());
+            redisUtil.expire(taskKey, 24, TimeUnit.HOURS);
+        }
     }
 }

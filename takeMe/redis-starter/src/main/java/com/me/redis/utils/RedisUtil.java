@@ -97,4 +97,20 @@ public class RedisUtil {
     public boolean isNullCached(String key) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(NULL_CACHE_PREFIX + key));
     }
+
+    public void hSet(String key, String field, Object value) {
+        redisTemplate.opsForHash().put(key, field, value);
+    }
+
+    public Object hGet(String key, String field) {
+        return redisTemplate.opsForHash().get(key, field);
+    }
+
+    public Long hIncrBy(String key, String field, long increment) {
+        return redisTemplate.opsForHash().increment(key, field, increment);
+    }
+
+    public void hDel(String key, String... fields) {
+        redisTemplate.opsForHash().delete(key, (Object[]) fields);
+    }
 }

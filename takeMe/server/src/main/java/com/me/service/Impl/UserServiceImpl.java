@@ -144,4 +144,18 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         
         log.info("User {} avatar deleted", userId);
     }
+
+    @Override
+    public java.util.List<Long> getAllUserIds(int pageNum, int pageSize) {
+        Page<User> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(User::getId)
+               .eq(User::getStatus, 1)
+               .orderByAsc(User::getId);
+        
+        Page<User> resultPage = this.page(page, wrapper);
+        return resultPage.getRecords().stream()
+                .map(User::getId)
+                .collect(java.util.stream.Collectors.toList());
+    }
 }

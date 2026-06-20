@@ -191,4 +191,18 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         
         log.info("Volunteer {} avatar deleted", volunteerId);
     }
+
+    @Override
+    public java.util.List<Long> getAllVolunteerIds(int pageNum, int pageSize) {
+        Page<Volunteer> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(Volunteer::getId)
+               .eq(Volunteer::getStatus, 1)
+               .orderByAsc(Volunteer::getId);
+        
+        Page<Volunteer> resultPage = this.page(page, wrapper);
+        return resultPage.getRecords().stream()
+                .map(Volunteer::getId)
+                .collect(java.util.stream.Collectors.toList());
+    }
 }
