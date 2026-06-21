@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+
+    <!-- ==================== 1. 读取 Spring 配置 ==================== -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="takeMe"/>
+    <springProperty scope="context" name="SERVER_PORT" source="server.port" defaultValue="8080"/>
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="./logs"/>
+
+    <!-- 定义日志文件名前缀：项目名-端口 -->
+    <property name="LOG_FILE_PREFIX" value="${APP_NAME}-${SERVER_PORT}"/>
+    <property name="MAX_HISTORY" value="7"/>
+    <property name="TOTAL_SIZE_CAP" value="5GB"/>
+    <property name="MAX_FILE_SIZE" value="100MB"/>
+
+    <!-- ==================== 2. 控制台输出器（无彩色） ==================== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40}:%L - %msg%n%xEx
+            </pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ==================== 3. 滚动文件输出器（无彩色） ==================== -->
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${LOG_FILE_PREFIX}.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${LOG_FILE_PREFIX}-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <cleanHistoryOnStart>false</cleanHistoryOnStart>
+        </rollingPolicy>
+
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40}:%L - %msg%n%xEx
+            </pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ==================== 4. 异步文件输出器 ==================== -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="ROLLING_FILE"/>
+    </appender>
+
+    <!-- ==================== 5. ERROR 日志单独输出 ==================== -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${LOG_FILE_PREFIX}-error.log</file>
+
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${LOG_FILE_PREFIX}-error-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40}:%L - %msg%n%xEx
+            </pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ==================== 6. SQL 日志单独输出 ==================== -->
+    <appender name="SQL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${LOG_FILE_PREFIX}-sql.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${LOG_FILE_PREFIX}-sql-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{40}:%L - %msg%n%xEx
+            </pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ==================== 7. Logger 配置 ==================== -->
+
+    <!-- MyBatis SQL 日志：仅输出到 SQL 文件，不输出到控制台和主日志 -->
+    <logger name="com.me.mapper" level="DEBUG" additivity="false">
+        <appender-ref ref="SQL_FILE"/>
+    </logger>
+
+    <!-- com.me 业务包：DEBUG 级别，输出到控制台、主日志文件、错误日志 -->
+    <logger name="com.me" level="DEBUG"/>
+
+    <!-- MyBatis-Plus：WARN 级别 -->
+    <logger name="com.baomidou" level="WARN"/>
+
+    <!-- Spring 框架：WARN 级别 -->
+    <logger name="org.springframework" level="WARN"/>
+
+    <!-- Druid 连接池：WARN 级别 -->
+    <logger name="com.alibaba.druid" level="WARN"/>
+
+    <!-- RabbitMQ：WARN 级别 -->
+    <logger name="org.springframework.amqp" level="WARN"/>
+
+    <!-- Redis：WARN 级别 -->
+    <logger name="org.springframework.data.redis" level="WARN"/>
+
+    <!-- ==================== 8. Root Logger ==================== -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </root>
+
+</configuration>
