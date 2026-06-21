@@ -15,6 +15,8 @@ import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.ReviewMapper;
 import com.me.mapper.UserMapper;
+import com.me.mapper.VolunteerMapper;
+import com.me.mapper.VolunteerPointsRecordMapper;
 import com.me.mq.config.RabbitMQConfig;
 import com.me.mq.producer.MessageProducer;
 import com.me.redis.annotation.RedisCache;
@@ -50,6 +52,8 @@ public class OrderServiceImpl implements OrderService {
     private final MessageProducer messageProducer;
     private final MessageService messageService;
     private final com.me.redis.utils.RedisUtil redisUtil;
+    private final VolunteerMapper volunteerMapper;
+    private final VolunteerPointsRecordMapper volunteerPointsRecordMapper;
 
     @Override
     public IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
@@ -379,6 +383,14 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("该服务项目已被接取");
         }
 
+        Volunteer volunteer = volunteerMapper.selectById(volunteerId);
+        if (volunteer == null) {
+            throw new RuntimeException("志愿者不存在");
+        }
+        if (volunteer.getPoints() != null && volunteer.getPoints() < 50) {
+            throw new RuntimeException("积分不足（当前积分：" + volunteer.getPoints() + "），无法接单。需要至少50积分才能接单。");
+        }
+
         com.me.utils.ServiceTimeValidator.validateCanAcceptOrder(
             item.getServiceDate(), item.getServiceTime()
         );
@@ -433,6 +445,28 @@ public class OrderServiceImpl implements OrderService {
         }
         if (item.getItemStatus() != 1 && item.getItemStatus() != 2) {
             throw new RuntimeException("当前状态不允许放弃");
+        }
+
+        Volunteer volunteer = volunteerMapper.selectById(volunteerId);
+        if (volunteer != null) {
+            int currentPoints = volunteer.getPoints() != null ? volunteer.getPoints() : 0;
+            int deductPoints = 50;
+            int actualDeduct = Math.min(deductPoints, currentPoints);
+            int newPoints = currentPoints - actualDeduct;
+            
+            volunteer.setPoints(newPoints);
+            volunteerMapper.updateById(volunteer);
+            
+            VolunteerPointsRecord record = new VolunteerPointsRecord();
+            record.setVolunteerId(volunteerId);
+            record.setOrderId(item.getOrderId());
+            record.setPoints(-actualDeduct);
+            record.setType(1);
+            record.setDescription("放弃订单扣除" + actualDeduct + "积分");
+            record.setCreateTime(LocalDateTime.now());
+            volunteerPointsRecordMapper.insert(record);
+            
+            log.info("志愿者 {} 放弃订单，扣除积分：{}，剩余积分：{}", volunteerId, actualDeduct, newPoints);
         }
 
         item.setVolunteerId(null);
@@ -503,6 +537,8 @@ public class OrderServiceImpl implements OrderService {
 
         item.setItemStatus(3);
         orderItemMapper.updateById(item);
+        
+        addPointsForCompletedOrder(volunteerId, item);
         
         Integer oldStatus = checkAndCompleteOrder(item.getOrderId());
 
@@ -1072,5 +1108,47 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
         sendMessage(volunteerId, receiverType, type, title, content, relatedOrderId);
+    }
+
+    private void addPointsForCompletedOrder(Long volunteerId, OrderItem item) {
+        if (item.getItemPrice() == null || item.getItemPrice() <= 0) {
+            log.warn("订单项 {} 的价格无效，跳过积分计算", item.getId());
+            return;
+        }
+
+        int earnedPoints;
+        if (item.getServiceType() != null && item.getServiceType() == 2) {
+            earnedPoints = (int) Math.floor(item.getItemPrice() / 10.0);
+        } else {
+            earnedPoints = item.getItemPrice();
+        }
+
+        if (earnedPoints <= 0) {
+            log.warn("订单项 {} 计算的积分为0或负数，跳过", item.getId());
+            return;
+        }
+
+        Volunteer volunteer = volunteerMapper.selectById(volunteerId);
+        if (volunteer == null) {
+            log.error("志愿者 {} 不存在，无法增加积分", volunteerId);
+            return;
+        }
+
+        int currentPoints = volunteer.getPoints() != null ? volunteer.getPoints() : 0;
+        int newPoints = currentPoints + earnedPoints;
+        
+        volunteer.setPoints(newPoints);
+        volunteerMapper.updateById(volunteer);
+        
+        VolunteerPointsRecord record = new VolunteerPointsRecord();
+        record.setVolunteerId(volunteerId);
+        record.setOrderId(item.getOrderId());
+        record.setPoints(earnedPoints);
+        record.setType(0);
+        record.setDescription("完成" + item.getServiceName() + "服务获得" + earnedPoints + "积分");
+        record.setCreateTime(LocalDateTime.now());
+        volunteerPointsRecordMapper.insert(record);
+        
+        log.info("志愿者 {} 完成订单 {}，获得积分：{}，当前总积分：{}", volunteerId, item.getId(), earnedPoints, newPoints);
     }
 }

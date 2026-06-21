@@ -9,4 +9,6 @@ public interface VolunteerPointsService {
     List<VolunteerPointsRecordVO> getListByVolunteerId(Long volunteerId);
 
     VolunteerPointsRecordVO getSummary(Long volunteerId);
+
+    void addPoints(Long volunteerId, Integer points);
 }

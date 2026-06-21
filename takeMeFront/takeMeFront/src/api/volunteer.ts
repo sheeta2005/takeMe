@@ -269,3 +269,11 @@ export function getPointsSummary() {
     method: 'get'
   })
 }
+
+export function addPoints(points?: number) {
+  return request({
+    url: '/api/volunteer/points/add',
+    method: 'post',
+    params: { points: points || 100 }
+  })
+}

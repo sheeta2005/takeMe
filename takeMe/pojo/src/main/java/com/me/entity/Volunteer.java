@@ -36,6 +36,7 @@ public class Volunteer {
     
     private Integer workStatus;
     private Integer totalServiceHours;
+    private Integer points;//总积分
 
     private String emergencyName;
     private String emergencyPhone;

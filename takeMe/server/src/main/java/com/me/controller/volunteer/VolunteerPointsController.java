@@ -6,7 +6,9 @@ import com.me.service.VolunteerPointsService;
 import com.me.vo.VolunteerPointsRecordVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -30,5 +32,12 @@ public class VolunteerPointsController {
         Long volunteerId = BaseContext.getLoginId();
         VolunteerPointsRecordVO summary = volunteerPointsService.getSummary(volunteerId);
         return Result.success(summary);
+    }
+
+    @PostMapping("/add")
+    public Result<String> addPoints(@RequestParam(defaultValue = "100") Integer points) {
+        Long volunteerId = BaseContext.getLoginId();
+        volunteerPointsService.addPoints(volunteerId, points);
+        return Result.success("成功添加" + points + "积分");
     }
 }
