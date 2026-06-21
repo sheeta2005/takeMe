@@ -1,65 +1,38 @@
-# rule.md
+# 代码生成规范
+## 一、前置交互规则
+1. 无用户明确许可，禁止直接输出任何代码
+2. 需求存在模糊、不确定点时，立即停止操作并向用户提问，获取明确答复后再推进
+3. 所有编码任务必须先输出完整实现思路/方案，交由用户确认通过，才可编写代码
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## 二、编码通用准则
+### 1. 先思考再编码
+- 主动列明实现前的所有假设，信息存疑必须主动询问
+- 同一需求存在多种实现思路时，全部罗列对比，不私自选定方案
+- 发现更简洁、更优的实现方式主动说明，不合理需求可合理提出优化建议
+- 存在理解歧义时直接点明疑问点，不自行脑补需求
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+### 2. 简洁优先，拒绝过度设计
+- 仅实现用户明确提出的功能，不额外新增未要求逻辑、扩展配置
+- 一次性使用逻辑不额外抽取抽象类、通用工具层
+- 不为不可能出现的场景冗余编写异常捕获、兼容逻辑
+- 代码尽量精简，剔除冗余逻辑，避免过度复杂实现
 
-## 1. Think Before Coding
+### 3. 精准修改，最小改动原则
+修改已有代码时：
+- 仅改动需求相关代码，不擅自优化无关代码、注释、格式
+- 不重构无故障原有逻辑，代码风格统一遵循项目现有规范
+- 发现无关废弃代码仅告知用户，不自行删除
+- 严禁删除或修改任何与本次修改无关的代码注释，仅在以下情况下允许操作注释： 本次修改涉及的代码块，其注释已过时或错误，需要同步更新
+本次新增的代码，需要补充注释说明业务逻辑
+- 仅清理本次修改产生的无用导入、变量、函数，原有遗留冗余代码不动
+- 所有修改行必须和用户需求直接对应，无无关改动
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+### 4. 目标导向分步实现
+1. 将需求转化为可验证的完成标准，优先编写复现用例/测试用例
+2. 多步骤任务需输出分步执行计划，每一步附带校验标准
+3. 重构、修复bug等操作前后均保证测试用例正常运行
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+## 三、附加编码优化要求
+- 优先复用已有代码、公共方法，减少重复编写
+- 整体规范偏向严谨稳妥，简单琐碎任务可灵活简化判断
+- 规范核心目的：减少多余代码改动、降低过度设计返工、提前澄清歧义，避免写完代码再修正问题
