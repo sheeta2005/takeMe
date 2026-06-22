@@ -2,7 +2,7 @@
 <template>
   <el-container class="layout-container">
     <el-header class="layout-header">
-      <div class="header-left">takeMe 志愿者服务平台</div>
+      <div class="header-left">takeMe志愿者服务平台</div>
       <div class="header-right">
         <div class="user-box">
           <Avatar :src="volunteerStore.avatar" :size="46" />
@@ -107,6 +107,10 @@ const handleMenuSelect = (path: string) => {
 <style scoped>
 .layout-container {
   height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .layout-header {
@@ -120,6 +124,9 @@ const handleMenuSelect = (path: string) => {
   font-weight: 600;
   box-shadow: 0 2px 12px rgba(0, 184, 153, 0.25);
   border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+  z-index: 1000;
+  width: 100%;
 }
 
 .header-right {
@@ -142,9 +149,20 @@ const handleMenuSelect = (path: string) => {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
+.layout-container > .el-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  width: 100%;
+}
+
 .layout-aside {
   background-color: #ffffff;
   border-right: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
 }
 
 .aside-menu {
@@ -176,7 +194,10 @@ const handleMenuSelect = (path: string) => {
 
 .layout-main {
   background-color: #f8faf9;
-  padding: 32px;
+  padding: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  height: 100%;
 }
 </style>

@@ -38,6 +38,27 @@
   --radius-xl: 20px;
 }
 
+/* 全局重置 - 消除默认边距和滚动条 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* 通用卡片样式 */
 .enhanced-card {
   background: var(--bg-primary);
@@ -53,11 +74,12 @@
   transform: translateY(-2px);
 }
 
-/* 页面容器 */
+/* 页面容器 - 内部添加padding */
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 0;
+  padding: 24px 32px;
+  width: 100%;
 }
 
 /* 页面头部 */
