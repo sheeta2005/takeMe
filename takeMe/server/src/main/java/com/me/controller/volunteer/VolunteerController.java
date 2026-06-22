@@ -9,6 +9,8 @@ import com.me.mapper.ApprovalMapper;
 import com.me.mapper.OrderItemMapper;
 import com.me.result.Result;
 import com.me.service.VolunteerService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Tag(name = "志愿者-信息管理")
 @RestController
 @RequestMapping("/api/volunteer")
 @RequiredArgsConstructor
@@ -29,26 +32,28 @@ public class VolunteerController {
     private final OrderItemMapper orderItemMapper;
     private final ApprovalMapper approvalMapper;
 
+    @Operation(summary = "查询信息")
     @GetMapping("/info")
     public Result<Volunteer> getInfo() {
         Long volunteerId = BaseContext.getLoginId();
         Volunteer volunteer = volunteerService.getById(volunteerId);
-        
+
         if (volunteer == null) {
             return Result.error("志愿者不存在");
         }
-        
+
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrderItem::getVolunteerId, volunteerId);
         wrapper.eq(OrderItem::getItemStatus, 3);
         Long completedServices = orderItemMapper.selectCount(wrapper);
-        
+
         volunteer.setTotalServiceHours(completedServices.intValue());
-        
+
         volunteer.setPassword(null);
         return Result.success(volunteer);
     }
 
+    @Operation(summary = "更新信息")
     @PostMapping("/update")
     public Result<Void> update(@RequestBody Volunteer volunteer) {
         try {
@@ -58,7 +63,7 @@ public class VolunteerController {
                 return Result.error("志愿者不存在");
             }
 
-            boolean serviceDaysChanged = volunteer.getServiceDays() != null 
+            boolean serviceDaysChanged = volunteer.getServiceDays() != null
                     && !volunteer.getServiceDays().equals(existVolunteer.getServiceDays());
 
             volunteer.setId(volunteerId);
@@ -96,40 +101,41 @@ public class VolunteerController {
         }
     }
 
-    @PostMapping("/uploadAvatar")
-    public Result<Map<String, String>> uploadAvatar(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestParam("file") MultipartFile file
-    ) {
-        if (file.isEmpty()) {
-            return Result.error("上传文件不能为空");
-        }
-
-        try {
-            String originalFilename = file.getOriginalFilename();
-            String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String fileName = UUID.randomUUID() + suffix;
-
-            String uploadPath = "D:/uploads/volunteer-avatar/";
-            File dest = new File(uploadPath + fileName);
-            if (!dest.getParentFile().exists()) {
-                dest.getParentFile().mkdirs();
-            }
-            file.transferTo(dest);
-
-            Long volunteerId = BaseContext.getLoginId();
-            Volunteer volunteer = new Volunteer();
-            volunteer.setId(volunteerId);
-            String avatarUrl = "http://localhost:8080/uploads/volunteer-avatar/" + fileName;
-            volunteer.setAvatar(avatarUrl);
-            volunteerService.updateById(volunteer);
-
-            Map<String, String> data = new HashMap<>();
-            data.put("url", avatarUrl);
-            return Result.success(data);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return Result.error("头像上传失败");
-        }
-    }
+//    @Operation(summary = "更新头像")
+//    @PostMapping("/uploadAvatar")
+//    public Result<Map<String, String>> uploadAvatar(
+//            @RequestHeader("Authorization") String authHeader,
+//            @RequestParam("file") MultipartFile file
+//    ) {
+//        if (file.isEmpty()) {
+//            return Result.error("上传文件不能为空");
+//        }
+//
+//        try {
+//            String originalFilename = file.getOriginalFilename();
+//            String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
+//            String fileName = UUID.randomUUID() + suffix;
+//
+//            String uploadPath = "D:/uploads/volunteer-avatar/";
+//            File dest = new File(uploadPath + fileName);
+//            if (!dest.getParentFile().exists()) {
+//                dest.getParentFile().mkdirs();
+//            }
+//            file.transferTo(dest);
+//
+//            Long volunteerId = BaseContext.getLoginId();
+//            Volunteer volunteer = new Volunteer();
+//            volunteer.setId(volunteerId);
+//            String avatarUrl = "http://localhost:8080/uploads/volunteer-avatar/" + fileName;
+//            volunteer.setAvatar(avatarUrl);
+//            volunteerService.updateById(volunteer);
+//
+//            Map<String, String> data = new HashMap<>();
+//            data.put("url", avatarUrl);
+//            return Result.success(data);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            return Result.error("头像上传失败");
+//        }
+//    }
 }

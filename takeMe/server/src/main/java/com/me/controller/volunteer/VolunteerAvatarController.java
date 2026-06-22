@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/volunteer/avatar")
 @RequiredArgsConstructor
-@Tag(name = "志愿者头像管理", description = "志愿者头像上传、更新接口")
+@Tag(name = "志愿者-头像管理", description = "志愿者头像上传、更新接口")
 public class VolunteerAvatarController {
 
     private final VolunteerService volunteerService;

@@ -9,12 +9,15 @@ import com.me.service.OnlineUserService;
 import com.me.service.VolunteerService;
 import com.me.utils.JwtUtil;
 import com.me.vo.LoginVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "志愿者-登录接口")
 @RestController
 @RequestMapping("/api/volunteer")
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class VolunteerLoginController {
     private final JwtUtil jwtUtil;
     private final OnlineUserService onlineUserService;
 
+    @Operation(summary = "登录")
     @RateLimit(prefix = "rate:volunteer:login", count = 10, period = 60)
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
@@ -41,6 +45,7 @@ public class VolunteerLoginController {
         return Result.success(loginVO);
     }
 
+    @Operation(summary = "注册")
     @PostMapping("/register")
     public Result<Void> register(@RequestBody UserRegisterDTO registerDTO) {
         boolean success = volunteerService.register(registerDTO);
@@ -50,6 +55,7 @@ public class VolunteerLoginController {
         return Result.success();
     }
 
+    @Operation(summary = "登出")
     @PostMapping("/logout")
     public Result<Void> logout() {
         Long userId = com.me.context.BaseContext.getLoginId();
