@@ -35,6 +35,7 @@ public class Order {
      * 3: 待确认 - 所有服务项都已完成(状态≥3)
      * 4: 已完成 - 用户确认完成
      * 5: 已取消 - 用户/系统取消
+     * 6: 模拟未支付
      */
     private Integer status;
     private LocalDateTime createTime;

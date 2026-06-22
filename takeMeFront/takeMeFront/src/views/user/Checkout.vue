@@ -32,7 +32,7 @@
           @click="submitOrder"
           :loading="submitting"
         >
-          提交订单
+          提交订单并支付
         </el-button>
       </div>
     </div>
@@ -42,8 +42,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { getCartList, checkoutCart } from '@/api/order'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getCartList, checkoutCart, mockPayment } from '@/api/order'
 import { useCartStore } from '@/stores/cart'
 
 const router = useRouter()
@@ -82,16 +82,42 @@ const submitOrder = async () => {
     return
   }
 
+  try {
+    await ElMessageBox.confirm(
+      `确认下单并支付？共 ${cartList.value.length} 项服务，总计 ¥${totalPrice.value}`,
+      '确认订单',
+      {
+        confirmButtonText: '确认支付',
+        cancelButtonText: '取消',
+        type: 'warning',
+        distinguishCancelAndClose: true
+      }
+    )
+  } catch {
+    return
+  }
+
   submitting.value = true
   try {
-    const res = await checkoutCart()
+    const createRes = await checkoutCart()
 
-    if (res.code === 200) {
-      ElMessage.success('订单提交成功')
+    if (createRes.code !== 200 || !createRes.data) {
+      ElMessage.error(createRes.msg || '订单创建失败')
+      return
+    }
+
+    const orderId = createRes.data.id
+
+    const payRes = await mockPayment({ orderId })
+
+    if (payRes.code === 200) {
+      ElMessage.success('支付成功，订单已提交')
 
       cartStore.items = []
 
       router.replace('/user/order')
+    } else {
+      ElMessage.error(payRes.msg || '支付失败')
     }
   } catch (err: any) {
     console.error('提交订单失败:', err)

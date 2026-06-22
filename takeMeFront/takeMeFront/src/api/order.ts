@@ -70,6 +70,22 @@ export function getCartList() {
   })
 }
 
+export function mockPayment(data: { orderId: number }) {
+  return request({
+    url: '/api/user/payment/mock',
+    method: 'post',
+    data
+  })
+}
+
+export function cancelOrderWithRefund(orderId: number) {
+  return request({
+    url: '/api/user/payment/cancel',
+    method: 'post',
+    params: { orderId }
+  })
+}
+
 export function addToCart(data: {
   serviceId: number
   serviceName: string

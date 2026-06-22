@@ -269,7 +269,7 @@ public class OrderServiceImpl implements OrderService {
         order.setAddress(firstItem.getAddress());
         order.setRemark(firstItem.getRemark());
         
-        order.setStatus(0);
+        order.setStatus(6);
         order.setIsReviewed(0);
         order.setCreateTime(LocalDateTime.now());
         orderMapper.insert(order);

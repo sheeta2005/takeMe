@@ -28,6 +28,7 @@
         @change="handleFilterChange"
       >
         <el-option label="全部状态" :value="undefined" />
+        <el-option label="未支付" :value="6" />
         <el-option label="待接单" :value="0" />
         <el-option label="已接单" :value="1" />
         <el-option label="服务中" :value="2" />
@@ -152,7 +153,8 @@ const statusMap: Record<number, string> = {
   2: '服务中',
   3: '待确认',
   4: '已完成',
-  5: '已取消'
+  5: '已取消',
+  6: '未支付'
 }
 
 const statusTagMap: Record<number, string> = {
@@ -161,7 +163,8 @@ const statusTagMap: Record<number, string> = {
   2: 'primary',
   3: 'info',
   4: 'success',
-  5: 'danger'
+  5: 'danger',
+  6: 'info'
 }
 
 const serviceTypeTagMap: Record<number, string> = {
