@@ -33,7 +33,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-label">总注册老人</div>
-            <el-count-up :end-val="dashboardData.elderCount" class="stat-value" />
+            <div class="stat-value">{{ dashboardData.elderCount }}</div>
             <div class="stat-trend trend-stable">
               <span>用户总数</span>
             </div>
@@ -48,7 +48,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-label">在线老人</div>
-            <el-count-up :end-val="onlineStats.elderOnline || 0" class="stat-value" />
+            <div class="stat-value">{{ onlineStats.elderOnline || 0 }}</div>
             <div class="stat-trend trend-up">
               <el-icon><CaretTop /></el-icon>
               <span>实时在线</span>
@@ -64,7 +64,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-label">志愿者总数</div>
-            <el-count-up :end-val="dashboardData.volunteerCount" class="stat-value" />
+            <div class="stat-value">{{ dashboardData.volunteerCount }}</div>
             <div class="stat-trend trend-stable">
               <span>注册志愿者</span>
             </div>
@@ -79,7 +79,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-label">在线志愿者</div>
-            <el-count-up :end-val="onlineStats.volunteerOnline || 0" class="stat-value" />
+            <div class="stat-value">{{ onlineStats.volunteerOnline || 0 }}</div>
             <div class="stat-trend trend-up">
               <el-icon><CaretTop /></el-icon>
               <span>实时在线</span>
@@ -96,7 +96,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-label">今日下单量</div>
-            <el-count-up :end-val="dashboardData.todayOrders || 0" class="stat-value" />
+            <div class="stat-value">{{ dashboardData.todayOrders || 0 }}</div>
             <div class="stat-trend trend-stable">
               <span>今日新增</span>
             </div>
@@ -111,7 +111,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-label">待处理订单</div>
-            <el-count-up :end-val="dashboardData.pendingOrders || 0" class="stat-value" />
+            <div class="stat-value">{{ dashboardData.pendingOrders || 0 }}</div>
             <div class="stat-trend trend-warning">
               <el-icon><Warning /></el-icon>
               <span>需处理</span>
@@ -143,7 +143,7 @@
           </div>
           <div class="stat-info">
             <div class="stat-label">已完成订单</div>
-            <el-count-up :end-val="dashboardData.completedOrders || 0" class="stat-value" />
+            <div class="stat-value">{{ dashboardData.completedOrders || 0 }}</div>
             <div class="stat-trend trend-success">
               <el-icon><SuccessFilled /></el-icon>
               <span>累计完成</span>
