@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/user/avatar")
 @RequiredArgsConstructor
-@Tag(name = "用户头像管理", description = "用户头像上传、更新接口")
+@Tag(name = "用户-头像管理", description = "用户头像上传、更新接口")
 public class UserAvatarController {
 
     private final UserService userService;

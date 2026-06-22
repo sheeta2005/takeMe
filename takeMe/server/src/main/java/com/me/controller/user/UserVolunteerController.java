@@ -8,6 +8,8 @@ import com.me.mapper.OrderItemMapper;
 import com.me.mapper.ReviewMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.result.Result;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+@Tag(name = "用户-志愿者相关")
 @RestController
 @RequestMapping("/api/user/volunteer")
 @RequiredArgsConstructor
@@ -27,6 +29,7 @@ public class UserVolunteerController {
     private final OrderItemMapper orderItemMapper;
     private final ReviewMapper reviewMapper;
 
+    @Operation(summary = "查志愿者详情")
     @GetMapping("/detail")
     public Result<Map<String, Object>> getVolunteerDetail(@RequestParam Long volunteerId) {
         Volunteer volunteer = volunteerMapper.selectById(volunteerId);

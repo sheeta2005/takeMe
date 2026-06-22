@@ -6,12 +6,15 @@ import com.me.service.CartService;
 import com.me.utils.JwtUtil;
 import com.me.vo.CartItemVO;
 import com.me.vo.OrderVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "用户-购物车管理")
 @RestController
 @RequestMapping("/api/user/cart")
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class CartController {
     private final CartService cartService;
     private final JwtUtil jwtUtil;
 
+    @Operation(summary = "列表查")
     @GetMapping("/list")
     public Result<List<CartItemVO>> getCartList(@RequestHeader("Authorization") String authHeader) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
@@ -27,6 +31,7 @@ public class CartController {
         return Result.success(list);
     }
 
+    @Operation(summary = "增")
     @PostMapping("/add")
     public Result addToCart(
             @RequestHeader("Authorization") String authHeader,
@@ -41,6 +46,7 @@ public class CartController {
         }
     }
 
+    @Operation(summary = "改")
     @PostMapping("/update")
     public Result updateCartItem(
             @RequestHeader("Authorization") String authHeader,
@@ -58,6 +64,7 @@ public class CartController {
         }
     }
 
+    @Operation(summary = "删")
     @PostMapping("/delete")
     public Result deleteCartItem(
             @RequestHeader("Authorization") String authHeader,
@@ -69,6 +76,7 @@ public class CartController {
         return Result.success();
     }
 
+    @Operation(summary = "删所有")
     @PostMapping("/clear")
     public Result clearCart(@RequestHeader("Authorization") String authHeader) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
@@ -76,6 +84,7 @@ public class CartController {
         return Result.success();
     }
 
+    @Operation(summary = "购买")
     @PostMapping("/checkout")
     public Result<OrderVO> checkout(@RequestHeader("Authorization") String authHeader) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);

@@ -9,6 +9,8 @@ import com.me.mapper.ReviewMapper;
 import com.me.result.Result;
 import com.me.service.UserService;
 import com.me.utils.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
+@Tag(name = "用户-信息管理")
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ public class UserController {
     private final ReviewMapper reviewMapper;
 
     // 获取当前用户信息
+    @Operation(summary = "获取当前用户信息")
     @GetMapping("/info")
     public Result<User> getUserInfo(@RequestHeader("Authorization") String authHeader) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
@@ -45,6 +48,7 @@ public class UserController {
     }
 
     // 修改用户信息
+    @Operation(summary = "修改用户信息")
     @PostMapping("/update")
     public Result updateUserInfo(
             @RequestHeader("Authorization") String authHeader,
@@ -65,6 +69,7 @@ public class UserController {
     }
 
     // 头像上传
+    @Operation(summary = "更新头像")
     @PostMapping("/uploadAvatar")
     public Result<Map<String, String>> uploadAvatar(
             @RequestHeader("Authorization") String authHeader,
@@ -105,6 +110,7 @@ public class UserController {
     }
 
     // 获取用户首页统计数据
+    @Operation(summary = "查用户仪表盘数据")
     @GetMapping("/statistics")
     public Result<Map<String, Object>> getUserStatistics(@RequestHeader("Authorization") String authHeader) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);

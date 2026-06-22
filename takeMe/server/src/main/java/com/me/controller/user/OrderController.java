@@ -10,12 +10,15 @@ import com.me.service.OrderService;
 import com.me.utils.JwtUtil;
 import com.me.vo.OrderVO;
 import com.me.vo.PageResultVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "用户-订单与服务管理")
 @RestController
 @RequestMapping("/api/user/order")
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class OrderController {
     private final JwtUtil jwtUtil;
 
     // ===================== 订单列表 =====================
+    @Operation(summary = "查列表")
     @GetMapping("/list")
     public Result<PageResultVO<OrderVO>> list(
             @RequestHeader("Authorization") String authHeader,
@@ -44,6 +48,7 @@ public class OrderController {
     }
 
     // ===================== 订单详情 =====================
+    @Operation(summary = "查详情")
     @GetMapping("/detail")
     public Result<OrderVO> detail(
             @RequestHeader("Authorization") String authHeader,
@@ -55,6 +60,7 @@ public class OrderController {
     }
 
     // ===================== 创建订单 =====================
+    @Operation(summary = "创建订单")
     @RateLimit(prefix = "rate:user:order:create", count = 10, period = 60)
     @PostMapping("/create")
     public Result<OrderVO> create(
@@ -74,6 +80,7 @@ public class OrderController {
     }
 
     // ===================== 取消订单 =====================
+    @Operation(summary = "取消整个订单")
     @PostMapping("/cancel")
     public Result<Void> cancel(
             @RequestHeader("Authorization") String authHeader,
@@ -85,6 +92,7 @@ public class OrderController {
     }
 
     // ===================== 确认完成 =====================
+    @Operation(summary = "确认完成")
     @PostMapping("/confirm")
     public Result<Void> confirm(
             @RequestHeader("Authorization") String authHeader,
@@ -95,6 +103,7 @@ public class OrderController {
         return Result.success();
     }
 
+    @Operation(summary = "评价")
     @PostMapping("/evaluateItem")
     public Result<Void> evaluateItem(
             @RequestHeader("Authorization") String authHeader,
@@ -108,6 +117,7 @@ public class OrderController {
     }
 
     // ===================== 确认开始服务 =====================
+    @Operation(summary = "确认开始服务")
     @PostMapping("/startService")
     public Result<Void> startService(
             @RequestHeader("Authorization") String authHeader,
@@ -118,6 +128,7 @@ public class OrderController {
         return Result.success();
     }
 
+    @Operation(summary = "取消一项服务")
     @PostMapping("/cancelItem")
     public Result<Void> cancelItem(
             @RequestHeader("Authorization") String authHeader,

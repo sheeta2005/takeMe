@@ -10,13 +10,15 @@ import com.me.service.OnlineUserService;
 import com.me.service.UserService;
 import com.me.utils.JwtUtil;
 import com.me.vo.LoginVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+@Tag(name = "用户-登录接口")
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class UserLoginController {
     private final JwtUtil jwtUtil;
     private final OnlineUserService onlineUserService;
 
+    @Operation(summary = "登入")
     @RateLimit(prefix = "rate:user:login", count = 10, period = 60)
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
@@ -43,6 +46,7 @@ public class UserLoginController {
         return Result.success(loginVO);
     }
 
+    @Operation(summary = "注册")
     @PostMapping("/register")
     public Result<Void> register(@RequestBody UserRegisterDTO registerDTO) {
         boolean success = userService.register(registerDTO);
@@ -52,6 +56,7 @@ public class UserLoginController {
         return Result.success();
     }
 
+    @Operation(summary = "更新密码")
     @PostMapping("/updatePassword")
     public Result<Void> updatePassword(
             @RequestHeader("Authorization") String authHeader,
@@ -69,6 +74,7 @@ public class UserLoginController {
         return Result.success();
     }
 
+    @Operation(summary = "登出")
     @PostMapping("/logout")
     public Result<Void> logout() {
         Long userId = com.me.context.BaseContext.getLoginId();

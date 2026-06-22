@@ -7,9 +7,12 @@ import com.me.result.Result;
 import com.me.service.MessageService;
 import com.me.vo.MessageVO;
 import com.me.vo.PageResultVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "用户-消息管理")
 @RestController
 @RequestMapping("/api/user/message")
 @RequiredArgsConstructor
@@ -17,6 +20,7 @@ public class MessageController {
 
     private final MessageService messageService;
 
+    @Operation(summary = "")
     @GetMapping("/list")
     public Result<PageResultVO<MessageVO>> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -36,6 +40,7 @@ public class MessageController {
         return Result.success(result);
     }
 
+    @Operation(summary = "已读")
     @PostMapping("/read/{id}")
     public Result<Void> markAsRead(@PathVariable Long id) {
         Long receiverId = BaseContext.getLoginId();
@@ -46,6 +51,7 @@ public class MessageController {
         return Result.success();
     }
 
+    @Operation(summary = "全部已读")
     @PostMapping("/read-all")
     public Result<Void> markAllAsRead() {
         Long receiverId = BaseContext.getLoginId();
@@ -57,6 +63,7 @@ public class MessageController {
         return Result.success();
     }
 
+    @Operation(summary = "查未读数量")
     @GetMapping("/unread-count")
     public Result<Integer> getUnreadCount() {
         Long receiverId = BaseContext.getLoginId();

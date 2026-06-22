@@ -24,7 +24,7 @@ public class OrderItem {
     private Integer servicePrice;
     private Integer quantity;
     private Integer itemPrice;
-    private Integer serviceType;
+    private Integer serviceType;//0=代购 1=助洁 2=助餐 3=助医 4=陪伴
     
     private String serviceDate;
     private String serviceTime;
