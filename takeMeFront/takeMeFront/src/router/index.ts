@@ -101,7 +101,7 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const volunteerStore = useVolunteerStore()
   const adminStore = useAdminStore()
@@ -127,6 +127,8 @@ router.beforeEach((to, from, next) => {
     requiredRole = 1
   } else if (to.path.startsWith('/user')) {
     requiredRole = 2
+  } else {
+    return next()
   }
 
   let hasToken = false
@@ -135,14 +137,25 @@ router.beforeEach((to, from, next) => {
   if (requiredRole === 0) {
     hasToken = !!adminStore.token
     currentRole = 0
+
+    if (hasToken && !adminStore.realName) {
+      try {
+        await adminStore.fetchAdminInfo()
+      } catch (error) {
+        console.error('获取管理员信息失败', error)
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminId')
+        adminStore.token = ''
+        adminStore.adminId = ''
+        return next('/login')
+      }
+    }
   } else if (requiredRole === 1) {
     hasToken = !!volunteerStore.token
     currentRole = volunteerStore.role
   } else if (requiredRole === 2) {
     hasToken = !!userStore.token
     currentRole = userStore.role
-  } else {
-    return next()
   }
 
   if (!hasToken) {
