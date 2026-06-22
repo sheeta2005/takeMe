@@ -11,6 +11,8 @@ import com.me.mapper.ReviewMapper;
 import com.me.result.Result;
 import com.me.service.VolunteerService;
 import com.me.vo.PageResultVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 
+@Tag(name = "管理员-志愿者管理")
 @RestController
 @RequestMapping("/api/admin/volunteer")
 @RequiredArgsConstructor
@@ -32,6 +35,7 @@ public class AdminVolunteerController {
     private final OrderItemMapper orderItemMapper;
     private final ReviewMapper reviewMapper;
 
+    @Operation(summary = "分页查")
     @GetMapping("/page")
     public Result<PageResultVO<Volunteer>> getVolunteerPage(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -47,7 +51,7 @@ public class AdminVolunteerController {
         PageResultVO<Volunteer> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
-
+    @Operation(summary = "搜索")
     @GetMapping("/search")
     public Result<PageResultVO<Volunteer>> searchVolunteer(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -68,7 +72,7 @@ public class AdminVolunteerController {
         PageResultVO<Volunteer> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
-
+    @Operation(summary = "查详情")
     @GetMapping("/detail/{id}")
     public Result<Map<String, Object>> getVolunteerDetail(@PathVariable Long id) {
         Volunteer volunteer = volunteerService.getById(id);
@@ -103,7 +107,7 @@ public class AdminVolunteerController {
         
         return Result.success(result);
     }
-
+    @Operation(summary = "删")
     @DeleteMapping("/delete/{id}")
     public Result<Void> deleteVolunteer(@PathVariable Long id) {
         Volunteer volunteer = volunteerService.getById(id);
@@ -118,9 +122,8 @@ public class AdminVolunteerController {
         }
         return Result.success();
     }
-    
+    @Operation(summary = "改状态")
     @PostMapping("/status/{id}")
-
     public Result<Void> updateVolunteerStatus(@PathVariable Long id, @RequestParam Integer status) {
         Volunteer volunteer = volunteerService.getById(id);
         if (volunteer == null) {
