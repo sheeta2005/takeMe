@@ -3,9 +3,11 @@ package com.me.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Approval;
 import com.me.entity.Order;
+import com.me.entity.OrderItem;
 import com.me.entity.User;
 import com.me.entity.Volunteer;
 import com.me.mapper.ApprovalMapper;
+import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.UserMapper;
 import com.me.mapper.VolunteerMapper;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final UserMapper userMapper;
     private final VolunteerMapper volunteerMapper;
     private final ApprovalMapper approvalMapper;
+    private final OrderItemMapper orderItemMapper;
 
     @Override
     @RedisCache(prefix = "admin:dashboard:data", expire = 10, nullExpire = 2)
@@ -105,15 +109,37 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     }
 
     @Override
+    @RedisCache(prefix = "admin:dashboard:amount:7d", expire = 30, nullExpire = 5)
+    public List<Integer> getOrderAmountTrend7d() {
+        List<Integer> trend = new ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            LocalDateTime dayStart = LocalDate.now().minusDays(i).atStartOfDay();
+            LocalDateTime dayEnd = dayStart.plusDays(1);
+
+            LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+            wrapper.between(Order::getCreateTime, dayStart, dayEnd);
+            List<Order> orders = orderMapper.selectList(wrapper);
+            int amount = orders.stream().mapToInt(Order::getTotalPrice).sum();
+            trend.add(amount);
+        }
+        return trend;
+    }
+
+    @Override
+    @RedisCache(prefix = "admin:dashboard:service:dist", expire = 30, nullExpire = 5)
     public List<Map<String, Object>> getServiceTypeDist() {
         List<Map<String, Object>> dist = new ArrayList<>();
 
         String[] serviceTypes = {"代购服务", "助洁服务", "助餐服务", "助医服务", "陪伴服务"};
 
         for (int i = 0; i < 5; i++) {
+            LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(OrderItem::getServiceType, i);
+            Long count = orderItemMapper.selectCount(wrapper);
+            
             Map<String, Object> item = new HashMap<>();
             item.put("name", serviceTypes[i]);
-            item.put("value", 0);
+            item.put("value", count.intValue());
             dist.add(item);
         }
 

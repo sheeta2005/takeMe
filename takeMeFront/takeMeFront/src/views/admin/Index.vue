@@ -259,7 +259,7 @@
             <div class="card-header">
               <div class="header-left">
                 <el-icon :size="20" color="#00a88d"><TrendCharts /></el-icon>
-                <span class="card-title">近7日订单流水趋势</span>
+                <span class="card-title">近7日订单金额趋势</span>
               </div>
             </div>
           </template>
@@ -295,8 +295,8 @@
                 <div class="todo-time">{{ formatTime(item.createTime) }}</div>
               </div>
               <div class="todo-actions">
-                <el-button type="success" size="small" plain>通过</el-button>
-                <el-button type="danger" size="small" plain>驳回</el-button>
+                <el-button type="success" size="small" plain @click="goToApproval">通过</el-button>
+                <el-button type="danger" size="small" plain @click="goToApproval">驳回</el-button>
               </div>
             </div>
           </div>
@@ -342,7 +342,16 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { getDashboardData, getOrderTrend7d, getServiceTypeDist, searchOrder, getApprovalPage } from '@/api/admin'
+import {
+  getDashboardData,
+  getOrderTrend7d,
+  getOrderAmountTrend7d,
+  getServiceTypeDist,
+  searchOrder,
+  getApprovalPage,
+  getOnlineStats,
+  getOrderStatistics
+} from '@/api/admin'
 import wsManager from '@/utils/websocket'
 import { useAdminStore } from '@/stores/admin'
 import defaultAvatar from '@/assets/default-avatar.png'
@@ -421,7 +430,7 @@ const loadDashboardData = async () => {
       pendingCount.value = res.data.pendingCount || 0
     }
 
-    const onlineRes = await fetch('/api/admin/online').then(r => r.json())
+    const onlineRes = await getOnlineStats()
     if (onlineRes.code === 200 && onlineRes.data) {
       onlineStats.value = {
         adminOnline: onlineRes.data.adminCount || 0,
@@ -547,44 +556,55 @@ const initCharts = async () => {
 
   if (orderStatusChart.value) {
     const chart = echarts.init(orderStatusChart.value)
-    chart.setOption({
-      tooltip: {
-        trigger: 'item',
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        borderRadius: 8,
-        padding: [12, 16]
-      },
-      legend: {
-        orient: 'vertical',
-        right: 10,
-        top: 'center',
-        textStyle: { color: '#666' }
-      },
-      series: [{
-        name: '订单状态',
-        type: 'pie',
-        radius: ['50%', '70%'],
-        center: ['35%', '50%'],
-        itemStyle: {
-          borderRadius: 10,
-          borderColor: '#fff',
-          borderWidth: 3
-        },
-        label: { show: false },
-        data: [
-          { value: dashboardData.value.pendingOrders || 0, name: '待接单', itemStyle: { color: '#f59e0b' } },
-          { value: dashboardData.value.completedOrders || 0, name: '已完成', itemStyle: { color: '#10b981' } },
-          { value: 0, name: '已取消', itemStyle: { color: '#ef4444' } },
-          { value: 0, name: '未支付', itemStyle: { color: '#6b7280' } }
-        ]
-      }]
-    })
+    try {
+      const statsRes = await getOrderStatistics()
+      if (statsRes.code === 200 && statsRes.data) {
+        const stats = statsRes.data
+        chart.setOption({
+          tooltip: {
+            trigger: 'item',
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            borderRadius: 8,
+            padding: [12, 16]
+          },
+          legend: {
+            orient: 'vertical',
+            right: 10,
+            top: 'center',
+            textStyle: { color: '#666' }
+          },
+          series: [{
+            name: '订单状态',
+            type: 'pie',
+            radius: ['50%', '70%'],
+            center: ['35%', '50%'],
+            itemStyle: {
+              borderRadius: 10,
+              borderColor: '#fff',
+              borderWidth: 3
+            },
+            label: { show: false },
+            data: [
+              { value: stats.status0Count || 0, name: '待接单', itemStyle: { color: '#f59e0b' } },
+              { value: stats.status1Count || 0, name: '已接单', itemStyle: { color: '#3b82f6' } },
+              { value: stats.status2Count || 0, name: '服务中', itemStyle: { color: '#10b981' } },
+              { value: stats.status3Count || 0, name: '待确认', itemStyle: { color: '#8b5cf6' } },
+              { value: stats.status4Count || 0, name: '已完成', itemStyle: { color: '#00a88d' } },
+              { value: stats.status5Count || 0, name: '已取消', itemStyle: { color: '#ef4444' } },
+              { value: stats.status6Count || 0, name: '未支付', itemStyle: { color: '#6b7280' } }
+            ]
+          }]
+        })
+      }
+    } catch (err) {
+      console.error('获取订单状态统计失败', err)
+    }
   }
 
   if (userGrowthChart.value) {
     const chart = echarts.init(userGrowthChart.value)
     try {
-      const res = await getOrderTrend7d()
+      const res = await getOrderAmountTrend7d()
       const days = Array.from({ length: 7 }, (_, i) => {
         const d = new Date()
         d.setDate(d.getDate() - (6 - i))
@@ -595,7 +615,11 @@ const initCharts = async () => {
           trigger: 'axis',
           backgroundColor: 'rgba(255,255,255,0.95)',
           textStyle: { color: '#333' },
-          borderRadius: 8
+          borderRadius: 8,
+          formatter: (params: any) => {
+            const data = params[0]
+            return `${data.seriesName}<br/>${data.name}: ¥${data.value}`
+          }
         },
         grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
         xAxis: {
@@ -608,10 +632,13 @@ const initCharts = async () => {
         yAxis: {
           type: 'value',
           splitLine: { lineStyle: { color: '#f5f5f5' } },
-          axisLabel: { color: '#666' }
+          axisLabel: {
+            color: '#666',
+            formatter: (value: number) => `¥${value}`
+          }
         },
         series: [{
-          name: '订单数量',
+          name: '订单金额',
           type: 'line',
           smooth: true,
           symbol: 'circle',
@@ -635,6 +662,10 @@ const initCharts = async () => {
 
 const viewOrderDetail = (orderId: number) => {
   router.push(`/admin/order/detail/${orderId}`)
+}
+
+const goToApproval = () => {
+  router.push('/admin/approval')
 }
 
 onMounted(() => {

@@ -11,9 +11,14 @@ public interface AdminDashboardService {
     Map<String, Object> getDashboardData();
 
     /**
-     * 获取近7天订单趋势
+     * 获取近7天订单数量趋势
      */
     List<Integer> getOrderTrend7d();
+
+    /**
+     * 获取近7天订单金额趋势
+     */
+    List<Integer> getOrderAmountTrend7d();
 
     /**
      * 获取服务类型分布

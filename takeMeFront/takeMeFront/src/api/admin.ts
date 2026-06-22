@@ -71,9 +71,23 @@ export const getOrderTrend7d = () => {
   })
 }
 
+export const getOrderAmountTrend7d = () => {
+  return request({
+    url: '/api/admin/order/amount7d',
+    method: 'get'
+  })
+}
+
 export const getServiceTypeDist = () => {
   return request({
     url: '/api/admin/service/type/dist',
+    method: 'get'
+  })
+}
+
+export const getOnlineStats = () => {
+  return request({
+    url: '/api/admin/online',
     method: 'get'
   })
 }
