@@ -20,7 +20,7 @@ public class VolunteerOrderController {
 
     private final OrderService orderService;
 
-    @Operation(summary = "查列表")
+    @Operation(summary = "查进行中服务列表")
     @GetMapping("/list")
     public Result<PageResultVO<OrderVO>> list(
             @RequestParam(defaultValue = "1") Integer pageNum,

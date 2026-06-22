@@ -101,41 +101,4 @@ public class VolunteerController {
         }
     }
 
-//    @Operation(summary = "更新头像")
-//    @PostMapping("/uploadAvatar")
-//    public Result<Map<String, String>> uploadAvatar(
-//            @RequestHeader("Authorization") String authHeader,
-//            @RequestParam("file") MultipartFile file
-//    ) {
-//        if (file.isEmpty()) {
-//            return Result.error("上传文件不能为空");
-//        }
-//
-//        try {
-//            String originalFilename = file.getOriginalFilename();
-//            String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
-//            String fileName = UUID.randomUUID() + suffix;
-//
-//            String uploadPath = "D:/uploads/volunteer-avatar/";
-//            File dest = new File(uploadPath + fileName);
-//            if (!dest.getParentFile().exists()) {
-//                dest.getParentFile().mkdirs();
-//            }
-//            file.transferTo(dest);
-//
-//            Long volunteerId = BaseContext.getLoginId();
-//            Volunteer volunteer = new Volunteer();
-//            volunteer.setId(volunteerId);
-//            String avatarUrl = "http://localhost:8080/uploads/volunteer-avatar/" + fileName;
-//            volunteer.setAvatar(avatarUrl);
-//            volunteerService.updateById(volunteer);
-//
-//            Map<String, String> data = new HashMap<>();
-//            data.put("url", avatarUrl);
-//            return Result.success(data);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            return Result.error("头像上传失败");
-//        }
-//    }
 }

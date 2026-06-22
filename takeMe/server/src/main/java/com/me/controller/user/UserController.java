@@ -13,14 +13,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+
 @Tag(name = "用户-信息管理")
 @RestController
 @RequestMapping("/api/user")
@@ -66,47 +63,6 @@ public class UserController {
 
         userService.updateById(user);
         return Result.success();
-    }
-
-    // 头像上传
-    @Operation(summary = "更新头像")
-    @PostMapping("/uploadAvatar")
-    public Result<Map<String, String>> uploadAvatar(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestParam("file") MultipartFile file
-    ) {
-        if (file.isEmpty()) {
-            return Result.error("上传文件不能为空");
-        }
-
-        try {
-            String originalFilename = file.getOriginalFilename();
-            String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String fileName = UUID.randomUUID() + suffix;
-
-            // ⚠️ 替换成你服务器的实际上传路径
-            String uploadPath = "D:/uploads/avatar/";
-            File dest = new File(uploadPath + fileName);
-            if (!dest.getParentFile().exists()) {
-                dest.getParentFile().mkdirs();
-            }
-            file.transferTo(dest);
-
-            Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
-            User user = new User();
-            user.setId(userId);
-            // ⚠️ 替换成你实际的访问前缀
-            String avatarUrl = "http://localhost:8080/uploads/avatar/" + fileName;
-            user.setAvatar(avatarUrl);
-            userService.updateById(user);
-
-            Map<String, String> data = new HashMap<>();
-            data.put("url", avatarUrl);
-            return Result.success(data);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return Result.error("头像上传失败");
-        }
     }
 
     // 获取用户首页统计数据
