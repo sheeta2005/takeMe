@@ -80,6 +80,7 @@ const routes = [
       { path: 'create', component: () => import('@/views/user/CreateOrder.vue') },
       { path: 'cart', component: () => import('@/views/user/Cart.vue') },
       { path: 'checkout', component: () => import('@/views/user/Checkout.vue') },
+      { path: 'payment', component: () => import('@/views/user/Payment.vue') },
       { path: 'meal', component: () => import('@/views/user/OrderMeal.vue') },
       { path: 'clean', component: () => import('@/views/user/OrderClean.vue') },
       { path: 'medical', component: () => import('@/views/user/OrderMedical.vue') },

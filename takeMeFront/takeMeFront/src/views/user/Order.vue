@@ -106,9 +106,19 @@
               <span class="price-label">订单金额：</span>
               <span class="price-value">¥{{ order.totalPrice }}</span>
             </div>
-            <div class="action-hint">
-              <el-icon><Right /></el-icon>
-              查看详情
+            <div class="footer-actions">
+              <el-button
+                v-if="order.status === 6"
+                type="success"
+                size="small"
+                @click.stop="handleRepay(order.id)"
+              >
+                去支付
+              </el-button>
+              <div class="action-hint">
+                <el-icon><Right /></el-icon>
+                查看详情
+              </div>
             </div>
           </div>
         </el-card>
@@ -132,10 +142,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { Calendar, Location, Document, Right, List, Search } from '@element-plus/icons-vue'
 import { getMyOrderList } from '@/api/order'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
@@ -245,6 +255,10 @@ const goToDetail = (orderId: number) => {
     return
   }
   router.push(`/user/order/detail/${orderId}`)
+}
+
+const handleRepay = (orderId: number) => {
+  router.push(`/user/payment?orderId=${orderId}`)
 }
 
 onMounted(() => {
@@ -394,6 +408,12 @@ onMounted(() => {
   font-size: 24px;
   font-weight: bold;
   color: #f5222d;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .action-hint {

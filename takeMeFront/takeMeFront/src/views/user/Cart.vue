@@ -78,17 +78,9 @@
             type="primary"
             size="large"
             @click="goToCheckout"
-            :disabled="submitting"
+            :disabled="submitting || cartStore.items.length === 0"
           >
             去结算
-          </el-button>
-          <el-button
-            type="success"
-            size="large"
-            @click="handleImmediateCheckout"
-            :loading="submitting"
-          >
-            立即下单
           </el-button>
         </div>
       </div>
@@ -166,60 +158,6 @@
       </div>
     </el-dialog>
 
-    <!-- 下单成功弹窗 -->
-    <el-dialog
-      v-model="orderSuccessVisible"
-      title="下单成功"
-      width="600px"
-      class="order-success-dialog"
-      :show-close="false"
-    >
-      <div class="success-content">
-        <el-result
-          icon="success"
-          title="订单提交成功！"
-          sub-title="我们将尽快为您安排服务"
-        />
-
-        <div class="order-info-box" v-if="createdOrder">
-          <div class="info-row">
-            <span class="info-label">订单编号</span>
-            <span class="info-value order-no">{{ createdOrder.orderNo }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">订单金额</span>
-            <span class="info-value price">¥{{ createdOrder.totalPrice }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">服务项目</span>
-            <span class="info-value">{{ createdOrder.items ? createdOrder.items.length : 0 }} 项</span>
-          </div>
-        </div>
-
-        <div class="success-actions">
-          <el-button
-            size="large"
-            @click="backToCart"
-          >
-            返回购物车
-          </el-button>
-          <el-button
-            type="primary"
-            size="large"
-            @click="viewOrderDetail"
-          >
-            查看订单
-          </el-button>
-          <el-button
-            type="success"
-            size="large"
-            @click="goToHome"
-          >
-            返回首页
-          </el-button>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -232,7 +170,6 @@ import {
   ShoppingCart, Minus, Plus, Document, Location,
   LocationFilled, ChatDotRound
 } from '@element-plus/icons-vue'
-import { checkoutCart } from '@/api/order'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -244,8 +181,6 @@ const pageSize = 5
 
 const detailVisible = ref(false)
 const currentDetailItem = ref<any>(null)
-const orderSuccessVisible = ref(false)
-const createdOrder = ref<any>(null)
 
 const currentPageItems = computed(() => {
   const start = (currentPage.value - 1) * pageSize
@@ -356,64 +291,6 @@ const goToCheckout = () => {
     return
   }
   router.push('/user/checkout')
-}
-
-const handleImmediateCheckout = async () => {
-  if (cartStore.items.length === 0) {
-    ElMessage.warning('购物车为空')
-    return
-  }
-
-  try {
-    await ElMessageBox.confirm(
-      `确认下单吗？共 ${cartStore.items.length} 项服务，总计 ¥${cartStore.totalPrice}`,
-      '确认订单',
-      {
-        confirmButtonText: '确认下单',
-        cancelButtonText: '取消',
-        type: 'warning',
-        distinguishCancelAndClose: true
-      }
-    )
-
-    submitting.value = true
-
-    const res = await checkoutCart()
-
-    if (res.code === 200 && res.data) {
-      createdOrder.value = res.data
-      orderSuccessVisible.value = true
-
-      cartStore.items = []
-
-      ElMessage.success('订单提交成功！')
-    } else {
-      ElMessage.error(res.msg || '下单失败')
-    }
-  } catch (err: any) {
-    if (err !== 'cancel' && err !== 'close') {
-      console.error('下单失败:', err)
-      ElMessage.error(err.response?.data?.msg || '下单失败，请重试')
-    }
-  } finally {
-    submitting.value = false
-  }
-}
-
-const viewOrderDetail = () => {
-  if (createdOrder.value?.id) {
-    orderSuccessVisible.value = false
-    router.push(`/user/order/detail/${createdOrder.value.id}`)
-  }
-}
-
-const backToCart = () => {
-  orderSuccessVisible.value = false
-  createdOrder.value = null
-}
-
-const goToHome = () => {
-  router.push('/user')
 }
 
 onMounted(async () => {
@@ -626,86 +503,6 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   margin-bottom: 20px;
-}
-
-/* 订单成功弹窗样式 */
-.order-success-dialog :deep(.el-dialog__header) {
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-  color: white;
-  padding: 20px 24px;
-  margin: 0;
-}
-
-.order-success-dialog :deep(.el-dialog__title) {
-  color: white;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.order-success-dialog :deep(.el-dialog__close) {
-  color: white;
-}
-
-.success-content {
-  padding: 20px 0;
-}
-
-.order-info-box {
-  background: #f6ffed;
-  border: 2px solid #b7eb8f;
-  border-radius: 12px;
-  padding: 24px;
-  margin-top: 16px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px dashed #d9f7be;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  font-size: 18px;
-  color: #666;
-  font-weight: 500;
-}
-
-.info-value {
-  font-size: 18px;
-  color: #333;
-  font-weight: 600;
-}
-
-.info-value.order-no {
-  font-family: 'Courier New', monospace;
-  font-size: 20px;
-  color: #1890ff;
-  letter-spacing: 1px;
-}
-
-.info-value.price {
-  font-size: 28px;
-  color: #f5222d;
-  font-weight: bold;
-}
-
-.success-actions {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  margin-top: 24px;
-}
-
-.success-actions .el-button {
-  min-width: 160px;
-  font-size: 18px;
-  padding: 16px 32px;
 }
 
 .cart-footer {
