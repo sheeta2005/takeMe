@@ -4,13 +4,13 @@
       <el-form :inline="true" :model="filterForm" class="filter-form">
         <el-form-item label="订单状态">
           <el-select v-model="filterForm.status" placeholder="全部" clearable @change="handleFilter" style="width: 140px">
+            <el-option label="未支付" :value="6" />
             <el-option label="待接单" :value="0" />
             <el-option label="已接单" :value="1" />
             <el-option label="服务中" :value="2" />
             <el-option label="待确认" :value="3" />
             <el-option label="已完成" :value="4" />
             <el-option label="已取消" :value="5" />
-            <el-option label="已放弃" :value="6" />
           </el-select>
         </el-form-item>
         <el-form-item label="订单编号">
@@ -138,12 +138,12 @@ const parseVolunteerId = (volunteerIds: string) => {
 }
 
 const getStatusName = (status: number) => {
-  const names = ['待接单', '已接单', '服务中', '待确认', '已完成', '已取消', '已放弃']
+  const names = ['待接单', '已接单', '服务中', '待确认', '已完成', '已取消', '未支付']
   return names[status] || '未知'
 }
 
 const getStatusType = (status: number) => {
-  const types = ['info', 'primary', 'warning', 'warning', 'success', 'danger', 'danger']
+  const types = ['warning', 'primary', 'warning', 'warning', 'success', 'danger', 'info']
   return types[status] || ''
 }
 

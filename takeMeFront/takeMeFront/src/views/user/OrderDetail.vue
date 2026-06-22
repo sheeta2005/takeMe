@@ -117,6 +117,16 @@
 
       <div class="action-section">
         <el-button
+          v-if="order.status === 6"
+          type="success"
+          size="large"
+          @click="handleRepayOrder"
+        >
+          <el-icon><Wallet /></el-icon>
+          去支付
+        </el-button>
+
+        <el-button
           v-if="[0, 1].includes(order.status)"
           type="danger"
           size="large"
@@ -296,7 +306,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Document, List, Location, CircleCheck, CloseBold, Back, Star, Edit, User, ChatDotRound
+  Document, List, Location, CircleCheck, CloseBold, Back, Star, Edit, User, ChatDotRound, Wallet
 } from '@element-plus/icons-vue'
 import { getUserOrderDetail, cancelOrder, confirmOrder } from '@/api/order'
 import { getVolunteerDetail } from '@/api/user'
@@ -357,7 +367,8 @@ const getStatusType = (status: number) => {
     2: 'primary',
     3: 'warning',
     4: 'success',
-    5: 'danger'
+    5: 'danger',
+    6: 'info'
   }
   return map[status] || 'info'
 }
@@ -369,7 +380,8 @@ const getStatusText = (status: number) => {
     2: '服务中',
     3: '待确认',
     4: '已完成',
-    5: '已取消'
+    5: '已取消',
+    6: '未支付'
   }
   return map[status] || '未知'
 }
@@ -481,6 +493,11 @@ const handleConfirmOrder = async () => {
 const goToReview = () => {
   if (!order.value?.id) return
   router.push(`/user/order/review/${order.value.id}`)
+}
+
+const handleRepayOrder = () => {
+  if (!order.value?.id) return
+  router.push(`/user/payment?orderId=${order.value.id}`)
 }
 
 onMounted(() => {

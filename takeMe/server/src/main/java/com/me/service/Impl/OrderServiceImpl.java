@@ -158,6 +158,10 @@ public class OrderServiceImpl implements OrderService {
                 Order order = orderMapper.selectById(item.getOrderId());
                 if (order == null) return null;
                 
+                if (order.getStatus() != null && order.getStatus() == 6) {
+                    return null;
+                }
+                
                 OrderVO vo = new OrderVO();
                 BeanUtils.copyProperties(order, vo);
                 
