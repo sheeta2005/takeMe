@@ -54,6 +54,26 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         List<Order> todayOrders = orderMapper.selectList(todayWrapper);
         int todayRevenue = todayOrders.stream().mapToInt(Order::getTotalPrice).sum();
         data.put("todayRevenue", todayRevenue);
+        
+        Long todayOrdersCount = orderMapper.selectCount(todayWrapper);
+        data.put("todayOrders", todayOrdersCount);
+
+        LambdaQueryWrapper<Order> pendingOrderWrapper = new LambdaQueryWrapper<>();
+        pendingOrderWrapper.eq(Order::getStatus, 0);
+        Long pendingOrders = orderMapper.selectCount(pendingOrderWrapper);
+        data.put("pendingOrders", pendingOrders);
+
+        LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LambdaQueryWrapper<Order> monthWrapper = new LambdaQueryWrapper<>();
+        monthWrapper.ge(Order::getCreateTime, monthStart);
+        List<Order> monthOrders = orderMapper.selectList(monthWrapper);
+        int monthRevenue = monthOrders.stream().mapToInt(Order::getTotalPrice).sum();
+        data.put("monthRevenue", monthRevenue);
+
+        LambdaQueryWrapper<Order> completedWrapper = new LambdaQueryWrapper<>();
+        completedWrapper.eq(Order::getStatus, 4);
+        Long completedOrders = orderMapper.selectCount(completedWrapper);
+        data.put("completedOrders", completedOrders);
 
         LambdaQueryWrapper<Volunteer> volunteerWrapper = new LambdaQueryWrapper<>();
         Long volunteerCount = volunteerMapper.selectCount(volunteerWrapper);
