@@ -7,6 +7,7 @@ import com.me.entity.PaymentTransaction;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.PaymentTransactionMapper;
 import com.me.mq.producer.MessageProducer;
+import com.me.redis.utils.RedisUtil;
 import com.me.service.PaymentService;
 import com.me.vo.PaymentResultVO;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentTransactionMapper paymentTransactionMapper;
     private final OrderMapper orderMapper;
     private final MessageProducer messageProducer;
+    private final RedisUtil redisUtil;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -72,6 +74,8 @@ public class PaymentServiceImpl implements PaymentService {
         order.setStatus(0);
         orderMapper.updateById(order);
 
+        redisUtil.deleteByPattern("order:detail:" + orderId);
+
         log.info("模拟支付成功: orderId={}, transactionNo={}, amount={}",
                 orderId, transactionNo, order.getTotalPrice());
 
@@ -115,6 +119,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         order.setStatus(5);
         orderMapper.updateById(order);
+
+        redisUtil.deleteByPattern("order:detail:" + orderId);
 
         log.info("订单取消成功: orderId={}", orderId);
     }

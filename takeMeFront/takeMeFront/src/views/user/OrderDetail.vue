@@ -302,7 +302,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -317,6 +317,14 @@ const orderId = Number(route.params.id)
 
 onMounted(() => {
   window.addEventListener(`orderStatusChange_${orderId}`, handleOrderStatusChange)
+
+  const id = route.params.id
+  if (id && !isNaN(Number(id))) {
+    loadOrderDetail()
+  } else {
+    ElMessage.error('订单参数无效')
+    router.back()
+  }
 })
 
 onUnmounted(() => {
@@ -408,7 +416,12 @@ const formatTime = (time: string) => {
 const loadOrderDetail = async () => {
   loading.value = true
   try {
-    const res = await getUserOrderDetail(orderId)
+    const currentOrderId = Number(route.params.id)
+    if (!currentOrderId || isNaN(currentOrderId)) {
+      ElMessage.error('订单ID无效')
+      return
+    }
+    const res = await getUserOrderDetail(currentOrderId)
     if (res.code === 200) {
       order.value = res.data || {}
     }
@@ -452,7 +465,7 @@ const handleCancelOrder = async () => {
     cancelLoading.value = true
     await cancelOrder(order.value.id)
     ElMessage.success('订单已取消')
-    await loadOrderDetail(order.value.id)
+    await loadOrderDetail()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error(error.message || '取消订单失败')
@@ -500,19 +513,18 @@ const handleRepayOrder = () => {
   router.push(`/user/payment?orderId=${order.value.id}`)
 }
 
-onMounted(() => {
-  const id = route.params.id
-  if (id && !isNaN(Number(id))) {
-    loadOrderDetail(Number(id))
-  } else {
-    ElMessage.error('订单参数无效')
-    router.back()
-  }
-})
-
 const back = () => {
   router.back()
 }
+
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId && !isNaN(Number(newId))) {
+      loadOrderDetail()
+    }
+  }
+)
 </script>
 
 <style scoped>

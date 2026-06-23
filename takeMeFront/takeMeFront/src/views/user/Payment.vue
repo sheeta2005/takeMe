@@ -154,9 +154,9 @@ const handlePayment = async () => {
 const goBack = () => {
   const orderId = route.query.orderId
   if (orderId) {
-    router.push(`/user/order/detail/${orderId}`)
+    router.replace(`/user/order/detail/${orderId}`)
   } else {
-    router.push('/user/order')
+    router.replace('/user/order')
   }
 }
 
