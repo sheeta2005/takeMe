@@ -21,8 +21,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     // 构造器注入
     public WebMvcConfig(JwtTokenAdminInterceptor adminInterceptor,
-                        JwtTokenVolunteerInterceptor volunteerInterceptor,
-                        JwtTokenUserInterceptor userInterceptor) {
+                                         JwtTokenVolunteerInterceptor volunteerInterceptor,
+                                         JwtTokenUserInterceptor userInterceptor) {
         this.adminInterceptor = adminInterceptor;
         this.volunteerInterceptor = volunteerInterceptor;
         this.userInterceptor = userInterceptor;

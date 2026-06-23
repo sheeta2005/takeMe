@@ -17,21 +17,16 @@ public class SecurityConfig {
 
     /**
      * 密码编码器配置
-     * 算法：BCrypt（Spring官方推荐，自带随机盐，防彩虹表攻击）
-     * 强度：12（生产环境标准值，单次验证约300ms，平衡安全性和性能）
-     * 返回接口类型而非具体实现，便于后续更换算法
+     * 算法：BCrypt
+     * 强度：12
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
     }
 
-    /**
-     * 放行所有接口，允许登录访问（新增，解决被拦截问题）
-     */
-    /**
-     * Spring Security 放行配置（SB3.2.5 标准写法）
-     */
+    //放行所有接口，允许登录访问
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         log.info("=== SecurityConfig 正在加载 ===");

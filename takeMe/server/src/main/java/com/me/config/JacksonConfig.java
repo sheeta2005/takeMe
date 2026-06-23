@@ -13,6 +13,8 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+//序列化配置
+
 @Configuration
 public class JacksonConfig {
 

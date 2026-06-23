@@ -1,15 +1,17 @@
 package com.me.config;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.Components;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+
+//接口文档配置
 
 @Configuration
 @Profile("dev")
@@ -21,10 +23,10 @@ public class SwaggerConfig {
                 .info(new Info()
                         .title("TakeMe养老服务系统 API文档")
                         .version("v1.0")
-                        .description("面向老年人的综合服务平台，提供代购、清洁、送餐、陪医等志愿服务")
+                        .description("面向老年人的综合服务平台，提供代购、清洁、送餐、陪医、陪伴等志愿服务")
                         .contact(new Contact()
-                                .name("TakeMe开发团队")
-                                .email("support@takeme.com"))
+                                .name("sheeta1998")
+                                .email("support@2169298883@qq.com"))
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
@@ -35,6 +37,6 @@ public class SwaggerConfig {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("请输入JWT Token（不包含Bearer前缀）")));
+                                        .description("请输入JWT Token")));
     }
 }
