@@ -228,7 +228,7 @@ public class GlobalExceptionHandler {
     // ======================== 6. 其他未知异常 ========================
 
     /**
-     * 捕获所有未处理的异常（兜底）
+     * 捕获所有未处理的异常
      */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

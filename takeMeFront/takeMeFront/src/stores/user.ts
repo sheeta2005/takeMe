@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { getUserInfo, updateUserInfo, logout } from '@/api/user'
 import { ElMessage } from 'element-plus'
+import wsManager from '@/utils/websocket'
 
 interface UserAddress {
   id: number
@@ -85,6 +86,7 @@ export const useUserStore = defineStore('user', {
       try {
         await logout()
       } catch (err) {} finally {
+        wsManager.disconnect()
         this.token = ''
         this.userId = ''
         this.username = ''

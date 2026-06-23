@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { getAdminInfo, updateAdminInfo, adminLogout } from '@/api'
 import { ElMessage } from 'element-plus'
+import wsManager from '@/utils/websocket'
+
 export const useAdminStore = defineStore('admin', {
   state: () => ({
     token: localStorage.getItem('adminToken') || '',
@@ -52,6 +54,7 @@ export const useAdminStore = defineStore('admin', {
       try {
         await adminLogout()
       } catch (err) {} finally {
+        wsManager.disconnect()
         this.token = ''
         this.adminId = ''
         this.username = ''

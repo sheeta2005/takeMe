@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { getVolunteerInfo, updateVolunteerInfo, volunteerLogout, uploadAvatar } from '@/api/volunteer'
 import { ElMessage } from 'element-plus'
+import wsManager from '@/utils/websocket'
 
 export interface VolunteerInfo {
   id: number
@@ -135,6 +136,7 @@ export const useVolunteerStore = defineStore('volunteer', {
         await volunteerLogout()
       } catch (err) {
       } finally {
+        wsManager.disconnect()
         this.$reset()
         localStorage.removeItem('volunteerToken')
         localStorage.removeItem('volunteerId')
