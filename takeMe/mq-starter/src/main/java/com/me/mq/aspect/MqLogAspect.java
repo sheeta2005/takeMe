@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class MqLogAspect {
-
+    //日志切面
     @Around("execution(* com.me.mq.producer.MessageProducer.sendMessage(..))")
     public Object logMqMessage(ProceedingJoinPoint joinPoint) throws Throwable {
         Object[] args = joinPoint.getArgs();

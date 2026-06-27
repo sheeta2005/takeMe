@@ -3,6 +3,7 @@ package com.me.mq.consumer;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.dto.ApprovalSubmitMessage;
 import com.me.entity.Admin;
+import com.me.entity.Message;
 import com.me.mapper.AdminMapper;
 import com.me.mq.config.RabbitMQConfig;
 import com.me.service.MessageService;
@@ -11,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +26,7 @@ public class AdminApprovalConsumer {
     private final AdminMapper adminMapper;
 
     private static final Map<String, String> TYPE_TEXT_MAP = new HashMap<>();
+
     static {
         TYPE_TEXT_MAP.put("leave", "请假");
         TYPE_TEXT_MAP.put("service_days_change", "工作日期变更");
@@ -35,7 +36,9 @@ public class AdminApprovalConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.APPROVAL_ADMIN_QUEUE)
-    public void handleAdminApprovalNotification(ApprovalSubmitMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
+    public void handleAdminApprovalNotification(ApprovalSubmitMessage message,
+                                                org.springframework.amqp.core.Message msg,
+                                                Channel channel) {
         try {
             if (message == null) {
                 log.warn("收到空消息，跳过处理");
@@ -58,14 +61,10 @@ public class AdminApprovalConsumer {
 
             String typeText = TYPE_TEXT_MAP.getOrDefault(message.getType(), "业务");
             String title = "新的" + typeText + "申请待审批";
-            String content = String.format("申请人：%s（ID：%d）提交了%s申请，请及时处理。",
-                    message.getApplicantName(),
-                    message.getApplicantId(),
-                    typeText
-            );
+            String content = String.format("申请人：%s（ID：%d）提交了%s申请，请及时处理。", message.getApplicantName(), message.getApplicantId(), typeText);
 
             for (Admin admin : admins) {
-                com.me.entity.Message notification = new com.me.entity.Message();
+                Message notification = new Message();
                 notification.setReceiverId(admin.getId());
                 notification.setReceiverType(0);
                 notification.setType(1);
@@ -81,8 +80,7 @@ public class AdminApprovalConsumer {
             if (msg != null && channel != null) {
                 channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
             }
-            log.info("管理员审批通知发送成功: approvalId={}, type={}, adminCount={}",
-                    message.getApprovalId(), message.getType(), admins.size());
+            log.info("管理员审批通知发送成功: approvalId={}, type={}, adminCount={}", message.getApprovalId(), message.getType(), admins.size());
         } catch (Exception e) {
             log.error("管理员审批通知处理失败: approvalId={}", message != null ? message.getApprovalId() : "unknown", e);
             try {

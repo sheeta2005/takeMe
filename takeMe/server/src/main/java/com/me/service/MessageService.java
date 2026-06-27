@@ -23,7 +23,6 @@ public interface MessageService extends IService<Message> {
 
     IPage<Message> getAdminMessagePage(Integer receiverType, Integer type, PageResultDTO pageResultDTO);
 
-    // 新增方法
     IPage<Message> getSentMessagePage(Integer receiverType, Integer type, PageResultDTO pageResultDTO);
 
     void sendBatchMessage(List<MessageDTO> messages);
