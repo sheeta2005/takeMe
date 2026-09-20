@@ -214,7 +214,10 @@ public class OrderServiceImpl implements OrderService {
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
 
-        List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
+        LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
+        orderItemWrapper.eq(OrderItem::getOrderId,orderId);
+        List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
+       // List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
             BeanUtils.copyProperties(item, vo);
@@ -236,7 +239,10 @@ public class OrderServiceImpl implements OrderService {
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
 
-        List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
+        LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
+        orderItemWrapper.eq(OrderItem::getOrderId,orderId);
+        List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
+        //List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
             BeanUtils.copyProperties(item, vo);
@@ -369,6 +375,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @RedisLock(prefix = "order:item:confirm", keyArgs = {1}, timeout = 5)
     @Transactional(rollbackFor = Exception.class)
     public void volunteerConfirmOrder(Long volunteerId, Long orderItemId) {
         LambdaQueryWrapper<OrderItem> inProgressWrapper = new LambdaQueryWrapper<>();
@@ -966,7 +973,10 @@ public class OrderServiceImpl implements OrderService {
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
 
-        List<OrderItem> items = orderItemMapper.selectByOrderId(id);
+        LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
+        orderItemWrapper.eq(OrderItem::getOrderId,id);
+        List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
+        //List<OrderItem> items = orderItemMapper.selectByOrderId(id);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
             BeanUtils.copyProperties(item, vo);

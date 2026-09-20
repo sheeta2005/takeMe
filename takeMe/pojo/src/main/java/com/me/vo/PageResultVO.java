@@ -14,7 +14,7 @@ import java.util.List;
 public class PageResultVO<T> implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private List<T> records;  // 将data字段改为records，以匹配前端期望
+    private List<T> records;
     private Long total;
     private Integer pageNum;
     private Integer pageSize;
