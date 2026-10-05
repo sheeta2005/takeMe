@@ -37,9 +37,8 @@ build/
 ### Mac OS ###
 .DS_Store
 
-# 屏蔽本地开发配置文件
-/src/main/resources/application-dev.yml
-application-dev.yml
-*.yml
-*.yaml
+# 仅屏蔽包含本地凭据的开发配置；公共配置和示例配置允许提交。
+/server/src/main/resources/application-dev.yml
+/server/src/main/resources/application-dev.yaml
+# 公共配置只引用外部凭据；本地 application-dev.yml 继续忽略。
 /优化方向/

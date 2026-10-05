@@ -1,0 +1,27 @@
+# 必须与 dev 一起激活，仅使用隔离测试库、Redis 实例及 RabbitMQ 虚拟主机。
+server:
+  address: 127.0.0.1
+  port: 9081
+me:
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/takeme_loadtest_20261004?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${TAKEME_TEST_DB_USER}
+      password: ${TAKEME_TEST_DB_PASSWORD}
+  redis:
+    host: 127.0.0.1
+    port: 6381
+    database: 0
+  rabbitmq:
+    virtual-host: takeme_loadtest_20261004
+    username: ${TAKEME_TEST_MQ_USER}
+    password: ${TAKEME_TEST_MQ_PASSWORD}
+  jwt:
+    secret: ${TAKEME_TEST_JWT_SECRET}
+  logging:
+    file:
+      path: ${TAKEME_TEST_LOG_DIR}
+logging:
+  level:
+    com.me: WARN
+    org.springframework: WARN

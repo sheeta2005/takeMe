@@ -1,0 +1,117 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: takeMe
+  profiles:
+    active: dev,community
+  data:
+    redis:
+      host: ${me.redis.host}
+      port: ${me.redis.port}
+      database: ${me.redis.database}
+      timeout: ${me.redis.timeout}
+      # 普通缓存和 Lua 限流复用 Lettuce 连接，不额外引入连接池依赖。
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      driver-class-name: ${me.datasource.druid.driver-class-name}
+      url: ${me.datasource.druid.url}
+      username: ${me.datasource.druid.username}
+      password: ${me.datasource.druid.password}
+      initial-size: ${me.datasource.druid.initial-size}
+      max-active: ${me.datasource.druid.max-active}
+      min-idle: ${me.datasource.druid.min-idle}
+      max-wait: ${me.datasource.druid.max-wait}
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+  rabbitmq:
+    host: ${me.rabbitmq.host}
+    port: ${me.rabbitmq.port}
+    username: ${me.rabbitmq.username}
+    password: ${me.rabbitmq.password}
+    virtual-host: ${me.rabbitmq.virtual-host}
+    listener:
+      simple:
+        # 落库成功后由可靠消费容器确认，异常进入统一重试与错误队列流程。
+        acknowledge-mode: auto
+        concurrency: ${me.rabbitmq.listener.simple.concurrency}
+        max-concurrency: ${me.rabbitmq.listener.simple.max-concurrency}
+        # 重试由 reliableRabbitListenerContainerFactory 统一配置，不重复叠加。
+    publisher-confirm-type: ${me.rabbitmq.publisher-confirm-type}
+    publisher-returns: ${me.rabbitmq.publisher-returns}
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.me.entity
+  configuration:
+    map-underscore-to-camel-case: true  # 开启驼峰命名映射
+
+jwt:
+  secret: ${me.jwt.secret}
+  expiration: ${me.jwt.expiration}
+
+mq:
+  order:
+    timeout-minutes: 30
+
+# 正常业务保持启用；停用 MQ 时 Outbox 保留待发送事件，恢复后继续投递。
+middleware:
+  # 全局总开关：true=启用所有中间件，false=禁用所有中间件
+  # 优先级最高，关闭后 Redis 和 RabbitMQ 均不可用
+  enabled: ${me.middleware.enabled}
+
+  # Redis 细分开关（受总开关约束）
+  # true=启用目录缓存、聚合缓存和限流，false=不执行 Redis 操作
+  redis:
+    enabled: ${me.middleware.redis.enabled}
+
+  # RabbitMQ 细分开关（受总开关约束）
+  # false=暂停投递与消费，不丢弃数据库中的待发送通知
+  rabbitmq:
+    enabled: ${me.middleware.rabbitmq.enabled}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+  group-configs:
+    - group: admin-api
+      display-name: 管理员接口
+      paths-to-match: /api/admin/**
+      packages-to-scan: com.me.controller.admin
+    - group: volunteer-api
+      display-name: 志愿者接口
+      paths-to-match: /api/volunteer/**
+      packages-to-scan: com.me.controller.volunteer
+    - group: user-api
+      display-name: 用户接口
+      paths-to-match: /api/user/**
+      packages-to-scan: com.me.controller.user
+
+aliyun:
+  oss:
+    endpoint: ${me.aliyun.oss.endpoint}
+    bucket-name: ${me.aliyun.oss.bucket-name}
+    access-key-id: ${me.aliyun.oss.access-key-id}
+    access-key-secret: ${me.aliyun.oss.access-key-secret}
+    domain: ${me.aliyun.oss.domain}
+    max-file-size: ${me.aliyun.oss.max-file-size}
+
+logging:
+  file:
+    path: ${me.logging.file.path}

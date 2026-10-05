@@ -1,0 +1,24 @@
+# 单 JVM 小区部署参数；数据库、Redis、MQ 凭据仍由本地或外部配置提供。
+server:
+  tomcat:
+    threads:
+      max: 80
+      min-spare: 10
+    accept-count: 100
+    # 600 个同时在线账号可能各占一个 HTTP 连接和一个推送连接。
+    max-connections: 2000
+me:
+  datasource:
+    druid:
+      max-active: 16
+      max-wait: 3000
+  rabbitmq:
+    listener:
+      simple:
+        concurrency: 1
+        max-concurrency: 3
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        prefetch: 20

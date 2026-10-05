@@ -1,0 +1,56 @@
+# 复制为 application-dev.yml 后，根据本机环境填写外部变量。
+# 真实数据库、RabbitMQ、OSS 和 JWT 凭据不要写入仓库。
+me:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: ${TAKEME_DB_URL:jdbc:mysql://localhost:3306/takeme?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true}
+      username: ${TAKEME_DB_USERNAME:root}
+      password: ${TAKEME_DB_PASSWORD}
+      initial-size: ${TAKEME_DB_INITIAL_SIZE:5}
+      max-active: ${TAKEME_DB_MAX_ACTIVE:20}
+      min-idle: ${TAKEME_DB_MIN_IDLE:5}
+      max-wait: ${TAKEME_DB_MAX_WAIT:60000}
+
+  redis:
+    host: ${TAKEME_REDIS_HOST:localhost}
+    port: ${TAKEME_REDIS_PORT:6379}
+    database: ${TAKEME_REDIS_DATABASE:0}
+    timeout: ${TAKEME_REDIS_TIMEOUT:3000ms}
+
+  rabbitmq:
+    host: ${TAKEME_RABBITMQ_HOST:localhost}
+    port: ${TAKEME_RABBITMQ_PORT:5672}
+    username: ${TAKEME_RABBITMQ_USERNAME}
+    password: ${TAKEME_RABBITMQ_PASSWORD}
+    virtual-host: ${TAKEME_RABBITMQ_VIRTUAL_HOST:/}
+    listener:
+      simple:
+        concurrency: ${TAKEME_RABBITMQ_CONCURRENCY:3}
+        max-concurrency: ${TAKEME_RABBITMQ_MAX_CONCURRENCY:10}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+
+  aliyun:
+    oss:
+      endpoint: ${TAKEME_OSS_ENDPOINT}
+      bucket-name: ${TAKEME_OSS_BUCKET_NAME}
+      access-key-id: ${TAKEME_OSS_ACCESS_KEY_ID}
+      access-key-secret: ${TAKEME_OSS_ACCESS_KEY_SECRET}
+      domain: ${TAKEME_OSS_DOMAIN}
+      max-file-size: ${TAKEME_OSS_MAX_FILE_SIZE:5242880}
+
+  jwt:
+    secret: ${TAKEME_JWT_SECRET}
+    expiration: ${TAKEME_JWT_EXPIRATION:86400000}
+
+  logging:
+    file:
+      path: ${TAKEME_LOG_DIR:./logs}
+
+  middleware:
+    enabled: ${TAKEME_MIDDLEWARE_ENABLED:true}
+    redis:
+      enabled: ${TAKEME_REDIS_ENABLED:true}
+    rabbitmq:
+      enabled: ${TAKEME_RABBITMQ_ENABLED:true}
