@@ -2,16 +2,14 @@ package com.me.service.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Order;
-import com.me.entity.PaymentTransaction;
+import com.me.entity.OrderItem;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
-import com.me.mapper.PaymentTransactionMapper;
-import com.me.service.MessageService;
+import com.me.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,63 +20,41 @@ import java.util.List;
 public class OrderTimeoutCancelTask {
 
     private final OrderMapper orderMapper;
-    private final PaymentTransactionMapper paymentTransactionMapper;
     private final OrderItemMapper orderItemMapper;
-    private final MessageService messageService;
+    private final OrderService orderService;
 
     @Scheduled(fixedDelay = 300000)
-    @Transactional(rollbackFor = Exception.class)
     public void cancelTimeoutOrders() {
-        LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(15);
-
-        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Order::getStatus, 6);
-        wrapper.le(Order::getCreateTime, timeoutThreshold);
-        List<Order> timeoutOrders = orderMapper.selectList(wrapper);
-
-        if (timeoutOrders.isEmpty()) {
-            return;
-        }
-
-        log.info("开始处理超时订单，数量: {}", timeoutOrders.size());
-
-        for (Order order : timeoutOrders) {
+        // 每项在独立事务中复核预约时间，避免首项超时取消整单。
+        List<Order> unpaid = orderMapper.selectList(new LambdaQueryWrapper<Order>()
+                .eq(Order::getStatus, 6)
+                .le(Order::getCreateTime, LocalDateTime.now().minusMinutes(15)));
+        for (Order order : unpaid) {
             try {
-                cancelTimeoutOrder(order);
+                orderService.expireUnpaidOrder(order.getId());
             } catch (Exception e) {
-                log.error("取消超时订单失败: orderId={}", order.getId(), e);
+                log.error("取消未支付订单失败: orderId={}", order.getId(), e);
             }
         }
-    }
 
-    private void cancelTimeoutOrder(Order order) {
-        order.setStatus(5);
-        orderMapper.updateById(order);
-
-        LambdaQueryWrapper<PaymentTransaction> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PaymentTransaction::getOrderId, order.getId());
-        wrapper.eq(PaymentTransaction::getPaymentStatus, 0);
-        PaymentTransaction transaction = paymentTransactionMapper.selectOne(wrapper);
-
-        if (transaction != null) {
-            transaction.setPaymentStatus(3);
-            transaction.setUpdateTime(LocalDateTime.now());
-            transaction.setRemark("订单超时自动取消");
-            paymentTransactionMapper.updateById(transaction);
+        List<OrderItem> pending = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
+                .eq(OrderItem::getItemStatus, 0));
+        for (OrderItem item : pending) {
+            try {
+                orderService.expirePendingItem(item.getId());
+            } catch (Exception e) {
+                log.error("取消无人接单服务项失败: orderItemId={}", item.getId(), e);
+            }
         }
 
-        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.me.entity.OrderItem> itemWrapper =
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        itemWrapper.eq(com.me.entity.OrderItem::getOrderId, order.getId());
-        itemWrapper.isNotNull(com.me.entity.OrderItem::getVolunteerId);
-        List<com.me.entity.OrderItem> assignedItems = orderItemMapper.selectList(itemWrapper);
-
-        for (com.me.entity.OrderItem item : assignedItems) {
-            item.setVolunteerId(null);
-            item.setItemStatus(5);
-            orderItemMapper.updateById(item);
+        List<OrderItem> accepted = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
+                .eq(OrderItem::getItemStatus, 1));
+        for (OrderItem item : accepted) {
+            try {
+                orderService.expireAcceptedItem(item.getId(), null);
+            } catch (Exception e) {
+                log.error("取消未启动服务项失败: orderItemId={}", item.getId(), e);
+            }
         }
-
-        log.info("超时订单已取消: orderId={}, orderNo={}", order.getId(), order.getOrderNo());
     }
 }

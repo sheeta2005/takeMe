@@ -133,16 +133,14 @@ public class GlobalExceptionHandler {
         return Result.error(ex.getMessage());
     }
 
-    /**
-     * 捕获业务运行时异常（如ServiceTimeValidator抛出的异常）
-     */
-    @ExceptionHandler(RuntimeException.class)
-    public Result<Void> handleRuntimeException(RuntimeException ex) {
-        log.warn("【业务校验失败】{}", ex.getMessage());
-        return Result.error(ex.getMessage());
-    }
-
     // ======================== 2. 参数校验异常 ========================
+
+    // 分页等显式参数边界校验返回 400，不把非法输入误报为服务端故障。
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return Result.error(400, ex.getMessage());
+    }
 
     /**
      * 捕获 @Valid 注解的参数校验异常

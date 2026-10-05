@@ -2,6 +2,7 @@ package com.me.interceptor;
 
 import com.me.context.BaseContext;
 import com.me.utils.JwtUtil;
+import com.me.service.AccountAccessService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -12,9 +13,11 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class JwtTokenAdminInterceptor implements HandlerInterceptor {
 
     private final JwtUtil jwtUtil;
+    private final AccountAccessService accountAccessService;
 
-    public JwtTokenAdminInterceptor(JwtUtil jwtUtil) {
+    public JwtTokenAdminInterceptor(JwtUtil jwtUtil, AccountAccessService accountAccessService) {
         this.jwtUtil = jwtUtil;
+        this.accountAccessService = accountAccessService;
     }
 
     @Override
@@ -35,7 +38,7 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
             Long userId = jwtUtil.getUserId(token);
             Integer role = jwtUtil.getRole(token);
 
-            if (role == null || role != 0) {
+            if (role == null || role != 0 || !accountAccessService.isActive(userId, role)) {
                 response.setStatus(401);
                 return false;
             }

@@ -12,13 +12,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Slf4j
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true}")
 @RequiredArgsConstructor
 public class AdminApprovalConsumer {
 
@@ -35,16 +35,13 @@ public class AdminApprovalConsumer {
         TYPE_TEXT_MAP.put("register", "注册");
     }
 
-    @RabbitListener(queues = RabbitMQConfig.APPROVAL_ADMIN_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.APPROVAL_ADMIN_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleAdminApprovalNotification(ApprovalSubmitMessage message,
                                                 org.springframework.amqp.core.Message msg,
                                                 Channel channel) {
         try {
             if (message == null) {
                 log.warn("收到空消息，跳过处理");
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
@@ -53,9 +50,6 @@ public class AdminApprovalConsumer {
 
             if (admins.isEmpty()) {
                 log.warn("未找到任何管理员，跳过通知发送");
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
@@ -74,22 +68,13 @@ public class AdminApprovalConsumer {
                 notification.setRelatedOrderId(message.getApprovalId());
                 notification.setCreateTime(message.getSubmitTime());
 
-                messageService.sendMessage(notification);
+                messageService.sendEventMessage(notification, msg == null ? null : msg.getMessageProperties().getMessageId());
             }
 
-            if (msg != null && channel != null) {
-                channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-            }
             log.info("管理员审批通知发送成功: approvalId={}, type={}, adminCount={}", message.getApprovalId(), message.getType(), admins.size());
         } catch (Exception e) {
             log.error("管理员审批通知处理失败: approvalId={}", message != null ? message.getApprovalId() : "unknown", e);
-            try {
-                if (msg != null && channel != null) {
-                    channel.basicNack(msg.getMessageProperties().getDeliveryTag(), false, true);
-                }
-            } catch (IOException ioException) {
-                log.error("NACK失败", ioException);
-            }
+            throw new IllegalStateException("管理员审批通知处理失败", e);
         }
     }
 }

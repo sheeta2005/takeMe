@@ -20,6 +20,7 @@ public class Approval {
 
     private String type;           // register=注册, leave=请假, service_change=服务变更, points_appeal=积分申诉
     private Long applicantId;      // 申请人ID
+    private Long businessId;       // 请假记录 ID；注册及日期变更为志愿者 ID
     private String applicantName;  // 申请人姓名
     private String content;        // 申请内容
     private String status;         // pending=待审核, approved=已通过, rejected=已驳回

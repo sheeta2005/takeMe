@@ -73,10 +73,6 @@
               <el-icon class="info-icon"><Calendar /></el-icon>
               <span class="info-text">下单时间：{{ formatTime(order.createTime) }}</span>
             </div>
-            <div class="info-row">
-              <el-icon class="info-icon"><Location /></el-icon>
-              <span class="info-text">服务地址：{{ order.address }}</span>
-            </div>
             <div class="info-row" v-if="order.items && order.items.length > 0">
               <el-icon class="info-icon"><List /></el-icon>
               <span class="info-text">服务项目：</span>
@@ -88,7 +84,7 @@
                   :type="getServiceTypeTag(item.serviceType)"
                   class="service-tag-item"
                 >
-                  {{ item.serviceName }} ×{{ item.quantity }}
+                  {{ item.serviceName }} ×{{ item.quantity }} · {{ item.serviceDate }} {{ item.serviceTime }}
                   <span v-if="item.volunteerId" class="volunteer-indicator">
                     👤 已接取
                   </span>
@@ -142,7 +138,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Calendar, Location, Document, Right, List, Search } from '@element-plus/icons-vue'
+import { Calendar, Document, Right, List, Search } from '@element-plus/icons-vue'
 import { getMyOrderList } from '@/api/order'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'

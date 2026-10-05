@@ -126,7 +126,7 @@
             <el-icon :size="32"><Money /></el-icon>
           </div>
           <div class="stat-info">
-            <div class="stat-label">本月成交总额</div>
+            <div class="stat-label">本月模拟净收款</div>
             <div class="stat-value currency">¥{{ dashboardData.monthRevenue || 0 }}</div>
             <div class="stat-trend trend-up">
               <el-icon><CaretTop /></el-icon>
@@ -259,7 +259,7 @@
             <div class="card-header">
               <div class="header-left">
                 <el-icon :size="20" color="#00a88d"><TrendCharts /></el-icon>
-                <span class="card-title">近7日订单金额趋势</span>
+                <span class="card-title">近7日模拟净收款趋势</span>
               </div>
             </div>
           </template>
@@ -638,7 +638,7 @@ const initCharts = async () => {
           }
         },
         series: [{
-          name: '订单金额',
+          name: '模拟净收款',
           type: 'line',
           smooth: true,
           symbol: 'circle',

@@ -20,5 +20,5 @@ public interface CartService extends IService<Cart> {
 
     void clearCart(Long userId);
     
-    OrderVO checkout(Long userId);
+    OrderVO checkout(Long userId, String requestId);
 }

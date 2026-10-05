@@ -1,9 +1,12 @@
 package com.me.utils;
 
+import com.me.exception.OrderBusinessException;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class ServiceTimeValidator {
 
@@ -26,21 +29,19 @@ public class ServiceTimeValidator {
             LocalDateTime latestAcceptTime = serviceDateTime.minusHours(1);
 
             if (now.isBefore(earliestAcceptTime)) {
-                throw new RuntimeException("服务尚未开放接取，预约时间为" + serviceDate + " " + serviceTime +
+                throw new OrderBusinessException("服务尚未开放接取，预约时间为" + serviceDate + " " + serviceTime +
                         "，将于" + earliestAcceptTime.format(DATE_FORMATTER) + " " +
                         earliestAcceptTime.format(TIME_FORMATTER) + "后开放接单");
             }
 
             if (now.isAfter(latestAcceptTime)) {
-                throw new RuntimeException("已超过接单截止时间，预约时间为" + serviceDate + " " + serviceTime +
+                throw new OrderBusinessException("已超过接单截止时间，预约时间为" + serviceDate + " " + serviceTime +
                         "，接单截止时间为" + latestAcceptTime.format(DATE_FORMATTER) + " " +
                         latestAcceptTime.format(TIME_FORMATTER));
             }
-        } catch (Exception e) {
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            }
-            throw new RuntimeException("服务时间格式错误");
+        } catch (DateTimeParseException e) {
+            // 日期解析错误统一转为业务提示，不能将解析器内部异常返回客户端。
+            throw new OrderBusinessException("服务时间格式错误");
         }
     }
 
@@ -59,15 +60,13 @@ public class ServiceTimeValidator {
             LocalDateTime earliestStartTime = serviceDateTime.minusHours(1);
 
             if (now.isBefore(earliestStartTime)) {
-                throw new RuntimeException("服务尚未到达可开始时间，预约时间为" + serviceDate + " " + serviceTime +
+                throw new OrderBusinessException("服务尚未到达可开始时间，预约时间为" + serviceDate + " " + serviceTime +
                         "，最早可于" + earliestStartTime.format(DATE_FORMATTER) + " " +
                         earliestStartTime.format(TIME_FORMATTER) + "开始服务");
             }
-        } catch (Exception e) {
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            }
-            throw new RuntimeException("服务时间格式错误");
+        } catch (DateTimeParseException e) {
+            // 不捕获服务时间窗口校验抛出的订单业务异常。
+            throw new OrderBusinessException("服务时间格式错误");
         }
     }
 

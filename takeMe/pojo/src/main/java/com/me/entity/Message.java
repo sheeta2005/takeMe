@@ -17,6 +17,7 @@ public class Message {
 
     @TableId(type = IdType.AUTO)
     private Long id;
+    private String eventId;          // MQ 事件标识，与接收者共同用于数据库去重
 
     private Long receiverId;          // 接收者ID
     private Integer receiverType;     // 0=管理员, 1=志愿者, 2=用户

@@ -44,7 +44,7 @@ public class MessageController {
     @PostMapping("/read/{id}")
     public Result<Void> markAsRead(@PathVariable Long id) {
         Long receiverId = BaseContext.getLoginId();
-        boolean success = messageService.markAsRead(id, receiverId);
+        boolean success = messageService.markAsRead(id, 2, receiverId);
         if (!success) {
             return Result.error("标记已读失败");
         }

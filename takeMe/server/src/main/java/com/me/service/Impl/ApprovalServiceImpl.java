@@ -7,17 +7,19 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.dto.ApprovalResultMessage;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Approval;
-import com.me.entity.Message;
 import com.me.entity.VolunteerLeave;
+import com.me.entity.Volunteer;
 import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerLeaveMapper;
 import com.me.mq.config.RabbitMQConfig;
-import com.me.mq.producer.MessageProducer;
+import com.me.mapper.VolunteerMapper;
+import com.me.service.OutboxService;
 import com.me.service.ApprovalService;
-import com.me.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 import java.time.LocalDateTime;
 
@@ -26,9 +28,9 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> implements ApprovalService {
 
-    private final MessageService messageService;
     private final VolunteerLeaveMapper volunteerLeaveMapper;
-    private final MessageProducer messageProducer;
+    private final VolunteerMapper volunteerMapper;
+    private final OutboxService outboxService;
 
     @Override
     public IPage<Approval> getApprovalPage(
@@ -71,108 +73,67 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean approveApplication(Long id, String remark) {
-        Approval approval = this.getById(id);
-        if (approval == null) {
-            return false;
-        }
-
-        if (!"pending".equals(approval.getStatus())) {
-            return false;
-        }
-
-        String type = approval.getType();
-
-        switch (type) {
-            case "leave":
-                LambdaQueryWrapper<VolunteerLeave> leaveWrapper = new LambdaQueryWrapper<>();
-                leaveWrapper.eq(VolunteerLeave::getVolunteerId, approval.getApplicantId())
-                        .eq(VolunteerLeave::getStatus, 0)
-                        .orderByDesc(VolunteerLeave::getCreateTime)
-                        .last("LIMIT 1");
-                VolunteerLeave leave = volunteerLeaveMapper.selectOne(leaveWrapper);
-                if (leave != null) {
-                    leave.setStatus((byte) 1);
-                    volunteerLeaveMapper.updateById(leave);
-                }
-                break;
-            case "service_days_change":
-                break;
-            default:
-                break;
-        }
-
-        approval.setStatus("approved");
-        approval.setRemark(remark);
-        approval.setUpdateTime(LocalDateTime.now());
-        boolean success = this.updateById(approval);
-
-        if (success) {
-            String title = "申请已通过";
-            String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
-            sendMessage(approval.getApplicantId(), 1, 0,
-                    title, String.format("您的%s申请已通过审批", typeText), approval.getId());
-
-            sendApprovalResultMessage(approval, "approved", remark);
-        }
-
-        return success;
+        return decide(id, "approved", remark);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean rejectApplication(Long id, String remark) {
-        Approval approval = this.getById(id);
-        if (approval == null) {
-            return false;
-        }
-
-        if (!"pending".equals(approval.getStatus())) {
-            return false;
-        }
-
-        approval.setStatus("rejected");
-        approval.setRemark(remark);
-        approval.setUpdateTime(LocalDateTime.now());
-        boolean success = this.updateById(approval);
-
-        if (success) {
-            if ("leave".equals(approval.getType())) {
-                LambdaQueryWrapper<VolunteerLeave> leaveWrapper = new LambdaQueryWrapper<>();
-                leaveWrapper.eq(VolunteerLeave::getVolunteerId, approval.getApplicantId())
-                        .eq(VolunteerLeave::getStatus, 0)
-                        .orderByDesc(VolunteerLeave::getCreateTime)
-                        .last("LIMIT 1");
-                VolunteerLeave leave = volunteerLeaveMapper.selectOne(leaveWrapper);
-                if (leave != null) {
-                    leave.setStatus((byte) 2);
-                    volunteerLeaveMapper.updateById(leave);
-                }
-            }
-
-            String title = "申请被拒绝";
-            String typeText = "leave".equals(approval.getType()) ? "请假" : "信息修改";
-            sendMessage(approval.getApplicantId(), 1, 0,
-                    title, String.format("您的%s申请被拒绝，原因：%s", typeText, remark), approval.getId());
-
-            sendApprovalResultMessage(approval, "rejected", remark);
-        }
-
-        return success;
+        return decide(id, "rejected", remark);
     }
 
-
-    private void sendMessage(Long receiverId, Integer receiverType, Integer type,
-                             String title, String content, Long relatedOrderId) {
-        Message message = new Message();
-        message.setReceiverId(receiverId);
-        message.setReceiverType(receiverType);
-        message.setType(type);
-        message.setTitle(title);
-        message.setContent(content);
-        message.setIsRead(0);
-        message.setRelatedOrderId(relatedOrderId);
-        message.setCreateTime(LocalDateTime.now());
-        messageService.save(message);
+    // 同一审批只允许从待审状态迁移一次，业务更新与消息登记一并回滚。
+    private boolean decide(Long id, String result, String remark) {
+        Approval approval = baseMapper.selectForUpdate(id);
+        if (approval == null || !"pending".equals(approval.getStatus())) return false;
+        boolean approved = "approved".equals(result);
+        switch (approval.getType()) {
+            case "leave" -> {
+                if (approval.getBusinessId() == null) {
+                    throw new IllegalStateException("历史请假审批尚未关联具体请假记录");
+                }
+                VolunteerLeave leave = volunteerLeaveMapper.selectForUpdate(approval.getBusinessId());
+                if (leave == null || !approval.getApplicantId().equals(leave.getVolunteerId())
+                        || leave.getStatus() == null || leave.getStatus() != 0) {
+                    throw new IllegalStateException("请假记录不存在或已审批");
+                }
+                LambdaUpdateWrapper<VolunteerLeave> update = new LambdaUpdateWrapper<>();
+                update.eq(VolunteerLeave::getId, leave.getId()).eq(VolunteerLeave::getStatus, 0)
+                        .set(VolunteerLeave::getStatus, approved ? 1 : 2);
+                if (volunteerLeaveMapper.update(null, update) != 1) {
+                    throw new IllegalStateException("请假状态更新失败");
+                }
+            }
+            case "register", "service_days_change" -> {
+                if (approved) {
+                    Volunteer volunteer = volunteerMapper.selectForUpdate(approval.getApplicantId());
+                    if (volunteer == null) throw new IllegalStateException("志愿者不存在");
+                    LambdaUpdateWrapper<Volunteer> update = new LambdaUpdateWrapper<>();
+                    update.eq(Volunteer::getId, volunteer.getId());
+                    if ("register".equals(approval.getType())) {
+                        update.set(Volunteer::getStatus, 1);
+                    } else {
+                        if (approval.getContent() == null || !approval.getContent().matches("[0-6](,[0-6]){0,2}")) {
+                            throw new IllegalArgumentException("工作日期格式无效");
+                        }
+                        update.set(Volunteer::getServiceDays, approval.getContent());
+                    }
+                    if (volunteerMapper.update(null, update) != 1) {
+                        throw new IllegalStateException("审批业务更新失败");
+                    }
+                }
+            }
+            default -> throw new IllegalArgumentException("尚未支持该审批类型");
+        }
+        LambdaUpdateWrapper<Approval> update = new LambdaUpdateWrapper<>();
+        update.eq(Approval::getId, id).eq(Approval::getStatus, "pending")
+                .set(Approval::getStatus, result).set(Approval::getRemark, remark)
+                .set(Approval::getUpdateTime, LocalDateTime.now());
+        if (baseMapper.update(null, update) != 1) throw new IllegalStateException("审批状态更新失败");
+        sendApprovalResultMessage(approval, result, remark);
+        return true;
     }
 
     private void sendApprovalResultMessage(Approval approval, String result, String remark) {
@@ -186,17 +147,12 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
             .approveTime(LocalDateTime.now())
             .build();
 
-        try {
-            String routingKey = RabbitMQConfig.APPROVAL_RESULT_ROUTING_KEY_PREFIX + approval.getApplicantId();
-            messageProducer.sendMessage(
+        outboxService.enqueue(
                 RabbitMQConfig.APPROVAL_RESULT_DIRECT_EXCHANGE,
-                routingKey,
+                RabbitMQConfig.APPROVAL_RESULT_ROUTING_KEY,
                 resultMessage
-            );
-            log.info("审批结果消息发送成功: approvalId={}, applicantId={}, result={}", 
+        );
+        log.info("审批结果消息已登记: approvalId={}, applicantId={}, result={}",
                 approval.getId(), approval.getApplicantId(), result);
-        } catch (Exception e) {
-            log.error("审批结果消息发送失败: approvalId={}", approval.getId(), e);
-        }
     }
 }

@@ -39,9 +39,17 @@ class WebSocketManager {
 
     this.disconnect()
 
+    const tokenKey: Record<string, string> = {
+      user: 'token',
+      volunteer: 'volunteerToken',
+      admin: 'adminToken'
+    }
+    const token = localStorage.getItem(tokenKey[userType])
+    if (!token) return
+
     this.userType = userType
     this.userId = userId
-    const url = `${this.baseUrl}/ws/order/${userType}/${userId}`
+    const url = `${this.baseUrl}/ws/order/${userType}/${userId}?token=${encodeURIComponent(token)}`
 
     try {
       this.ws = new WebSocket(url)
@@ -81,6 +89,10 @@ class WebSocketManager {
     switch (message.type) {
       case 'ORDER_STATUS_CHANGE':
         this.handleOrderStatusChange(message.data as OrderStatusChangeData)
+        break
+      case 'NEW_MESSAGE':
+        ElMessage.info({ message: message.data.title, duration: 5000, showClose: true })
+        window.dispatchEvent(new CustomEvent('newMessage', { detail: message.data }))
         break
       default:
         console.warn('未知的WebSocket消息类型:', message.type)

@@ -9,14 +9,19 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
+import org.springframework.amqp.rabbit.retry.RepublishMessageRecovererWithConfirms;
+import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainerFactoryConfigurer;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
-@ConditionalOnProperty(name = "middleware.rabbitmq.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnExpression("${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true}")
 public class RabbitMQConfig {
 
 
@@ -38,6 +43,12 @@ public class RabbitMQConfig {
 
     public static final String APPROVAL_RESULT_DIRECT_EXCHANGE = "approval.result.direct.exchange";
     public static final String APPROVAL_RESULT_ROUTING_KEY_PREFIX = "approval.result.";
+    public static final String APPROVAL_RESULT_ROUTING_KEY = "approval.result.volunteer";
+    public static final String CONSUMER_FAILED_EXCHANGE = "takeme.consumer.failed.exchange";
+    public static final String CONSUMER_FAILED_QUEUE = "takeme.consumer.failed.queue";
+    public static final String CONSUMER_FAILED_ROUTING_KEY = "failed";
+    public static final String BROADCAST_EXCHANGE = "notification.broadcast.exchange";
+    public static final String BROADCAST_QUEUE = "notification.broadcast.queue";
 
     // 志愿者启动服务超时队列配置
     public static final String VOLUNTEER_START_TIMEOUT_EXCHANGE = "volunteer.start.timeout.exchange";
@@ -56,6 +67,9 @@ public class RabbitMQConfig {
     public RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(messageConverter());
+        connectionFactory.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
+        connectionFactory.setPublisherReturns(true);
+        template.setMandatory(true);
 
         template.setConfirmCallback((correlationData, ack, cause) -> {
             if (ack) {
@@ -70,11 +84,47 @@ public class RabbitMQConfig {
 
         template.setReturnsCallback(returned -> {
             org.slf4j.LoggerFactory.getLogger(RabbitMQConfig.class)
-                    .error("消息被退回: exchange={}, routingKey={}, message={}",
-                            returned.getExchange(), returned.getRoutingKey(), returned.getMessage());
+                    .error("消息被退回: exchange={}, routingKey={}, eventId={}",
+                            returned.getExchange(), returned.getRoutingKey(),
+                            returned.getMessage().getMessageProperties().getMessageId());
         });
 
         return template;
+    }
+
+    // 消费最多执行三次；失败消息确认进入错误队列后，容器才自动 ACK 原消息。
+    @Bean
+    public SimpleRabbitListenerContainerFactory reliableRabbitListenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer,
+            CachingConnectionFactory connectionFactory, RabbitTemplate rabbitTemplate) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        configurer.configure(factory, connectionFactory);
+        factory.setAcknowledgeMode(AcknowledgeMode.AUTO);
+        factory.setMessageConverter(messageConverter());
+        RepublishMessageRecovererWithConfirms recoverer = new RepublishMessageRecovererWithConfirms(
+                rabbitTemplate, CONSUMER_FAILED_EXCHANGE, CONSUMER_FAILED_ROUTING_KEY,
+                CachingConnectionFactory.ConfirmType.CORRELATED);
+        recoverer.setConfirmTimeout(5000);
+        factory.setAdviceChain(RetryInterceptorBuilder.stateless().maxAttempts(3)
+                .backOffOptions(1000, 2, 3000).recoverer(recoverer).build());
+        // 错误队列不可用属于基础设施故障，保留原消息等待恢复。
+        factory.setDefaultRequeueRejected(true);
+        return factory;
+    }
+
+    @Bean
+    public Declarables broadcastTopology() {
+        DirectExchange exchange = new DirectExchange(BROADCAST_EXCHANGE, true, false);
+        Queue queue = QueueBuilder.durable(BROADCAST_QUEUE).build();
+        return new Declarables(exchange, queue, BindingBuilder.bind(queue).to(exchange).with("broadcast"));
+    }
+
+    @Bean
+    public Declarables consumerFailedTopology() {
+        DirectExchange exchange = new DirectExchange(CONSUMER_FAILED_EXCHANGE, true, false);
+        Queue queue = QueueBuilder.durable(CONSUMER_FAILED_QUEUE).build();
+        return new Declarables(exchange, queue,
+                BindingBuilder.bind(queue).to(exchange).with(CONSUMER_FAILED_ROUTING_KEY));
     }
 
     @Bean
@@ -220,6 +270,7 @@ public class RabbitMQConfig {
 
     //管理员通知队列绑定：将订单状态广播交换机与管理员通知队列绑定，接收订单状态变更消息
     @Bean
+    @ConditionalOnProperty(name = "middleware.rabbitmq.legacy-audit.enabled", havingValue = "true")
     public Binding notificationAdminBinding(Queue notificationAdminQueue, FanoutExchange orderStatusFanoutExchange) {
         return BindingBuilder.bind(notificationAdminQueue).to(orderStatusFanoutExchange);
     }
@@ -230,12 +281,12 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(approvalAdminQueue).to(approvalSubmitFanoutExchange);
     }
 
-    //审批结果志愿者队列绑定：将审批结果直连交换机与志愿者队列绑定，接收审批结果（支持通配符路由）
+    // 审批结果使用固定 Direct 路由，接收者由消息内容区分。
     @Bean
     public Binding volunteerApprovalBinding(Queue volunteerApprovalQueue, DirectExchange approvalResultDirectExchange) {
         return BindingBuilder.bind(volunteerApprovalQueue)
                 .to(approvalResultDirectExchange)
-                .with(APPROVAL_RESULT_ROUTING_KEY_PREFIX + "*");
+                .with(APPROVAL_RESULT_ROUTING_KEY);
     }
 
     //志愿者启动超时延时队列绑定：将超时交换机与延时队列绑定，用于志愿者接单后启动服务的超时检测

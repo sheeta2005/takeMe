@@ -13,10 +13,8 @@ import com.me.vo.PageResultVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.Map;
 
 @Tag(name = "用户-订单与服务管理")
 @RestController
@@ -65,19 +63,16 @@ public class OrderController {
     @PostMapping("/create")
     public Result<OrderVO> create(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody Map<String, Object> params
+            @RequestBody CreateOrderRequest params
     ) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
 
-        // 解析前端参数
-        OrderDTO orderDTO = new OrderDTO();
-        BeanUtils.copyProperties(params.get("order"), orderDTO);
-
-        List<OrderItemDTO> itemList = (List<OrderItemDTO>) params.get("items");
-
-        OrderVO orderVO = orderService.createOrder(userId, orderDTO, itemList);
+        OrderVO orderVO = orderService.createOrder(userId, params.order(), params.items());
         return Result.success(orderVO);
     }
+
+    // 每个订单项保存自己的预约信息，订单只承担本次结算。
+    public record CreateOrderRequest(OrderDTO order, List<OrderItemDTO> items) {}
 
     // ===================== 取消订单 =====================
     @Operation(summary = "取消整个订单")

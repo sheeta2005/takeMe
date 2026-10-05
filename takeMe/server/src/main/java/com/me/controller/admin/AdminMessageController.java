@@ -2,6 +2,7 @@ package com.me.controller.admin;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.MessageDTO;
+import com.me.context.BaseContext;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Message;
 import com.me.result.Result;
@@ -96,7 +97,7 @@ public class AdminMessageController {
     @Operation(summary = "标记消息为已读", description = "将指定消息标记为已读状态")
     @PostMapping("/read/{id}")
     public Result<Void> markAsRead(@Parameter(description = "消息ID", required = true) @PathVariable Long id) {
-        boolean success = messageService.markAsRead(id, 0L);
+        boolean success = messageService.markAsRead(id, 0, BaseContext.getLoginId());
         if (!success) {
             return Result.error("标记已读失败");
         }
@@ -106,7 +107,7 @@ public class AdminMessageController {
     @Operation(summary = "全部标记已读", description = "将指定类型的所有消息标记为已读")
     @PostMapping("/read-all")
     public Result<Void> markAllAsRead(@Parameter(description = "接收者类型", required = true) @RequestParam Integer receiverType) {
-        boolean success = messageService.markAllAsRead(receiverType, 0L);
+        boolean success = messageService.markAllAsRead(0, BaseContext.getLoginId());
         if (!success) {
             return Result.error("全部标记已读失败");
         }

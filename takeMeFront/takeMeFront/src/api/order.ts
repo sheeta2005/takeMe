@@ -16,10 +16,11 @@ export function createOrder(data: any) {
   })
 }
 
-export function checkoutCart() {
+export function checkoutCart(requestId: string) {
   return request({
     url: '/api/user/cart/checkout',
-    method: 'post'
+    method: 'post',
+    headers: { 'Idempotency-Key': requestId }
   })
 }
 

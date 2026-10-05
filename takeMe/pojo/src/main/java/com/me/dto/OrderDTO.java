@@ -11,6 +11,8 @@ public class OrderDTO {
 
     private Long id;
     private String orderNo;
+    // 同一次提交的网络重试保留此标识。
+    private String requestId;
     private Long userId;
     private Long volunteerId;
 

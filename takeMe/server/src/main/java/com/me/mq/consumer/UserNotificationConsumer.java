@@ -9,12 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true}")
 @RequiredArgsConstructor
 public class UserNotificationConsumer {
 
@@ -31,23 +31,17 @@ public class UserNotificationConsumer {
         STATUS_TEXT_MAP.put(5, "已取消");
     }
 
-    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_USER_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_USER_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleUserNotification(OrderStatusChangeMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
         try {
             if (message == null) {
                 log.warn("收到空消息，跳过处理");
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
             Long userId = message.getUserId();
             if (userId == null) {
                 log.warn("用户ID为空，跳过通知: orderId={}", message.getOrderId());
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
@@ -64,7 +58,7 @@ public class UserNotificationConsumer {
             notification.setRelatedOrderId(message.getOrderId());
             notification.setCreateTime(message.getChangeTime());
 
-            messageService.sendMessage(notification);
+            messageService.sendEventMessage(notification, msg == null ? null : msg.getMessageProperties().getMessageId());
 
             com.me.dto.OrderStatusChangeWsMessage wsMessage = com.me.dto.OrderStatusChangeWsMessage.builder()
                 .orderId(message.getOrderId())
@@ -79,25 +73,18 @@ public class UserNotificationConsumer {
             
             com.me.websocket.OrderWebSocketEndpoint.sendMessageToUser(userId.toString(), wsMessage);
 
-            if (msg != null && channel != null) {
-                channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-            }
             log.info("用户通知发送成功: userId={}, orderId={}, status={}→{}", 
                 userId, message.getOrderId(), message.getOldStatus(), message.getNewStatus());
         } catch (Exception e) {
             log.error("用户通知处理失败: orderId={}", message != null ? message.getOrderId() : "unknown", e);
-            try {
-                if (msg != null && channel != null) {
-                    channel.basicNack(msg.getMessageProperties().getDeliveryTag(), false, true);
-                }
-            } catch (IOException ioException) {
-                log.error("NACK失败", ioException);
-            }
+            throw new IllegalStateException("用户通知处理失败", e);
         }
     }
 
 
     private String buildTitle(OrderStatusChangeMessage message) {
+        // 服务项发生动作但父订单聚合状态未变时，仍明确展示本次动作。
+        if (message.getRemark() != null) return message.getRemark();
         Integer newStatus = message.getNewStatus();
         switch (newStatus) {
             case 1:

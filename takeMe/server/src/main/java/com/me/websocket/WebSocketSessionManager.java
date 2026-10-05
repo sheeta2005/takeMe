@@ -30,18 +30,18 @@ public class WebSocketSessionManager {
         log.info("管理员WebSocket连接建立: adminId={}", adminId);
     }
 
-    public void removeUserSession(String userId) {
-        userSessions.remove(userId);
+    public void removeUserSession(String userId, Session session) {
+        userSessions.remove(userId, session);
         log.info("用户WebSocket连接断开: userId={}", userId);
     }
 
-    public void removeVolunteerSession(String volunteerId) {
-        volunteerSessions.remove(volunteerId);
+    public void removeVolunteerSession(String volunteerId, Session session) {
+        volunteerSessions.remove(volunteerId, session);
         log.info("志愿者WebSocket连接断开: volunteerId={}", volunteerId);
     }
 
-    public void removeAdminSession(String adminId) {
-        adminSessions.remove(adminId);
+    public void removeAdminSession(String adminId, Session session) {
+        adminSessions.remove(adminId, session);
         log.info("管理员WebSocket连接断开: adminId={}", adminId);
     }
 

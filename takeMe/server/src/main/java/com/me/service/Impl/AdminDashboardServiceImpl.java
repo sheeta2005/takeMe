@@ -11,6 +11,8 @@ import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.UserMapper;
 import com.me.mapper.VolunteerMapper;
+import com.me.mapper.PaymentTransactionMapper;
+import com.me.mapper.VolunteerPointsRecordMapper;
 import com.me.redis.annotation.RedisCache;
 import com.me.service.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
@@ -30,64 +32,45 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final VolunteerMapper volunteerMapper;
     private final ApprovalMapper approvalMapper;
     private final OrderItemMapper orderItemMapper;
+    private final PaymentTransactionMapper paymentTransactionMapper;
+    private final VolunteerPointsRecordMapper pointsRecordMapper;
 
     @Override
-    @RedisCache(prefix = "admin:dashboard:data", expire = 10, nullExpire = 2)
+    @RedisCache(prefix = "admin:dashboard:data", expire = 1, nullExpire = 2)
     public Map<String, Object> getDashboardData() {
         Map<String, Object> data = new HashMap<>();
 
-        LambdaQueryWrapper<Order> orderWrapper = new LambdaQueryWrapper<>();
-        Long totalOrders = orderMapper.selectCount(orderWrapper);
-        data.put("totalOrders", totalOrders);
-
-        LambdaQueryWrapper<Order> activeWrapper = new LambdaQueryWrapper<>();
-        activeWrapper.in(Order::getStatus, 1, 2);
-        Long activeOrders = orderMapper.selectCount(activeWrapper);
-        data.put("activeOrders", activeOrders);
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        Map<String, Object> counts = orderMapper.selectDashboardOrderCounts(todayStart, todayStart.plusDays(1));
+        // JDBC 的 COUNT/SUM 数字类型不同，对外保持原 Long 指标契约。
+        counts.forEach((key, value) -> data.put(key, ((Number) value).longValue()));
+        Long activeOrders = (Long) data.get("activeOrders");
 
         LambdaQueryWrapper<Approval> pendingApprovalWrapper = new LambdaQueryWrapper<>();
-        pendingApprovalWrapper.eq(Approval::getStatus, "PENDING");
+        pendingApprovalWrapper.eq(Approval::getStatus, "pending");
         Long pendingApprovalCount = approvalMapper.selectCount(pendingApprovalWrapper);
         
         Long pendingCount = activeOrders + pendingApprovalCount;
         data.put("pendingCount", pendingCount);
 
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LambdaQueryWrapper<Order> todayWrapper = new LambdaQueryWrapper<>();
-        todayWrapper.ge(Order::getCreateTime, todayStart);
-        List<Order> todayOrders = orderMapper.selectList(todayWrapper);
-        int todayRevenue = todayOrders.stream().mapToInt(Order::getTotalPrice).sum();
+        Long todayRevenue = paymentTransactionMapper.selectNetMockAmount(todayStart, todayStart.plusDays(1));
         data.put("todayRevenue", todayRevenue);
-        
-        Long todayOrdersCount = orderMapper.selectCount(todayWrapper);
-        data.put("todayOrders", todayOrdersCount);
-
-        LambdaQueryWrapper<Order> pendingOrderWrapper = new LambdaQueryWrapper<>();
-        pendingOrderWrapper.eq(Order::getStatus, 0);
-        Long pendingOrders = orderMapper.selectCount(pendingOrderWrapper);
-        data.put("pendingOrders", pendingOrders);
 
         LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        LambdaQueryWrapper<Order> monthWrapper = new LambdaQueryWrapper<>();
-        monthWrapper.ge(Order::getCreateTime, monthStart);
-        List<Order> monthOrders = orderMapper.selectList(monthWrapper);
-        int monthRevenue = monthOrders.stream().mapToInt(Order::getTotalPrice).sum();
+        Long monthRevenue = paymentTransactionMapper.selectNetMockAmount(monthStart, monthStart.plusMonths(1));
         data.put("monthRevenue", monthRevenue);
 
-        LambdaQueryWrapper<Order> completedWrapper = new LambdaQueryWrapper<>();
-        completedWrapper.eq(Order::getStatus, 4);
-        Long completedOrders = orderMapper.selectCount(completedWrapper);
-        data.put("completedOrders", completedOrders);
-
         LambdaQueryWrapper<Volunteer> volunteerWrapper = new LambdaQueryWrapper<>();
+        volunteerWrapper.eq(Volunteer::getStatus, 1);
         Long volunteerCount = volunteerMapper.selectCount(volunteerWrapper);
         data.put("volunteerCount", volunteerCount);
 
         LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
+        userWrapper.eq(User::getStatus, 1);
         Long elderCount = userMapper.selectCount(userWrapper);
         data.put("elderCount", elderCount);
 
-        data.put("pointsIssued", 0);
+        data.put("pointsIssued", pointsRecordMapper.sumIssuedPoints());
 
         return data;
     }
@@ -101,7 +84,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
             LocalDateTime dayEnd = dayStart.plusDays(1);
 
             LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-            wrapper.between(Order::getCreateTime, dayStart, dayEnd);
+            wrapper.ge(Order::getCreateTime, dayStart).lt(Order::getCreateTime, dayEnd);
             Long count = orderMapper.selectCount(wrapper);
             trend.add(count.intValue());
         }
@@ -116,10 +99,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
             LocalDateTime dayStart = LocalDate.now().minusDays(i).atStartOfDay();
             LocalDateTime dayEnd = dayStart.plusDays(1);
 
-            LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-            wrapper.between(Order::getCreateTime, dayStart, dayEnd);
-            List<Order> orders = orderMapper.selectList(wrapper);
-            int amount = orders.stream().mapToInt(Order::getTotalPrice).sum();
+            int amount = Math.toIntExact(paymentTransactionMapper.selectNetMockAmount(dayStart, dayEnd));
             trend.add(amount);
         }
         return trend;

@@ -3,6 +3,8 @@ package com.me.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Volunteer;
 import com.me.entity.VolunteerPointsRecord;
+import com.me.exception.AccountNotFoundException;
+import com.me.exception.BaseException;
 import com.me.mapper.VolunteerMapper;
 import com.me.mapper.VolunteerPointsRecordMapper;
 import com.me.service.VolunteerPointsService;
@@ -41,7 +43,7 @@ public class VolunteerPointsServiceImpl implements VolunteerPointsService {
     public VolunteerPointsRecordVO getSummary(Long volunteerId) {
         Volunteer volunteer = volunteerMapper.selectById(volunteerId);
         if (volunteer == null) {
-            throw new RuntimeException("志愿者不存在");
+            throw new AccountNotFoundException("志愿者不存在");
         }
 
         LambdaQueryWrapper<VolunteerPointsRecord> wrapper = new LambdaQueryWrapper<>();
@@ -60,12 +62,12 @@ public class VolunteerPointsServiceImpl implements VolunteerPointsService {
     @Transactional(rollbackFor = Exception.class)
     public void addPoints(Long volunteerId, Integer points) {
         if (points == null || points <= 0) {
-            throw new RuntimeException("积分数量必须大于0");
+            throw new BaseException("积分数量必须大于0");
         }
 
         Volunteer volunteer = volunteerMapper.selectById(volunteerId);
         if (volunteer == null) {
-            throw new RuntimeException("志愿者不存在");
+            throw new AccountNotFoundException("志愿者不存在");
         }
 
         int currentPoints = volunteer.getPoints() != null ? volunteer.getPoints() : 0;

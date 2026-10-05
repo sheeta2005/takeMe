@@ -28,6 +28,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+// 历史演示测试不再默认访问开发库。
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "takeme.legacy.demo.tests", matches = "true")
 public class OrderStatusChangeMqTest {
 
     @Autowired

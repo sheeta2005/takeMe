@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -71,8 +73,9 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             return false;
         }
 
-        user.setPassword(passwordEncoder.encode(newPassword));
-        return this.updateById(user);
+        // 修改密码只写密码，不把旧资料中的启用状态回写。
+        return this.update(new LambdaUpdateWrapper<User>()
+                .eq(User::getId, userId).set(User::getPassword, passwordEncoder.encode(newPassword)));
     }
 
     @Override
@@ -134,8 +137,8 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             ossUtil.deleteFile(oldAvatar);
         }
 
-        user.setAvatar(avatarUrl);
-        this.updateById(user);
+        this.update(new LambdaUpdateWrapper<User>()
+                .eq(User::getId, userId).set(User::getAvatar, avatarUrl));
         
         log.info("User {} avatar updated: {}", userId, avatarUrl);
     }
@@ -152,8 +155,8 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             ossUtil.deleteFile(oldAvatar);
         }
 
-        user.setAvatar(null);
-        this.updateById(user);
+        this.update(new LambdaUpdateWrapper<User>()
+                .eq(User::getId, userId).set(User::getAvatar, null));
         
         log.info("User {} avatar deleted", userId);
     }
@@ -173,8 +176,9 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean logicalDeleteUser(Long userId) {
-        User user = this.getById(userId);
+        User user = baseMapper.selectForUpdate(userId);
         if (user == null) {
             return false;
         }
@@ -184,7 +188,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         user.setStatus(0);
         user.setRealName("已删除用户" + randomSuffix);
         user.setUsername("deleted_" + userId + "_" + randomSuffix);
-        user.setPhone("00000000000");
+        user.setPhone("D" + userId);
         user.setPassword("DELETED");
         user.setAvatar(null);
         user.setGender(0);
@@ -192,7 +196,9 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         user.setEmergencyName("sseehee");
         user.setEmergencyPhone("00000000000");
         
-        boolean success = this.updateById(user);
+        // 显式清空头像，避免 MyBatis 非空更新策略保留旧值。
+        boolean success = this.update(user, new LambdaUpdateWrapper<User>()
+                .eq(User::getId, userId).set(User::getAvatar, null));
         
         if (success) {
             log.info("用户 {} 已被逻辑删除，敏感字段已脱敏", userId);

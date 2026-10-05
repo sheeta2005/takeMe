@@ -86,11 +86,12 @@ public class CartController {
 
     @Operation(summary = "购买")
     @PostMapping("/checkout")
-    public Result<OrderVO> checkout(@RequestHeader("Authorization") String authHeader) {
+    public Result<OrderVO> checkout(@RequestHeader("Authorization") String authHeader,
+                                    @RequestHeader("Idempotency-Key") String requestId) {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
         
         try {
-            OrderVO orderVO = cartService.checkout(userId);
+            OrderVO orderVO = cartService.checkout(userId, requestId);
             return Result.success(orderVO);
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());

@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.dto.PaymentDTO;
 import com.me.entity.Order;
 import com.me.entity.PaymentTransaction;
+import com.me.exception.OrderBusinessException;
 import com.me.mapper.OrderMapper;
 import com.me.mapper.PaymentTransactionMapper;
-import com.me.mq.producer.MessageProducer;
-import com.me.redis.utils.RedisUtil;
 import com.me.service.PaymentService;
+import com.me.service.OrderService;
 import com.me.vo.PaymentResultVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,21 +26,20 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentTransactionMapper paymentTransactionMapper;
     private final OrderMapper orderMapper;
-    private final MessageProducer messageProducer;
-    private final RedisUtil redisUtil;
+    private final OrderService orderService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PaymentResultVO mockPayment(Long userId, PaymentDTO paymentDTO) {
         Long orderId = paymentDTO.getOrderId();
 
-        Order order = orderMapper.selectById(orderId);
+        Order order = orderMapper.selectForUpdate(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
-            throw new RuntimeException("订单不存在");
+            throw new OrderBusinessException("订单不存在");
         }
 
         if (order.getStatus() != 6) {
-            throw new RuntimeException("订单状态不允许支付，仅未支付订单可支付");
+            throw new OrderBusinessException("订单状态不允许支付，仅未支付订单可支付");
         }
 
         LambdaQueryWrapper<PaymentTransaction> wrapper = new LambdaQueryWrapper<>();
@@ -49,7 +48,7 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentTransaction existingTransaction = paymentTransactionMapper.selectOne(wrapper);
 
         if (existingTransaction != null) {
-            throw new RuntimeException("订单已有待支付流水，请勿重复支付");
+            throw new OrderBusinessException("订单已有待支付流水，请勿重复支付");
         }
 
         String transactionNo = generateTransactionNo();
@@ -74,7 +73,6 @@ public class PaymentServiceImpl implements PaymentService {
         order.setStatus(0);
         orderMapper.updateById(order);
 
-        redisUtil.deleteByPattern("order:detail:" + orderId);
 
         log.info("模拟支付成功: orderId={}, transactionNo={}, amount={}",
                 orderId, transactionNo, order.getTotalPrice());
@@ -93,36 +91,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrderWithRefund(Long userId, Long orderId) {
-        Order order = orderMapper.selectById(orderId);
-        if (order == null || !order.getUserId().equals(userId)) {
-            throw new RuntimeException("订单不存在");
-        }
-
-        if (order.getStatus() == 5) {
-            throw new RuntimeException("订单已取消");
-        }
-
-        LambdaQueryWrapper<PaymentTransaction> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PaymentTransaction::getOrderId, orderId);
-        wrapper.eq(PaymentTransaction::getPaymentStatus, 1);
-        PaymentTransaction transaction = paymentTransactionMapper.selectOne(wrapper);
-
-        if (transaction != null) {
-            transaction.setPaymentStatus(2);
-            transaction.setRefundTime(LocalDateTime.now());
-            transaction.setUpdateTime(LocalDateTime.now());
-            paymentTransactionMapper.updateById(transaction);
-
-            log.info("订单取消，流水退款: orderId={}, transactionNo={}",
-                    orderId, transaction.getTransactionNo());
-        }
-
-        order.setStatus(5);
-        orderMapper.updateById(order);
-
-        redisUtil.deleteByPattern("order:detail:" + orderId);
-
-        log.info("订单取消成功: orderId={}", orderId);
+        orderService.cancelOrder(userId, orderId);
     }
 
     private String generateTransactionNo() {

@@ -36,6 +36,8 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+// 历史 TTL 演示不属于新的业务链路，不默认访问开发库。
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "takeme.legacy.demo.tests", matches = "true")
 public class OrderTimeoutMqTest {
 
     @Autowired

@@ -331,15 +331,8 @@ const loadAvailableServices = async () => {
     })
     if (res.code === 200) {
       const services: any[] = []
-      const seenOrderIds = new Set<number>() // 用于去重：记录已处理的订单ID
 
       res.data?.records?.forEach((order: any) => {
-        // 如果该订单已处理过，跳过（避免同一订单的多个服务项目导致重复渲染）
-        if (seenOrderIds.has(order.id)) {
-          return
-        }
-        seenOrderIds.add(order.id)
-
         order.items?.forEach((item: any) => {
           if (!item.volunteerId && item.itemStatus === 0) {
             services.push({

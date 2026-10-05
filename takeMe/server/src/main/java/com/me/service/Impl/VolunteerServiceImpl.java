@@ -13,12 +13,15 @@ import com.me.mapper.ApprovalMapper;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
+import com.me.service.OrderService;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.util.OssUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -34,6 +37,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     private final OrderItemMapper orderItemMapper;
     private final ApprovalMapper approvalMapper;
     private final OssUtil ossUtil;
+    private final OrderService orderService;
 
 
     @Override
@@ -104,6 +108,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     }
     
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean register(UserRegisterDTO registerDTO) {
         // 检查用户名是否已存在
         Volunteer existingVolunteer = this.getByUsername(registerDTO.getUsername());
@@ -140,6 +145,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
             Approval approval = new Approval();
             approval.setType("register");
             approval.setApplicantId(volunteer.getId());
+            approval.setBusinessId(volunteer.getId());
             approval.setApplicantName(volunteer.getRealName());
             approval.setContent("志愿者注册申请");
             approval.setStatus("pending");
@@ -152,10 +158,13 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     }
     
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int releaseVolunteerServices(Long volunteerId) {
         if (volunteerId == null) {
             return 0;
         }
+        // 停用和接单共用志愿者行锁，避免释放过程中又接到新服务。
+        if (baseMapper.selectForUpdate(volunteerId) == null) return 0;
         
         // 查询该志愿者所有 itemStatus=1（已接单）或 2（服务中）的订单项
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
@@ -170,11 +179,10 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         
         int count = 0;
         for (OrderItem item : items) {
-            // 清空志愿者ID，设置为已放弃状态
-            item.setVolunteerId(null);
-            item.setItemStatus( 5); // 5=已放弃
-            orderItemMapper.updateById(item);
-            count++;
+            // 显式置空，并且只更新仍处于读取状态的服务项。
+            if (orderService.releaseAssignedItem(volunteerId, item.getId())) {
+                count++;
+            }
         }
         
         return count;
@@ -192,8 +200,9 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
             ossUtil.deleteFile(oldAvatar);
         }
 
-        volunteer.setAvatar(avatarUrl);
-        this.updateById(volunteer);
+        // 头像编辑不回写此前读取的积分、状态等并发字段。
+        this.update(new LambdaUpdateWrapper<Volunteer>()
+                .eq(Volunteer::getId, volunteerId).set(Volunteer::getAvatar, avatarUrl));
         
         log.info("Volunteer {} avatar updated: {}", volunteerId, avatarUrl);
     }
@@ -210,8 +219,8 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
             ossUtil.deleteFile(oldAvatar);
         }
 
-        volunteer.setAvatar(null);
-        this.updateById(volunteer);
+        this.update(new LambdaUpdateWrapper<Volunteer>()
+                .eq(Volunteer::getId, volunteerId).set(Volunteer::getAvatar, null));
         
         log.info("Volunteer {} avatar deleted", volunteerId);
     }
@@ -232,29 +241,26 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
 
     //志愿者逻辑删除
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean logicalDeleteVolunteer(Long volunteerId) {
-        Volunteer volunteer = this.getById(volunteerId);
+        Volunteer volunteer = baseMapper.selectForUpdate(volunteerId);
         if (volunteer == null) {
             return false;
         }
         
         String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         
-        volunteer.setStatus(0);
-        volunteer.setRealName("已删除志愿者" + randomSuffix);
-        volunteer.setUsername("deleted_" + volunteerId + "_" + randomSuffix);
-        volunteer.setPhone("00000000000");
-        volunteer.setPassword("sheeeeta");
-        volunteer.setAvatar(null);
-        volunteer.setGender(0);
-        volunteer.setAge(0);
-        volunteer.setAddress("西安邮电大学");
-        volunteer.setEmergencyName("sshheettaa");
-        volunteer.setEmergencyPhone("00000000000");
-        volunteer.setServiceDays(null);
-        volunteer.setWorkStatus(null);
-        
-        this.updateById(volunteer);
+        // 脱敏手机号按主键唯一，显式清空敏感字段且不覆盖服务积分。
+        this.update(new LambdaUpdateWrapper<Volunteer>().eq(Volunteer::getId, volunteerId)
+                .set(Volunteer::getStatus, 0)
+                .set(Volunteer::getRealName, "已删除志愿者" + randomSuffix)
+                .set(Volunteer::getUsername, "deleted_" + volunteerId + "_" + randomSuffix)
+                .set(Volunteer::getPhone, "D" + volunteerId)
+                .set(Volunteer::getPassword, "DELETED")
+                .set(Volunteer::getAvatar, null).set(Volunteer::getGender, null)
+                .set(Volunteer::getAge, null).set(Volunteer::getAddress, null)
+                .set(Volunteer::getEmergencyName, null).set(Volunteer::getEmergencyPhone, null)
+                .set(Volunteer::getServiceDays, null).set(Volunteer::getWorkStatus, 0));
         
         int releasedCount = this.releaseVolunteerServices(volunteerId);
         

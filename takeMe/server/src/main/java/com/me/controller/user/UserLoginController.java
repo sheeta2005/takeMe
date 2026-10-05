@@ -6,7 +6,6 @@ import com.me.dto.UserRegisterDTO;
 import com.me.entity.User;
 import com.me.redis.annotation.RateLimit;
 import com.me.result.Result;
-import com.me.service.OnlineUserService;
 import com.me.service.UserService;
 import com.me.utils.JwtUtil;
 import com.me.vo.LoginVO;
@@ -26,7 +25,6 @@ public class UserLoginController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
-    private final OnlineUserService onlineUserService;
 
     @Operation(summary = "登入")
     @RateLimit(prefix = "rate:user:login", count = 10, period = 60)
@@ -36,7 +34,6 @@ public class UserLoginController {
         if (user == null) {
             return Result.error("账号或密码错误");
         }
-        onlineUserService.userOnline(user.getId(), 2);
         LoginVO loginVO = jwtUtil.buildLoginVO(
                 user.getId(),
                 2,
@@ -77,11 +74,6 @@ public class UserLoginController {
     @Operation(summary = "登出")
     @PostMapping("/logout")
     public Result<Void> logout() {
-        Long userId = com.me.context.BaseContext.getLoginId();
-        Integer role = com.me.context.BaseContext.getLoginType();
-        if (userId != null) {
-            onlineUserService.userOffline(userId, role);
-        }
         return Result.success();
     }
 }

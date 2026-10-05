@@ -45,11 +45,13 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getCartList, checkoutCart } from '@/api/order'
 import { useCartStore } from '@/stores/cart'
+import { newOrderRequestId } from '@/utils/orderRequest'
 
 const router = useRouter()
 const cartStore = useCartStore()
 const loading = ref(false)
 const submitting = ref(false)
+const requestId = newOrderRequestId()
 
 const cartList = ref<any[]>([])
 
@@ -77,6 +79,7 @@ const loadCart = async () => {
 }
 
 const submitOrder = async () => {
+  if (submitting.value) return
   if (cartList.value.length === 0) {
     ElMessage.warning('购物车为空')
     return
@@ -84,7 +87,7 @@ const submitOrder = async () => {
 
   submitting.value = true
   try {
-    const res = await checkoutCart()
+    const res = await checkoutCart(requestId)
 
     if (res.code === 200 && res.data) {
       const orderId = res.data.id

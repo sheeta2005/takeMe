@@ -16,6 +16,7 @@ public interface OrderService {
     OrderVO getOrderDetail(Long userId, Long orderId);
 
     OrderVO createOrder(Long userId, OrderDTO orderDTO, List<OrderItemDTO> itemDTOList);
+    boolean releaseAssignedItem(Long volunteerId, Long orderItemId);
 
     void cancelOrder(Long userId, Long orderId);
 
@@ -26,6 +27,14 @@ public interface OrderService {
     void userStartService(Long userId, Long orderItemId);
 
     void cancelOrderItem(Long userId, Long orderItemId);
+
+    void expireUnpaidOrder(Long orderId);
+
+    void expirePendingItems(Long orderId);
+
+    void expirePendingItem(Long orderItemId);
+
+    void expireAcceptedItem(Long orderItemId, Long volunteerId);
 
     void volunteerStartService(Long volunteerId, Long orderItemId);
 

@@ -1,3 +1,4 @@
 com.me.redis.config.RedisConfig
+com.me.redis.utils.RedisUtil
 com.me.redis.aspect.RedisCacheAspect
-com.me.redis.aspect.RedisLockAspect
+com.me.redis.aspect.RateLimitAspect

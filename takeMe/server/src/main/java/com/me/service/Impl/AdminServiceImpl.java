@@ -3,7 +3,7 @@ package com.me.service.Impl;
 import com.me.dto.LoginDTO;
 import com.me.entity.Admin;
 import com.me.mapper.AdminMapper;
-import com.me.redis.annotation.RedisCache;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.me.service.AdminService;
 import com.me.util.OssUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -35,7 +35,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     }
 
     @Override
-    @RedisCache(prefix = "admin:info", expire = 120, nullExpire = 2)
+    // 管理员资料读取量低，直接查库可及时反映修改结果。
     public Admin getAdminInfo(Long adminId) {
         Admin admin = this.getById(adminId);
         if (admin != null) {
@@ -65,8 +65,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
             ossUtil.deleteFile(oldAvatar);
         }
 
-        admin.setAvatar(avatarUrl);
-        this.updateById(admin);
+        this.update(new LambdaUpdateWrapper<Admin>()
+                .eq(Admin::getId, adminId).set(Admin::getAvatar, avatarUrl));
         
         log.info("Admin {} avatar updated: {}", adminId, avatarUrl);
     }
@@ -83,8 +83,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
             ossUtil.deleteFile(oldAvatar);
         }
 
-        admin.setAvatar(null);
-        this.updateById(admin);
+        this.update(new LambdaUpdateWrapper<Admin>()
+                .eq(Admin::getId, adminId).set(Admin::getAvatar, null));
         
         log.info("Admin {} avatar deleted", adminId);
     }

@@ -10,7 +10,7 @@ import com.me.mapper.ApprovalMapper;
 import com.me.mapper.VolunteerLeaveMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.mq.config.RabbitMQConfig;
-import com.me.mq.producer.MessageProducer;
+import com.me.service.OutboxService;
 import com.me.service.MessageService;
 import com.me.service.VolunteerLeaveService;
 import com.me.vo.VolunteerLeaveVO;
@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,7 +33,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
     private final ApprovalMapper approvalMapper;
     private final VolunteerMapper volunteerMapper;
     private final MessageService messageService;
-    private final MessageProducer messageProducer;
+    private final OutboxService outboxService;
 
     @Override
     public List<VolunteerLeaveVO> getListByVolunteerId(Long volunteerId) {
@@ -49,6 +50,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void submit(VolunteerLeave leave) {
         leave.setStatus((byte) 0);
         leave.setCreateTime(LocalDateTime.now());
@@ -60,6 +62,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
         Approval approval = new Approval();
         approval.setType("leave");
         approval.setApplicantId(leave.getVolunteerId());
+        approval.setBusinessId(leave.getId());
         approval.setApplicantName(applicantName);
         approval.setContent("请假类型：" + (leave.getType() == 0 ? "事假" : "病假") +
                 "，时间：" + leave.getStartTime() + " 至 " + leave.getEndTime() +
@@ -80,17 +83,14 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
             .submitTime(LocalDateTime.now())
             .build();
 
-        try {
-            messageProducer.sendMessage(
+        // 请假、审批记录及提交事件必须在同一事务内登记。
+        outboxService.enqueue(
                 RabbitMQConfig.APPROVAL_SUBMIT_FANOUT_EXCHANGE,
                 "",
                 submitMessage
-            );
-            log.info("请假申请提交消息发送成功: approvalId={}, applicantId={}", 
+        );
+        log.info("请假申请提交消息已登记: approvalId={}, applicantId={}",
                 approval.getId(), leave.getVolunteerId());
-        } catch (Exception e) {
-            log.error("请假申请提交消息发送失败: approvalId={}", approval.getId(), e);
-        }
     }
 
     private void sendMessage(Long receiverId, Integer receiverType, Integer type, 

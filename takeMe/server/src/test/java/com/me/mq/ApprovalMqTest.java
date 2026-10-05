@@ -27,6 +27,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+// 历史演示测试会访问开发库，默认不执行；可靠性回归使用随机隔离库和虚拟主机。
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "takeme.legacy.demo.tests", matches = "true")
 public class ApprovalMqTest {
 
     @Autowired
@@ -105,7 +107,7 @@ public class ApprovalMqTest {
                 .approveTime(LocalDateTime.now())
                 .build();
 
-        String routingKey = RabbitMQConfig.APPROVAL_RESULT_ROUTING_KEY_PREFIX + testVolunteerId;
+        String routingKey = RabbitMQConfig.APPROVAL_RESULT_ROUTING_KEY;
         messageProducer.sendMessage(
                 RabbitMQConfig.APPROVAL_RESULT_DIRECT_EXCHANGE,
                 routingKey,

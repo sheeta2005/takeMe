@@ -8,22 +8,22 @@ import com.me.dto.MessageDTO;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Message;
 import com.me.mapper.MessageMapper;
-import com.me.redis.utils.RedisUtil;
 import com.me.service.MessageService;
-import com.me.service.UserService;
-import com.me.service.VolunteerService;
+import com.me.service.OutboxService;
+import com.me.mq.config.RabbitMQConfig;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.me.vo.MessageVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.nio.charset.StandardCharsets;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,12 +32,7 @@ import java.util.stream.Collectors;
 public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> implements MessageService {
 
     private final MessageMapper messageMapper;
-    private final UserService userService;
-    private final VolunteerService volunteerService;
-    private final RedisUtil redisUtil;
-
-    private static final String TASK_PROGRESS_PREFIX = "message:task:";
-    private static final int BATCH_SIZE = 500;
+    private final OutboxService outboxService;
 
     @Override
     public IPage<MessageVO> list(Long receiverId, Integer receiverType, Integer type, Integer isRead, PageResultDTO pageResultDTO) {
@@ -76,13 +71,11 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     }
 
     @Override
-    public boolean markAsRead(Long messageId, Long receiverId) {
-        Message message = this.getById(messageId);
-        if (message == null || !message.getReceiverId().equals(receiverId)) {
-            return false;
-        }
-        message.setIsRead(1);
-        return this.updateById(message);
+    public boolean markAsRead(Long messageId, Integer receiverType, Long receiverId) {
+        // 不同角色的数字 ID 可能相同，必须同时校验角色与账号。
+        return this.update(new LambdaUpdateWrapper<Message>()
+                .eq(Message::getId, messageId).eq(Message::getReceiverType, receiverType)
+                .eq(Message::getReceiverId, receiverId).set(Message::getIsRead, 1));
     }
 
     @Override
@@ -109,6 +102,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void sendMessage(Message message) {
         if (message.getCreateTime() == null) {
             message.setCreateTime(LocalDateTime.now());
@@ -118,10 +112,29 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         }
         
         if (message.getReceiverId() == null && message.getReceiverType() != null) {
-            sendToAllUsersAsync(message.getReceiverType(), message);
+            if (message.getReceiverType() != 1 && message.getReceiverType() != 2) {
+                throw new IllegalArgumentException("群发接收者类型无效");
+            }
+            // 群发和订单通知复用可靠消息链路，事务提交后再分批写入。
+            outboxService.enqueue(RabbitMQConfig.BROADCAST_EXCHANGE, "broadcast", message);
         } else {
             this.save(message);
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void sendEventMessage(Message message, String eventId) {
+        if (eventId == null || eventId.isBlank()) {
+            // 兼容已有队列中不含事件 ID 的消息，使用稳定的业务内容生成标识。
+            String identity = message.getRelatedOrderId() + "|" + message.getTitle() + "|"
+                    + message.getContent() + "|" + message.getCreateTime();
+            eventId = "legacy:" + UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8));
+        }
+        message.setEventId(eventId);
+        if (message.getCreateTime() == null) message.setCreateTime(LocalDateTime.now());
+        if (message.getIsRead() == null) message.setIsRead(0);
+        messageMapper.insertEventNotification(message);
     }
 
     @Override
@@ -158,6 +171,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void sendBatchMessage(List<MessageDTO> messages) {
         if (messages == null || messages.isEmpty()) {
             return;
@@ -179,7 +193,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
             return message;
         }).collect(Collectors.toList());
         
-        this.saveBatch(entityList);
+        entityList.forEach(this::sendMessage);
     }
 
     @Override
@@ -214,79 +228,4 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         return stats;
     }
 
-    @Override
-    @Async("messageTaskExecutor")
-    public void sendToAllUsersAsync(Integer receiverType, Message template) {
-        String taskId = UUID.randomUUID().toString().replace("-", "");
-        String taskKey = TASK_PROGRESS_PREFIX + taskId;
-        
-        try {
-            log.info("开始异步群发消息任务: {}, receiverType: {}", taskId, receiverType);
-            
-            int pageNum = 1;
-            int totalProcessed = 0;
-            int totalPages = 0;
-            
-            while (true) {
-                List<Long> userIds;
-                if (receiverType == 1) {
-                    userIds = volunteerService.getAllVolunteerIds(pageNum, BATCH_SIZE);
-                } else if (receiverType == 2) {
-                    userIds = userService.getAllUserIds(pageNum, BATCH_SIZE);
-                } else {
-                    log.warn("不支持的receiverType: {}", receiverType);
-                    break;
-                }
-                
-                if (userIds == null || userIds.isEmpty()) {
-                    break;
-                }
-                
-                totalPages = pageNum;
-                
-                List<Message> messages = userIds.stream().map(userId -> {
-                    Message msg = new Message();
-                    msg.setReceiverId(userId);
-                    msg.setReceiverType(receiverType);
-                    msg.setType(template.getType());
-                    msg.setTitle(template.getTitle());
-                    msg.setContent(template.getContent());
-                    msg.setRelatedOrderId(template.getRelatedOrderId());
-                    msg.setRelatedUserId(template.getRelatedUserId());
-                    msg.setRelatedVolunteerId(template.getRelatedVolunteerId());
-                    msg.setRelatedUrl(template.getRelatedUrl());
-                    msg.setIsRead(0);
-                    msg.setCreateTime(LocalDateTime.now());
-                    return msg;
-                }).collect(Collectors.toList());
-                
-                this.saveBatch(messages, BATCH_SIZE);
-                
-                totalProcessed += messages.size();
-                
-                redisUtil.hSet(taskKey, "processed", totalProcessed);
-                
-                log.info("任务 {} 进度: 第{}批, 本批{}条, 累计{}条", 
-                        taskId, pageNum, messages.size(), totalProcessed);
-                
-                pageNum++;
-                
-                if (userIds.size() < BATCH_SIZE) {
-                    break;
-                }
-            }
-            
-            redisUtil.hSet(taskKey, "total", totalProcessed);
-            redisUtil.hSet(taskKey, "status", "SUCCESS");
-            redisUtil.expire(taskKey, 24, TimeUnit.HOURS);
-            
-            log.info("消息群发任务完成: {}, 总计{}条", taskId, totalProcessed);
-            
-        } catch (Exception e) {
-            log.error("消息群发任务失败: {}", taskId, e);
-            redisUtil.hSet(taskKey, "status", "FAILED");
-            redisUtil.hSet(taskKey, "error", e.getMessage());
-            redisUtil.expire(taskKey, 24, TimeUnit.HOURS);
-        }
-    }
 }

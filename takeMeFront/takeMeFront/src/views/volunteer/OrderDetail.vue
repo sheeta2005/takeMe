@@ -26,15 +26,6 @@
           <el-descriptions-item label="下单时间">
             {{ formatTime(order.createTime) }}
           </el-descriptions-item>
-          <el-descriptions-item label="服务时间" v-if="order.serviceDate">
-            {{ order.serviceDate }} {{ order.serviceTime || '' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="服务地址" v-if="order.address">
-            <div class="address-content">
-              <el-icon><Location /></el-icon>
-              {{ order.address }}
-            </div>
-          </el-descriptions-item>
           <el-descriptions-item label="联系人" v-if="order.contactName">
             {{ order.contactName }}
           </el-descriptions-item>
@@ -87,6 +78,22 @@
               <el-tag type="primary" size="small">×{{ row.quantity }}</el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="预约时间" min-width="160">
+            <template #default="{ row }">{{ row.serviceDate }} {{ row.serviceTime }}</template>
+          </el-table-column>
+          <el-table-column prop="address" label="服务地址" min-width="160" />
+          <el-table-column label="操作" min-width="180">
+            <template #default="{ row }">
+              <el-button v-if="row.itemStatus === 2" type="success" size="small"
+                :loading="completing" @click="handleCompleteOrder(row.id)">
+                <el-icon><CircleCheck /></el-icon>完成服务
+              </el-button>
+              <el-button v-if="row.itemStatus === 1 || row.itemStatus === 2" type="danger" size="small"
+                :loading="abandoning" @click="handleAbandonOrder(row.id)">
+                <el-icon><CloseBold /></el-icon>放弃服务
+              </el-button>
+            </template>
+          </el-table-column>
           <el-table-column label="小计" width="120" align="right">
             <template #default="{ row }">
               <span class="subtotal-cell">¥{{ row.itemPrice }}</span>
@@ -123,17 +130,6 @@
           </template>
         </el-result>
       </el-card>
-
-      <div class="action-section" v-if="order.status === 2">
-        <el-button type="success" size="large" @click="handleCompleteOrder" :loading="completing">
-          <el-icon><CircleCheck /></el-icon>
-          完成服务
-        </el-button>
-        <el-button type="danger" size="large" @click="handleAbandonOrder" :loading="abandoning">
-          <el-icon><CloseBold /></el-icon>
-          放弃订单
-        </el-button>
-      </div>
 
       <div class="back-section">
         <el-button size="large" @click="back">
@@ -336,7 +332,7 @@ const showServiceDetail = (service: any) => {
   serviceDetailVisible.value = true
 }
 
-const handleCompleteOrder = async () => {
+const handleCompleteOrder = async (orderItemId: number) => {
   if (!order.value?.id) return
 
   try {
@@ -347,8 +343,8 @@ const handleCompleteOrder = async () => {
     })
 
     completing.value = true
-    await apiCompleteOrder(order.value.id)
-    ElMessage.success('订单已完成，积分已发放')
+    await apiCompleteOrder(orderItemId)
+    ElMessage.success('服务项已完成，积分已发放')
     await loadOrderDetail(order.value.id)
     await volunteerStore.fetchVolunteerInfo()
   } catch (error: any) {
@@ -360,7 +356,7 @@ const handleCompleteOrder = async () => {
   }
 }
 
-const handleAbandonOrder = async () => {
+const handleAbandonOrder = async (orderItemId: number) => {
   if (!order.value?.id) return
 
   try {
@@ -371,8 +367,8 @@ const handleAbandonOrder = async () => {
     })
 
     abandoning.value = true
-    await apiAbandonOrder(order.value.id)
-    ElMessage.warning('订单已放弃')
+    await apiAbandonOrder(orderItemId)
+    ElMessage.warning('服务项已放弃')
     await loadOrderDetail(order.value.id)
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -645,4 +641,3 @@ const back = () => {
   background-color: #fafafa;
 }
 </style>
-

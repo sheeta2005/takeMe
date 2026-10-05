@@ -7,47 +7,67 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.serializer.SerializationException;
 
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Aspect
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "middleware.redis.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnExpression("${middleware.enabled:true} && ${middleware.redis.enabled:true}")
 public class RedisCacheAspect {
 
     private final RedisUtil redisUtil;
+    private static final Object MISS = new Object();
+    private static final Object NULL_VALUE = new Object();
 
     @Around("@annotation(redisCache)")
     public Object around(ProceedingJoinPoint joinPoint, RedisCache redisCache) throws Throwable {
         String cacheKey = buildCacheKey(joinPoint, redisCache.prefix(), redisCache.keyArgs());
 
-        if (redisUtil.isNullCached(cacheKey)) {
-            log.debug("缓存穿透防护: 空值缓存命中 key={}", cacheKey);
-            return null;
+        Object cached = read(cacheKey);
+        if (cached != MISS) return cached == NULL_VALUE ? null : cached;
+        // 部署为单 JVM，固定数量锁条带合并热点回源，并与目录缓存失效协调。
+        synchronized (redisUtil.cacheMonitor(cacheKey)) {
+            // 等待者再次查缓存，避免所有线程排队后各自查询数据库。
+            cached = read(cacheKey);
+            if (cached != MISS) return cached == NULL_VALUE ? null : cached;
+            Object result = joinPoint.proceed();
+            try {
+                if (result == null) {
+                    redisUtil.setNull(cacheKey, jitterSeconds(redisCache.nullExpire()), TimeUnit.SECONDS);
+                } else {
+                    redisUtil.set(cacheKey, result, jitterSeconds(redisCache.expire()), TimeUnit.SECONDS);
+                }
+            } catch (DataAccessException | SerializationException ex) {
+                // 仅可重建的查询缓存降级；数据库异常和安全限流不在此处吞掉。
+                log.warn("查询缓存写入失败，保留数据库结果 key={}, 原因={}", cacheKey, ex.getClass().getSimpleName());
+            }
+            return result;
         }
+    }
 
-        Object cached = redisUtil.get(cacheKey);
-        if (cached != null) {
-            log.debug("缓存命中 key={}", cacheKey);
-            return cached;
+    private Object read(String key) {
+        try {
+            Object value = redisUtil.get(key);
+            if (value != null) return value;
+            return redisUtil.isNullCached(key) ? NULL_VALUE : MISS;
+        } catch (DataAccessException | SerializationException ex) {
+            log.warn("查询缓存读取失败，回源数据库 key={}, 原因={}", key, ex.getClass().getSimpleName());
+            return MISS;
         }
+    }
 
-        Object result = joinPoint.proceed();
-
-        if (result == null) {
-            redisUtil.setNull(cacheKey, redisCache.nullExpire(), TimeUnit.MINUTES);
-            log.debug("空值缓存设置 key={}, expire={}min", cacheKey, redisCache.nullExpire());
-            return null;
-        }
-
-        redisUtil.set(cacheKey, result, redisCache.expire(), TimeUnit.MINUTES);
-        log.debug("缓存写入成功 key={}, expire={}min", cacheKey, redisCache.expire());
-
-        return result;
+    private long jitterSeconds(long minutes) {
+        // 注解仍以分钟配置；实际 TTL 加减 10%，避免一批键同时到期。
+        long seconds = Math.max(1, TimeUnit.MINUTES.toSeconds(minutes));
+        long spread = seconds / 10;
+        return Math.max(1, seconds + ThreadLocalRandom.current().nextLong(-spread, spread + 1));
     }
 
     private String buildCacheKey(ProceedingJoinPoint joinPoint, String prefix, int[] keyArgs) {

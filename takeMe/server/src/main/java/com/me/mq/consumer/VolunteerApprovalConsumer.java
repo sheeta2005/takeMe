@@ -9,12 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true}")
 @RequiredArgsConstructor
 public class VolunteerApprovalConsumer {
 
@@ -29,23 +29,17 @@ public class VolunteerApprovalConsumer {
         TYPE_TEXT_MAP.put("register", "注册");
     }
 
-    @RabbitListener(queues = "#{@volunteerApprovalQueue}")
+    @RabbitListener(queues = "#{@volunteerApprovalQueue}", containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleVolunteerApprovalResult(ApprovalResultMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
         try {
             if (message == null) {
                 log.warn("收到空消息，跳过处理");
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
             Long volunteerId = message.getApplicantId();
             if (volunteerId == null) {
                 log.warn("志愿者ID为空，跳过通知: approvalId={}", message.getApprovalId());
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
@@ -69,22 +63,13 @@ public class VolunteerApprovalConsumer {
             notification.setRelatedOrderId(message.getApprovalId());
             notification.setCreateTime(message.getApproveTime());
 
-            messageService.sendMessage(notification);
+            messageService.sendEventMessage(notification, msg == null ? null : msg.getMessageProperties().getMessageId());
 
-            if (msg != null && channel != null) {
-                channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-            }
             log.info("志愿者审批结果通知发送成功: volunteerId={}, approvalId={}, result={}",
                     volunteerId, message.getApprovalId(), message.getResult());
         } catch (Exception e) {
             log.error("志愿者审批结果通知处理失败: approvalId={}", message != null ? message.getApprovalId() : "unknown", e);
-            try {
-                if (msg != null && channel != null) {
-                    channel.basicNack(msg.getMessageProperties().getDeliveryTag(), false, true);
-                }
-            } catch (IOException ioException) {
-                log.error("NACK失败", ioException);
-            }
+            throw new IllegalStateException("审批结果通知处理失败", e);
         }
     }
 }

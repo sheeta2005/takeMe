@@ -18,13 +18,9 @@
             <span class="label">服务项目：</span>
             <span class="value">{{ itemsCount }} 项</span>
           </div>
-          <div class="info-row full-width">
-            <span class="label">服务时间：</span>
-            <span class="value">{{ orderInfo.serviceDate }} {{ orderInfo.serviceTime }}</span>
-          </div>
-          <div class="info-row full-width" v-if="orderInfo.address">
-            <span class="label">服务地址：</span>
-            <span class="value">{{ orderInfo.address }}</span>
+          <div class="info-row full-width" v-for="item in orderInfo.items || []" :key="item.id">
+            <span class="label">{{ item.serviceName }}：</span>
+            <span class="value">{{ item.serviceDate }} {{ item.serviceTime }} · {{ item.address }}</span>
           </div>
         </div>
       </div>

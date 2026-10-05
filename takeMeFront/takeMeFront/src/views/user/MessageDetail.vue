@@ -43,7 +43,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getUserMessageById, markMessageRead } from '@/api/user'
+import { getUserMessageDetail as getUserMessageById, markMessageRead } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()

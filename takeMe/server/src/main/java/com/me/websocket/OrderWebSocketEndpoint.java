@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.me.dto.OrderStatusChangeWsMessage;
 import com.me.dto.WebSocketMessage;
 import com.me.util.SpringContextUtil;
+import com.me.utils.JwtUtil;
+import com.me.service.AccountAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 public class OrderWebSocketEndpoint {
 
     private static ObjectMapper objectMapper;
+    private boolean authenticated;
 
     private static ObjectMapper getObjectMapper() {
         if (objectMapper == null) {
@@ -29,6 +32,34 @@ public class OrderWebSocketEndpoint {
 
     @OnOpen
     public void onOpen(Session session, @PathParam("userType") String userType, @PathParam("userId") String userId) {
+        try {
+            String token = session.getRequestParameterMap().getOrDefault("token", java.util.List.of())
+                    .stream().findFirst().orElse(null);
+            JwtUtil jwt = SpringContextUtil.getBean(JwtUtil.class);
+            Integer role = switch (userType.toLowerCase()) {
+                case "admin" -> 0;
+                case "volunteer" -> 1;
+                case "user" -> 2;
+                default -> null;
+            };
+            if (token == null || role == null
+                    || !role.equals(jwt.getRole(token))
+                    || !userId.equals(String.valueOf(jwt.getUserId(token)))
+                    || !SpringContextUtil.getBean(AccountAccessService.class)
+                        .isActive(jwt.getUserId(token), role)) {
+                session.close();
+                return;
+            }
+        } catch (Exception e) {
+            log.warn("WebSocket鉴权失败: userType={}, userId={}", userType, userId);
+            try {
+                session.close();
+            } catch (IOException closeError) {
+                log.error("关闭WebSocket连接失败", closeError);
+            }
+            return;
+        }
+        authenticated = true;
         WebSocketSessionManager sessionManager = SpringContextUtil.getBean(WebSocketSessionManager.class);
         
         switch (userType.toLowerCase()) {
@@ -52,39 +83,43 @@ public class OrderWebSocketEndpoint {
     }
 
     @OnClose
-    public void onClose(@PathParam("userType") String userType, @PathParam("userId") String userId) {
+    public void onClose(Session session, @PathParam("userType") String userType, @PathParam("userId") String userId) {
+        if (!authenticated) return;
         WebSocketSessionManager sessionManager = SpringContextUtil.getBean(WebSocketSessionManager.class);
         
         switch (userType.toLowerCase()) {
             case "user":
-                sessionManager.removeUserSession(userId);
+                sessionManager.removeUserSession(userId, session);
                 break;
             case "volunteer":
-                sessionManager.removeVolunteerSession(userId);
+                sessionManager.removeVolunteerSession(userId, session);
                 break;
             case "admin":
-                sessionManager.removeAdminSession(userId);
+                sessionManager.removeAdminSession(userId, session);
                 break;
+        }
+    }
+
+    public static void sendMessageReminder(Integer role, Long receiverId, com.me.entity.Message message) {
+        try {
+            WebSocketSessionManager manager = SpringContextUtil.getBean(WebSocketSessionManager.class);
+            Session session = role == 2 ? manager.getUserSession(receiverId.toString())
+                    : manager.getVolunteerSession(receiverId.toString());
+            if (session == null || !session.isOpen()) return;
+            // 群发落库后只推送提醒，离线用户仍从消息列表获取完整内容。
+            WebSocketMessage reminder = WebSocketMessage.builder().type("NEW_MESSAGE")
+                    .data(java.util.Map.of("title", message.getTitle(), "content", message.getContent()))
+                    .timestamp(LocalDateTime.now()).build();
+            session.getAsyncRemote().sendText(getObjectMapper().writeValueAsString(reminder));
+        } catch (Exception error) {
+            log.debug("消息提醒推送失败，不影响已持久化通知: receiverId={}", receiverId, error);
         }
     }
 
     @OnError
     public void onError(Session session, Throwable error, @PathParam("userType") String userType, @PathParam("userId") String userId) {
         log.error("WebSocket错误: userType={}, userId={}", userType, userId, error);
-
-        WebSocketSessionManager sessionManager = SpringContextUtil.getBean(WebSocketSessionManager.class);
-        
-        switch (userType.toLowerCase()) {
-            case "user":
-                sessionManager.removeUserSession(userId);
-                break;
-            case "volunteer":
-                sessionManager.removeVolunteerSession(userId);
-                break;
-            case "admin":
-                sessionManager.removeAdminSession(userId);
-                break;
-        }
+        onClose(session, userType, userId);
     }
 
     public static void sendMessageToUser(String userId, OrderStatusChangeWsMessage message) {
@@ -102,7 +137,7 @@ public class OrderWebSocketEndpoint {
                 session.getBasicRemote().sendText(jsonMessage);
                 log.info("WebSocket消息发送成功: userId={}, orderId={}", userId, message.getOrderId());
             } else {
-                log.warn("用户WebSocket连接不存在或已关闭: userId={}", userId);
+                log.debug("用户当前离线，通知已保存在消息列表: userId={}", userId);
             }
         } catch (Exception e) {
             log.error("发送WebSocket消息失败: userId={}", userId, e);
@@ -124,7 +159,7 @@ public class OrderWebSocketEndpoint {
                 session.getBasicRemote().sendText(jsonMessage);
                 log.info("WebSocket消息发送成功: volunteerId={}, orderId={}", volunteerId, message.getOrderId());
             } else {
-                log.warn("志愿者WebSocket连接不存在或已关闭: volunteerId={}", volunteerId);
+                log.debug("志愿者当前离线，通知已保存在消息列表: volunteerId={}", volunteerId);
             }
         } catch (Exception e) {
             log.error("发送WebSocket消息失败: volunteerId={}", volunteerId, e);

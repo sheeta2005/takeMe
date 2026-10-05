@@ -27,6 +27,10 @@ public class ServiceController {
     @Operation(summary = "根据服务类型获取可用服务列表")
     @GetMapping("/list")
     public Result<List<ServicePackage>> getServiceList(@RequestParam Integer type) {
+        // 目录只有五种业务类型，拒绝无效类型，避免产生无限空缓存键。
+        if (type < 0 || type > 4) {
+            return Result.error(400, "服务类型必须在0到4之间");
+        }
         List<ServicePackage> list = servicePackageService.getAvailableServiceByType(type);
         return Result.success(list);
     }

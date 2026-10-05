@@ -7,14 +7,12 @@ import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -23,28 +21,11 @@ public class OrderAutoCompleteTask {
 
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
-    private final StringRedisTemplate redisTemplate;
-
-    private static final String LOCK_KEY = "order:auto:complete:lock";
-    private static final long LOCK_EXPIRE_TIME = 5;
 
     @Scheduled(cron = "0 0 2 * * ?")
     @Transactional(rollbackFor = Exception.class)
     public void autoCompleteOrders() {
-        String lockValue = String.valueOf(System.currentTimeMillis());
-
-        Boolean isLocked = redisTemplate.opsForValue().setIfAbsent(
-                LOCK_KEY,
-                lockValue,
-                LOCK_EXPIRE_TIME,
-                TimeUnit.MINUTES
-        );
-
-        if (Boolean.FALSE.equals(isLocked)) {
-            log.warn("定时任务正在执行，跳过本次调度");
-            return;
-        }
-
+        // 单实例调度依靠订单行锁和状态条件，不需要额外的分布式锁。
         try {
             log.info("开始执行订单自动确认完成定时任务");
 
@@ -52,20 +33,31 @@ public class OrderAutoCompleteTask {
 
             LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(Order::getStatus, 3);
-            wrapper.le(Order::getCompleteTime, yesterday);
+            wrapper.and(w -> w.le(Order::getCompleteTime, yesterday)
+                    .or()
+                    .isNull(Order::getCompleteTime)
+                    .le(Order::getCreateTime, yesterday));
 
             List<Order> pendingOrders = orderMapper.selectList(wrapper);
 
             for (Order order : pendingOrders) {
-                LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
-                itemWrapper.eq(OrderItem::getOrderId, order.getId());
-                itemWrapper.in(OrderItem::getItemStatus, 3);
+                // 与用户确认/取消共用订单行锁，防止调度基于旧状态写回。
+                order = orderMapper.selectForUpdate(order.getId());
+                if (order == null || order.getStatus() != 3) {
+                    continue;
+                }
+                List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(order.getId());
+                if (items.stream().noneMatch(item -> item.getItemStatus() == 3)
+                        || items.stream().anyMatch(item -> item.getItemStatus() < 3)) {
+                    continue;
+                }
 
-                List<OrderItem> pendingItems = orderItemMapper.selectList(itemWrapper);
-
-                for (OrderItem item : pendingItems) {
-                    item.setItemStatus(4);
-                    orderItemMapper.updateById(item);
+                for (OrderItem item : items) {
+                    if (item.getItemStatus() == 3) {
+                        if (orderItemMapper.changeStatus(item.getId(), 3, 4) != 1) {
+                            throw new IllegalStateException("自动确认时服务状态已变化");
+                        }
+                    }
                 }
 
                 order.setStatus(4);
@@ -79,11 +71,7 @@ public class OrderAutoCompleteTask {
 
         } catch (Exception e) {
             log.error("订单自动确认完成定时任务执行失败", e);
-        } finally {
-            String currentLockValue = redisTemplate.opsForValue().get(LOCK_KEY);
-            if (lockValue.equals(currentLockValue)) {
-                redisTemplate.delete(LOCK_KEY);
-            }
+            throw new IllegalStateException("订单自动确认失败", e);
         }
     }
 }

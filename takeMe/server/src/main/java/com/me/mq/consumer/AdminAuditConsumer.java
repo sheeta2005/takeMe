@@ -8,12 +8,14 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
 @Component
+// 仅在旧审计消息迁移期间启用，正常业务不再维护日志专用 MQ 分支。
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression(
+        "${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true} && ${middleware.rabbitmq.legacy-audit.enabled:false}")
 public class AdminAuditConsumer {
 
     private static final Map<Integer, String> STATUS_TEXT_MAP = new HashMap<>();
@@ -26,14 +28,11 @@ public class AdminAuditConsumer {
         STATUS_TEXT_MAP.put(5, "已取消");
     }
 
-    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_ADMIN_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_ADMIN_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleAdminAudit(OrderStatusChangeMessage message, Message msg, Channel channel) {
         try {
             if (message == null) {
                 log.warn("收到空消息，跳过处理");
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
@@ -51,18 +50,9 @@ public class AdminAuditConsumer {
                     message.getChangeTime()
             );
 
-            if (msg != null && channel != null) {
-                channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-            }
         } catch (Exception e) {
             log.error("管理员审计日志处理失败: orderId={}", message != null ? message.getOrderId() : "unknown", e);
-            try {
-                if (msg != null && channel != null) {
-                    channel.basicNack(msg.getMessageProperties().getDeliveryTag(), false, true);
-                }
-            } catch (IOException ioException) {
-                log.error("NACK失败", ioException);
-            }
+            throw new IllegalStateException("管理员审计处理失败", e);
         }
     }
 }

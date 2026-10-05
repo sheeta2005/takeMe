@@ -32,15 +32,6 @@
           <el-descriptions-item label="志愿者ID">
             {{ parseVolunteerId(order.volunteerIds) }}
           </el-descriptions-item>
-          <el-descriptions-item label="服务时间" v-if="order.serviceDate">
-            {{ order.serviceDate }} {{ order.serviceTime || '' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="服务地址" v-if="order.address">
-            <div class="address-content">
-              <el-icon><Location /></el-icon>
-              {{ order.address }}
-            </div>
-          </el-descriptions-item>
           <el-descriptions-item label="联系人" v-if="order.contactName">
             {{ order.contactName }}
           </el-descriptions-item>
@@ -96,6 +87,10 @@
               <el-tag type="primary" size="small">×{{ row.quantity }}</el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="预约时间" min-width="160">
+            <template #default="{ row }">{{ row.serviceDate }} {{ row.serviceTime }}</template>
+          </el-table-column>
+          <el-table-column prop="address" label="服务地址" min-width="160" />
           <el-table-column label="小计" width="120" align="right">
             <template #default="{ row }">
               <span class="subtotal-cell">¥{{ row.itemPrice }}</span>
@@ -113,7 +108,7 @@
 
       <div class="action-section">
         <el-button
-          v-if="[0, 1, 2].includes(order.status)"
+          v-if="order.status === 3"
           type="success"
           size="large"
           @click="handleComplete"
@@ -124,7 +119,7 @@
         </el-button>
 
         <el-button
-          v-if="order.status !== 4 && order.status !== 5 && order.status !== 6"
+          v-if="[0, 1, 6].includes(order.status)"
           type="danger"
           size="large"
           @click="handleCancel"
@@ -152,7 +147,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Document, List, Location, CircleCheck, CloseBold, Back, User
+  Document, List, CircleCheck, CloseBold, Back, User
 } from '@element-plus/icons-vue'
 import { getOrderDetail, completeOrder, cancelOrder } from '@/api/admin'
 

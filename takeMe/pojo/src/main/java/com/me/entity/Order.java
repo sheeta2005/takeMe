@@ -2,6 +2,8 @@ package com.me.entity;
 
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.IdType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,9 +16,12 @@ import java.time.LocalDateTime;
 @TableName("`order`")
 public class Order {
 
+    // 单库订单使用数据库自增，不引入分布式 ID 服务。
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String orderNo;
+    private String requestId;
     private Long userId;
     private String volunteerIds;
 

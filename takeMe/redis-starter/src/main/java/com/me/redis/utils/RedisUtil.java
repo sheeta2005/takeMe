@@ -20,13 +20,18 @@ public class RedisUtil {
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
 
-    @Value("${middleware.redis.enabled:true}")
+    @Value("#{${middleware.enabled:true} && ${middleware.redis.enabled:true}}")
     private boolean redisEnabled;
 
     private static final String NULL_CACHE_PREFIX = "null:";
+    private final Object[] cacheLocks = java.util.stream.IntStream.range(0, 64)
+            .mapToObj(i -> new Object()).toArray();
 
-    private static final String RELEASE_LOCK_SCRIPT =
-            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+    public Object cacheMonitor(String key) {
+        // 回源与主动失效共用本机锁，防止旧查询在目录修改提交之后重新写入过时缓存。
+        String businessKey = key.startsWith(NULL_CACHE_PREFIX) ? key.substring(NULL_CACHE_PREFIX.length()) : key;
+        return cacheLocks[Math.floorMod(businessKey.hashCode(), cacheLocks.length)];
+    }
 
     private static final String RATE_LIMIT_SCRIPT =
             "local exists = redis.call('EXISTS', KEYS[1]) " +
@@ -69,7 +74,9 @@ public class RedisUtil {
             log.debug("Redis 已禁用，跳过 delete 操作 key={}", key);
             return false;
         }
-        return redisTemplate.delete(key);
+        synchronized (cacheMonitor(key)) {
+            return redisTemplate.delete(key);
+        }
     }
 
     public Boolean hasKey(String key) {
@@ -118,16 +125,6 @@ public class RedisUtil {
             return true;
         }
         return redisTemplate.opsForValue().setIfAbsent(key, value, timeout, unit);
-    }
-
-    public boolean releaseLock(String lockKey, String lockValue) {
-        if (!redisEnabled) {
-            log.debug("Redis 已禁用，跳过 releaseLock 操作 key={}", lockKey);
-            return true;
-        }
-        DefaultRedisScript<Long> script = new DefaultRedisScript<>(RELEASE_LOCK_SCRIPT, Long.class);
-        Long result = redisTemplate.execute(script, Collections.singletonList(lockKey), lockValue);
-        return Long.valueOf(1).equals(result);
     }
 
     public boolean rateLimit(String key, int period, int maxCount) {

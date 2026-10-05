@@ -9,12 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true}")
 @RequiredArgsConstructor
 public class VolunteerNotificationConsumer {
 
@@ -30,22 +30,16 @@ public class VolunteerNotificationConsumer {
         STATUS_TEXT_MAP.put(5, "已取消");
     }
 
-    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_VOLUNTEER_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_VOLUNTEER_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleVolunteerNotification(OrderStatusChangeMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
         try {
             if (message == null) {
                 log.warn("收到空消息，跳过处理");
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
             Long volunteerId = message.getVolunteerId();
             if (volunteerId == null) {
-                if (msg != null && channel != null) {
-                    channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-                }
                 return;
             }
 
@@ -62,22 +56,18 @@ public class VolunteerNotificationConsumer {
             notification.setRelatedOrderId(message.getOrderId());
             notification.setCreateTime(message.getChangeTime());
 
-            messageService.sendMessage(notification);
+            messageService.sendEventMessage(notification, msg == null ? null : msg.getMessageProperties().getMessageId());
+            com.me.websocket.OrderWebSocketEndpoint.sendMessageToVolunteer(volunteerId.toString(),
+                    com.me.dto.OrderStatusChangeWsMessage.builder().orderId(message.getOrderId())
+                            .orderNo(message.getOrderNo()).oldStatus(message.getOldStatus())
+                            .newStatus(message.getNewStatus()).userId(message.getUserId())
+                            .volunteerId(volunteerId).message(content).changeTime(message.getChangeTime()).build());
 
-            if (msg != null && channel != null) {
-                channel.basicAck(msg.getMessageProperties().getDeliveryTag(), false);
-            }
             log.info("志愿者通知发送成功: volunteerId={}, orderId={}, status={}→{}", 
                 volunteerId, message.getOrderId(), message.getOldStatus(), message.getNewStatus());
         } catch (Exception e) {
             log.error("志愿者通知处理失败: orderId={}", message != null ? message.getOrderId() : "unknown", e);
-            try {
-                if (msg != null && channel != null) {
-                    channel.basicNack(msg.getMessageProperties().getDeliveryTag(), false, true);
-                }
-            } catch (IOException ioException) {
-                log.error("NACK失败", ioException);
-            }
+            throw new IllegalStateException("志愿者通知处理失败", e);
         }
     }
 
