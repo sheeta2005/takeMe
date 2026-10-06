@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="小区助老业务压测" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="已登录居民混合业务" enabled="true">
+        <stringProp name="ThreadGroup.num_threads">${__P(threads,60)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(ramp,30)}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(duration,600)}</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="合成账号池" enabled="true">
+          <stringProp name="filename">${__P(accounts)}</stringProp>
+          <stringProp name="fileEncoding">UTF-8</stringProp>
+          <stringProp name="variableNames"/>
+          <stringProp name="delimiter">,</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">true</boolProp>
+          <boolProp name="stopThread">false</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="隔离服务地址" enabled="true">
+          <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+          <stringProp name="HTTPSampler.port">9081</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">3000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </ConfigTestElement>
+        <hashTree/>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="鉴权与 JSON" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="Authorization" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${token}</stringProp>
+            </elementProp>
+            <elementProp name="Content-Type" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="所有线程共享目标吞吐" enabled="true">
+          <stringProp name="throughput">${__P(tpm,1800)}</stringProp>
+          <intProp name="calcMode">4</intProp>
+        </ConstantThroughputTimer>
+        <hashTree/>
+        <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="业务状态及订单关联校验" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script"><![CDATA[
+try {
+    def result = new groovy.json.JsonSlurper().parseText(prev.getResponseDataAsString())
+    if (result.code != 200) throw new IllegalStateException("业务失败 code=${result.code}, msg=${result.msg}")
+    if (prev.getSampleLabel() == '创建订单') {
+        if (!result.data?.id) throw new IllegalStateException('建单未返回主键')
+        vars.put('newOrderId', result.data.id.toString())
+    } else if (prev.getSampleLabel() == '重复提交校验') {
+        if (result.data.id.toString() != vars.get('newOrderId')) throw new IllegalStateException('重试生成了不同订单')
+    } else if (prev.getSampleLabel() == '取消后状态校验') {
+        if (result.data.status != 5) throw new IllegalStateException('取消未完成')
+    }
+} catch (Exception error) {
+    prev.setSuccessful(false)
+    prev.setResponseMessage(error.message)
+}
+          ]]></stringProp>
+        </JSR223PostProcessor>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="混合业务" enabled="true">
+          <stringProp name="HTTPSampler.method">${method}</stringProp>
+          <stringProp name="HTTPSampler.path">${path}</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${payload}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="居民浏览思考时间" enabled="true">
+            <stringProp name="ConstantTimer.delay">${__P(think,500)}</stringProp>
+            <stringProp name="RandomTimer.range">1000</stringProp>
+          </UniformRandomTimer>
+          <hashTree/>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="选择有效业务操作" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script"><![CDATA[
+int choice = java.util.concurrent.ThreadLocalRandom.current().nextInt(100)
+vars.put('method','GET'); vars.put('payload',''); vars.put('operation','read')
+vars.put('token', vars.get('userToken')); vars.remove('newOrderId')
+if (choice < 30) {
+    sampler.setName('服务目录')
+    vars.put('path', '/api/user/service/list?type=' + (choice % 5))
+} else if (choice < 55) {
+    sampler.setName('老人订单列表')
+    vars.put('path', '/api/user/order/list?pageNum=1&pageSize=10')
+} else if (choice < 65) {
+    sampler.setName('老人订单详情')
+    vars.put('path', '/api/user/order/detail?orderId=' + vars.get('existingOrderId'))
+} else if (choice < 80) {
+    sampler.setName('老人消息列表')
+    vars.put('path', '/api/user/message/list?pageNum=1&pageSize=10')
+} else if (choice < 90) {
+    sampler.setName('志愿者可接服务')
+    vars.put('token', vars.get('volunteerToken'))
+    vars.put('path', '/api/volunteer/order/available?pageNum=1&pageSize=10')
+} else if (choice < 95) {
+    sampler.setName('管理员聚合看板')
+    vars.put('token', vars.get('adminToken')); vars.put('path','/api/admin/dashboard')
+} else {
+    sampler.setName('创建订单')
+    vars.put('method','POST'); vars.put('operation','create'); vars.put('path','/api/user/order/create')
+    def booking = java.time.LocalDateTime.now().plusHours(3)
+    def payload = [order:[requestId:UUID.randomUUID().toString()],items:[[serviceId:3,quantity:1,
+        serviceDate:booking.toLocalDate().toString(),serviceTime:booking.format(java.time.format.DateTimeFormatter.ofPattern('HH:mm')),
+        address:'合成压测地址',remark:'仅用于隔离测试']]]
+    vars.put('payload', groovy.json.JsonOutput.toJson(payload))
+}
+            ]]></stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="有效建单后的结算链路" enabled="true">
+          <stringProp name="IfController.condition">${__groovy(vars.get('operation') == 'create' &amp;&amp; vars.get('newOrderId') != null)}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="重复提交校验" enabled="true">
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <stringProp name="HTTPSampler.path">/api/user/order/create</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments"><collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument"><boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${payload}</stringProp><stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp></elementProp>
+          </HTTPSamplerProxy><hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="模拟支付" enabled="true">
+            <stringProp name="HTTPSampler.method">POST</stringProp><stringProp name="HTTPSampler.path">/api/user/payment/mock</stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp><boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments"><collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument"><boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"orderId":${newOrderId}}</stringProp><stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp></elementProp>
+          </HTTPSamplerProxy><hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="取消与模拟退款" enabled="true">
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <stringProp name="HTTPSampler.path">/api/user/order/cancel?orderId=${newOrderId}</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          </HTTPSamplerProxy><hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="取消后状态校验" enabled="true">
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.path">/api/user/order/detail?orderId=${newOrderId}</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          </HTTPSamplerProxy><hashTree/>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

@@ -1,0 +1,9 @@
+arthas.config.overrideAll=true
+arthas.ip=127.0.0.1
+arthas.telnetPort=3658
+arthas.httpPort=8563
+arthas.username=takeme
+arthas.password=${PASSWORD}
+arthas.localConnectionNonAuth=false
+arthas.sessionTimeout=1800
+arthas.disabledCommands=redefine,retransform,mc,ognl,vmtool,dump,heapdump
