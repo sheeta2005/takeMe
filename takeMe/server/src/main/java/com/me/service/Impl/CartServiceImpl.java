@@ -7,14 +7,10 @@ import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
 import com.me.entity.Cart;
 import com.me.entity.CartItem;
+import com.me.entity.Order;
 import com.me.entity.ServicePackage;
 import com.me.exception.ShoppingCartBusinessException;
-import com.me.mapper.CartItemMapper;
-import com.me.mapper.CartMapper;
-import com.me.mapper.ServicePackageMapper;
-import com.me.mapper.UserMapper;
-import com.me.mapper.OrderMapper;
-import com.me.entity.Order;
+import com.me.mapper.*;
 import com.me.service.CartService;
 import com.me.service.OrderService;
 import com.me.vo.CartItemVO;
@@ -22,8 +18,8 @@ import com.me.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,19 +46,14 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         List<CartItem> itemList = cartItemMapper.selectList(wrapper);
 
-        return itemList.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        return itemList.stream().map(this::convertToVO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void addItem(Long userId, CartItemDTO dto) {
         ServicePackage service = dto.getServiceId() == null ? null : servicePackageMapper.selectById(dto.getServiceId());
-        if (service == null || service.getStatus() == null || service.getStatus() != 1
-                || service.getPrice() == null || service.getPrice() < 0
-                || dto.getQuantity() == null || dto.getQuantity() < 1
-                || (service.getType() != null && service.getType() != SERVICE_TYPE_MEAL && dto.getQuantity() != 1)) {
+        if (service == null || service.getStatus() == null || service.getStatus() != 1 || service.getPrice() == null || service.getPrice() < 0 || dto.getQuantity() == null || dto.getQuantity() < 1 || (service.getType() != null && service.getType() != SERVICE_TYPE_MEAL && dto.getQuantity() != 1)) {
             throw new IllegalArgumentException("服务已下架或数量无效");
         }
         dto.setServiceName(service.getName());
@@ -74,16 +65,15 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         item.setCartId(cart.getId());
 
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getServiceId, item.getServiceId());
-        
+        wrapper.eq(CartItem::getCartId, cart.getId()).eq(CartItem::getServiceId, item.getServiceId());
+
         if (item.getServiceDate() != null && !item.getServiceDate().isEmpty()) {
             wrapper.eq(CartItem::getServiceDate, item.getServiceDate());
         }
         if (item.getServiceTime() != null && !item.getServiceTime().isEmpty()) {
             wrapper.eq(CartItem::getServiceTime, item.getServiceTime());
         }
-        
+
         CartItem existingItem = cartItemMapper.selectOne(wrapper);
 
         if (existingItem != null) {
@@ -112,8 +102,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         Cart cart = getOrCreateCart(userId);
 
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getId, productId);
+        wrapper.eq(CartItem::getCartId, cart.getId()).eq(CartItem::getId, productId);
         CartItem item = cartItemMapper.selectOne(wrapper);
 
         if (item == null) {
@@ -141,8 +130,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         Cart cart = getOrCreateCart(userId);
 
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId())
-                .eq(CartItem::getId, productId);
+        wrapper.eq(CartItem::getCartId, cart.getId()).eq(CartItem::getId, productId);
         cartItemMapper.delete(wrapper);
 
         cart.setUpdateTime(LocalDateTime.now());
@@ -161,7 +149,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         cart.setUpdateTime(LocalDateTime.now());
         this.updateById(cart);
     }
-    
+
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public OrderVO checkout(Long userId, String requestId) {
@@ -173,15 +161,15 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         Order existing = orderMapper.selectByRequestForUpdate(userId, requestId);
         if (existing != null) return orderService.getOrderDetail(userId, existing.getId());
         Cart cart = getOrCreateCart(userId);
-        
+
         LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CartItem::getCartId, cart.getId());
         List<CartItem> cartItems = cartItemMapper.selectList(wrapper);
-        
+
         if (cartItems == null || cartItems.isEmpty()) {
             throw new ShoppingCartBusinessException("购物车为空");
         }
-        
+
         List<OrderItemDTO> itemDTOList = cartItems.stream().map(item -> {
             OrderItemDTO dto = new OrderItemDTO();
             dto.setServiceId(item.getServiceId());
@@ -193,19 +181,19 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
             dto.setServiceTime(item.getServiceTime());
             dto.setAddress(item.getAddress());
             dto.setRemark(item.getRemark());
-            
+
             dto.setItemPrice(item.getServicePrice() * item.getQuantity());
-            
+
             return dto;
         }).collect(Collectors.toList());
-        
+
         OrderDTO orderDTO = new OrderDTO();
         orderDTO.setRequestId(requestId);
-        
+
         OrderVO orderVO = orderService.createOrder(userId, orderDTO, itemDTOList);
-        
+
         clearCart(userId);
-        
+
         return orderVO;
     }
 

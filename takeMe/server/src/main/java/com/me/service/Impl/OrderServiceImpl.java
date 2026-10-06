@@ -10,26 +10,19 @@ import com.me.dto.OrderStatusChangeMessage;
 import com.me.dto.PageResultDTO;
 import com.me.entity.*;
 import com.me.exception.OrderBusinessException;
-import com.me.mapper.OrderItemMapper;
-import com.me.mapper.OrderMapper;
-import com.me.mapper.PaymentTransactionMapper;
-import com.me.mapper.ReviewMapper;
-import com.me.mapper.ServicePackageMapper;
-import com.me.mapper.UserMapper;
-import com.me.mapper.VolunteerMapper;
-import com.me.mapper.VolunteerPointsRecordMapper;
+import com.me.mapper.*;
 import com.me.mq.config.RabbitMQConfig;
-import com.me.service.OutboxService;
 import com.me.service.MessageService;
 import com.me.service.OrderService;
+import com.me.service.OutboxService;
 import com.me.vo.OrderItemVO;
 import com.me.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -70,12 +63,11 @@ public class OrderServiceImpl implements OrderService {
         wrapper.orderByDesc(Order::getCreateTime, Order::getId);
 
         Page<Order> orderPage = orderMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), wrapper);
-        // 按本页订单批量取服务项，避免每条订单单独访问数据库。
         List<Long> orderIds = orderPage.getRecords().stream().map(Order::getId).toList();
         Map<Long, List<OrderItem>> itemsByOrder = orderIds.isEmpty() ? Map.of()
                 : orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
                         .in(OrderItem::getOrderId, orderIds).orderByAsc(OrderItem::getId))
-                        .stream().collect(Collectors.groupingBy(OrderItem::getOrderId));
+                .stream().collect(Collectors.groupingBy(OrderItem::getOrderId));
 
         List<OrderVO> records = orderPage.getRecords().stream().map(order -> {
             OrderVO vo = new OrderVO();
@@ -103,7 +95,7 @@ public class OrderServiceImpl implements OrderService {
         if (volunteerId == null) {
             throw new OrderBusinessException("志愿者ID不能为空");
         }
-        
+
         LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
         itemWrapper.eq(OrderItem::getVolunteerId, volunteerId);
         if (status != null) {
@@ -112,9 +104,9 @@ public class OrderServiceImpl implements OrderService {
         itemWrapper.orderByDesc(OrderItem::getCreateTime, OrderItem::getId);
 
         Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), itemWrapper);
-        
+
         List<OrderVO> records = buildVolunteerRecords(itemPage.getRecords(), false);
-        
+
         Page<OrderVO> voPage = new Page<>(itemPage.getCurrent(), itemPage.getSize(), itemPage.getTotal());
         voPage.setRecords(records);
         return voPage;
@@ -160,38 +152,38 @@ public class OrderServiceImpl implements OrderService {
         Map<Long, User> users = userIds.isEmpty() ? Map.of() : userMapper.selectBatchIds(userIds).stream()
                 .collect(Collectors.toMap(User::getId, user -> user));
         return items.stream()
-            .map(item -> {
-                Order order = orders.get(item.getOrderId());
-                if (order == null) return null;
-                
-                if (availableOnly && (order.getStatus() == null || order.getStatus() < 0 || order.getStatus() > 2)) {
-                    return null;
-                }
-                
-                OrderVO vo = new OrderVO();
-                BeanUtils.copyProperties(order, vo);
-                vo.setServiceDate(null);
-                vo.setServiceTime(null);
-                vo.setAddress(null);
-                vo.setRemark(null);
-                
-                // 填充用户信息
-                if (order.getUserId() != null) {
-                    User user = users.get(order.getUserId());
-                    if (user != null) {
-                        vo.setUserName(user.getRealName());
-                        vo.setUserPhone(user.getPhone());
+                .map(item -> {
+                    Order order = orders.get(item.getOrderId());
+                    if (order == null) return null;
+
+                    if (availableOnly && (order.getStatus() == null || order.getStatus() < 0 || order.getStatus() > 2)) {
+                        return null;
                     }
-                }
-                
-                // 一条可接单记录仅对应一个服务项，预约时间以服务项为准。
-                OrderItemVO itemVO = new OrderItemVO();
-                BeanUtils.copyProperties(item, itemVO);
-                vo.setItems(List.of(itemVO));
-                return vo;
-            })
-            .filter(vo -> vo != null)
-            .collect(Collectors.toList());
+
+                    OrderVO vo = new OrderVO();
+                    BeanUtils.copyProperties(order, vo);
+                    vo.setServiceDate(null);
+                    vo.setServiceTime(null);
+                    vo.setAddress(null);
+                    vo.setRemark(null);
+
+                    // 填充用户信息
+                    if (order.getUserId() != null) {
+                        User user = users.get(order.getUserId());
+                        if (user != null) {
+                            vo.setUserName(user.getRealName());
+                            vo.setUserPhone(user.getPhone());
+                        }
+                    }
+
+                    // 一条可接单记录仅对应一个服务项，预约时间以服务项为准。
+                    OrderItemVO itemVO = new OrderItemVO();
+                    BeanUtils.copyProperties(item, itemVO);
+                    vo.setItems(List.of(itemVO));
+                    return vo;
+                })
+                .filter(vo -> vo != null)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -205,9 +197,9 @@ public class OrderServiceImpl implements OrderService {
         BeanUtils.copyProperties(order, orderVO);
 
         LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
-        orderItemWrapper.eq(OrderItem::getOrderId,orderId);
+        orderItemWrapper.eq(OrderItem::getOrderId, orderId);
         List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
-       // List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
+        // List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
             BeanUtils.copyProperties(item, vo);
@@ -238,7 +230,7 @@ public class OrderServiceImpl implements OrderService {
         orderVO.setRemark(null);
 
         LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
-        orderItemWrapper.eq(OrderItem::getOrderId,orderId);
+        orderItemWrapper.eq(OrderItem::getOrderId, orderId);
         orderItemWrapper.eq(OrderItem::getVolunteerId, volunteerId);
         List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
         //List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
@@ -304,19 +296,19 @@ public class OrderServiceImpl implements OrderService {
         }
 
         OrderItemDTO firstItem = itemDTOList.get(0);
-        
+
         Order order = new Order();
         // 主键、金额、状态和归属不接收客户端覆盖。
         order.setRequestId(orderDTO.getRequestId());
         order.setUserId(userId);
         order.setOrderNo(generateOrderNo());
         order.setTotalPrice(totalPrice);
-        
+
         order.setServiceDate(firstItem.getServiceDate());
         order.setServiceTime(firstItem.getServiceTime());
         order.setAddress(firstItem.getAddress());
         order.setRemark(firstItem.getRemark());
-        
+
         order.setStatus(6);
         order.setIsReviewed(0);
         order.setCreateTime(LocalDateTime.now());
@@ -329,7 +321,7 @@ public class OrderServiceImpl implements OrderService {
             item.setOrderId(order.getId());
             item.setCreateTime(LocalDateTime.now());
             item.setItemStatus(0);
-            
+
             return item;
         }).collect(Collectors.toList());
 
@@ -337,17 +329,17 @@ public class OrderServiceImpl implements OrderService {
 
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
-        
+
         LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
         itemWrapper.eq(OrderItem::getOrderId, order.getId());
         List<OrderItem> orderItems = orderItemMapper.selectList(itemWrapper);
-        
+
         List<OrderItemVO> itemVOList = orderItems.stream().map(item -> {
             OrderItemVO itemVO = new OrderItemVO();
             BeanUtils.copyProperties(item, itemVO);
             return itemVO;
         }).collect(Collectors.toList());
-        
+
         orderVO.setItems(itemVOList);
 
         sendMessage(userId, 2, 1, "订单已创建", "请先完成模拟支付，支付后进入待接单", order.getId());
@@ -371,6 +363,8 @@ public class OrderServiceImpl implements OrderService {
         cancelAllItems(order, "用户取消订单");
     }
 
+
+    //rc
     @Override
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public void volunteerConfirmOrder(Long volunteerId, Long orderItemId) {
@@ -400,7 +394,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         com.me.utils.ServiceTimeValidator.validateCanAcceptOrder(
-            item.getServiceDate(), item.getServiceTime()
+                item.getServiceDate(), item.getServiceTime()
         );
 
         OrderItem claimed = new OrderItem();
@@ -412,7 +406,7 @@ public class OrderServiceImpl implements OrderService {
         if (orderItemMapper.update(claimed, claim) != 1) {
             throw new OrderBusinessException("该服务项目已被接取");
         }
-        
+
         updateOrderVolunteerIds(item.getOrderId());
         Integer oldStatus = updateOrderStatus(item.getOrderId());
 
@@ -447,10 +441,10 @@ public class OrderServiceImpl implements OrderService {
             int deductPoints = 50;
             int actualDeduct = Math.min(deductPoints, currentPoints);
             int newPoints = currentPoints - actualDeduct;
-            
+
             volunteer.setPoints(newPoints);
             volunteerMapper.updateById(volunteer);
-            
+
             VolunteerPointsRecord record = new VolunteerPointsRecord();
             record.setVolunteerId(volunteerId);
             record.setOrderId(item.getOrderId());
@@ -459,12 +453,12 @@ public class OrderServiceImpl implements OrderService {
             record.setDescription("放弃订单扣除" + actualDeduct + "积分");
             record.setCreateTime(LocalDateTime.now());
             volunteerPointsRecordMapper.insert(record);
-            
+
             log.info("志愿者 {} 放弃订单，扣除积分：{}，剩余积分：{}", volunteerId, actualDeduct, newPoints);
         }
 
         clearItemVolunteer(item, 0);
-        
+
         updateOrderVolunteerIds(item.getOrderId());
         Integer oldStatus = updateOrderStatus(item.getOrderId());
 
@@ -486,24 +480,24 @@ public class OrderServiceImpl implements OrderService {
         if (order == null || order.getStatus() == 5 || order.getStatus() == 6) {
             throw new OrderBusinessException("订单不可操作");
         }
-        
+
         if (!volunteerId.equals(item.getVolunteerId())) {
             throw new OrderBusinessException("无权操作此服务");
         }
-        
+
         if (item.getItemStatus() != 1) {
             throw new OrderBusinessException("当前状态不允许开始服务");
         }
 
         com.me.utils.ServiceTimeValidator.validateCanStartService(
-            item.getServiceDate(), item.getServiceTime()
+                item.getServiceDate(), item.getServiceTime()
         );
 
         changeItemStatus(item, 2);
-        
+
         Integer oldStatus = updateOrderStatus(item.getOrderId());
-        
-        
+
+
         order = orderMapper.selectById(item.getOrderId());
         if (order != null) {
             sendStatusChangeMessage(order, oldStatus, order.getStatus(), "志愿者开始服务", volunteerId);
@@ -530,9 +524,9 @@ public class OrderServiceImpl implements OrderService {
         }
 
         changeItemStatus(item, 3);
-        
+
         addPointsForCompletedOrder(volunteerId, item);
-        
+
         Integer oldStatus = updateOrderStatus(item.getOrderId());
 
 
@@ -561,10 +555,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         changeItemStatus(item, 2);
-        
+
         Integer oldStatus = updateOrderStatus(item.getOrderId());
-        
-        
+
+
         order = orderMapper.selectById(item.getOrderId());
         sendStatusChangeMessage(order, oldStatus, order.getStatus(), "用户确认开始服务");
     }
@@ -577,7 +571,7 @@ public class OrderServiceImpl implements OrderService {
         if (item == null) {
             throw new OrderBusinessException("服务项目不存在");
         }
-        
+
         if (order == null || !order.getUserId().equals(userId)) {
             throw new OrderBusinessException("无权操作此服务");
         }
@@ -748,13 +742,13 @@ public class OrderServiceImpl implements OrderService {
 
     private void updateOrderVolunteerIds(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(orderId);
-        
+
         Set<Long> volunteerIdSet = items.stream()
-            .filter(item -> item.getItemStatus() != 0 && item.getItemStatus() != 5)
-            .map(OrderItem::getVolunteerId)
-            .filter(id -> id != null)
-            .collect(Collectors.toSet());
-        
+                .filter(item -> item.getItemStatus() != 0 && item.getItemStatus() != 5)
+                .map(OrderItem::getVolunteerId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
         String ids = volunteerIdSet.isEmpty() ? null : volunteerIdSet.stream()
                 .sorted().map(String::valueOf).collect(Collectors.joining(","));
         com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Order> update =
@@ -767,14 +761,14 @@ public class OrderServiceImpl implements OrderService {
 
     private Integer updateOrderStatus(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(orderId);
-        
+
         if (items.isEmpty()) return null;
-        
+
         Order order = orderMapper.selectForUpdate(orderId);
         if (order == null) return null;
-        
+
         Integer oldStatus = order.getStatus();
-        
+
         List<OrderItem> active = items.stream().filter(item -> item.getItemStatus() != 5).toList();
         if (active.isEmpty()) {
             order.setStatus(5);
@@ -782,7 +776,7 @@ public class OrderServiceImpl implements OrderService {
             return oldStatus;
         }
         boolean allCompleted = active.stream().allMatch(item -> item.getItemStatus() == 4);
-        
+
         if (allCompleted) {
             if (order.getStatus() != 4) {
                 order.setStatus(4);
@@ -791,9 +785,9 @@ public class OrderServiceImpl implements OrderService {
             }
             return oldStatus;
         }
-        
+
         boolean allPendingConfirm = active.stream().allMatch(item -> item.getItemStatus() >= 3);
-        
+
         if (allPendingConfirm) {
             if (order.getStatus() != 3 || order.getCompleteTime() == null) {
                 order.setStatus(3);
@@ -804,15 +798,15 @@ public class OrderServiceImpl implements OrderService {
             }
             return oldStatus;
         }
-        
+
         boolean anyInProgress = active.stream().anyMatch(item ->
-            item.getItemStatus() == 2
+                item.getItemStatus() == 2
         );
-        
+
         boolean anyAccepted = active.stream().anyMatch(item ->
-            item.getItemStatus() == 1
+                item.getItemStatus() == 1
         );
-        
+
         if (anyInProgress) {
             order.setStatus(2);
         } else if (anyAccepted) {
@@ -820,18 +814,18 @@ public class OrderServiceImpl implements OrderService {
         } else {
             order.setStatus(0);
         }
-        
+
         orderMapper.updateById(order);
         return oldStatus;
     }
 
     private boolean checkAllItemsCancelled(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(orderId);
-        
+
         if (items.isEmpty()) {
             return true;
         }
-        
+
         return items.stream().allMatch(item -> item.getItemStatus() == 5);
     }
 
@@ -845,15 +839,15 @@ public class OrderServiceImpl implements OrderService {
         }
 
         OrderStatusChangeMessage statusMessage = OrderStatusChangeMessage.builder()
-            .orderId(order.getId())
-            .orderNo(order.getOrderNo())
-            .oldStatus(oldStatus)
-            .newStatus(newStatus)
-            .userId(order.getUserId())
-            .volunteerId(volunteerId)
-            .changeTime(LocalDateTime.now())
-            .remark(remark)
-            .build();
+                .orderId(order.getId())
+                .orderNo(order.getOrderNo())
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .userId(order.getUserId())
+                .volunteerId(volunteerId)
+                .changeTime(LocalDateTime.now())
+                .remark(remark)
+                .build();
 
         // 状态更新与待发送事件一起提交，不能在事务内直接投递。
         outboxService.enqueue(RabbitMQConfig.ORDER_STATUS_FANOUT_EXCHANGE, "", statusMessage);
@@ -875,13 +869,13 @@ public class OrderServiceImpl implements OrderService {
 
         Integer oldStatus = order.getStatus();
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(orderId);
-        
+
         for (OrderItem item : items) {
             if (item.getItemStatus() == 3) {
                 changeItemStatus(item, 4);
             }
         }
-        
+
         order.setStatus(4);
         order.setCompleteTime(LocalDateTime.now());
         orderMapper.updateById(order);
@@ -899,20 +893,20 @@ public class OrderServiceImpl implements OrderService {
         if (item == null) {
             throw new OrderBusinessException("服务项目不存在");
         }
-        
+
         Order order = orderMapper.selectById(item.getOrderId());
         if (order == null || !order.getUserId().equals(userId)) {
             throw new OrderBusinessException("无权评价此服务");
         }
-        
+
         if (item.getItemStatus() != 3 && item.getItemStatus() != 4) {
             throw new OrderBusinessException("服务未完成，无法评价");
         }
-        
+
         LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
         reviewWrapper.eq(Review::getOrderItemId, orderItemId);
         Review existingReview = reviewMapper.selectOne(reviewWrapper);
-        
+
         if (existingReview != null) {
             existingReview.setRating(rating);
             existingReview.setComment(comment);
@@ -927,11 +921,11 @@ public class OrderServiceImpl implements OrderService {
             review.setComment(comment);
             review.setCreateTime(LocalDateTime.now());
             reviewMapper.insert(review);
-            
-            sendMessageToVolunteer(item.getVolunteerId(), 1, 0, 
-                "收到新评价", 
-                "您的服务（" + item.getServiceName() + "）收到了用户评价，评分：" + rating + " 星", 
-                item.getId());
+
+            sendMessageToVolunteer(item.getVolunteerId(), 1, 0,
+                    "收到新评价",
+                    "您的服务（" + item.getServiceName() + "）收到了用户评价，评分：" + rating + " 星",
+                    item.getId());
         }
     }
 
@@ -940,21 +934,21 @@ public class OrderServiceImpl implements OrderService {
         itemWrapper.eq(OrderItem::getOrderId, orderId);
         itemWrapper.in(OrderItem::getItemStatus, 3, 4);
         List<OrderItem> items = orderItemMapper.selectList(itemWrapper);
-        
+
         Order order = orderMapper.selectById(orderId);
         if (order == null) {
             return;
         }
-        
+
         for (OrderItem item : items) {
             if (item.getVolunteerId() == null) {
                 continue;
             }
-            
+
             LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
             reviewWrapper.eq(Review::getOrderItemId, item.getId());
             Long count = reviewMapper.selectCount(reviewWrapper);
-            
+
             if (count == 0) {
                 Review review = new Review();
                 review.setOrderId(item.getOrderId());
@@ -965,11 +959,11 @@ public class OrderServiceImpl implements OrderService {
                 review.setComment("系统默认好评");
                 review.setCreateTime(LocalDateTime.now());
                 reviewMapper.insert(review);
-                
-                sendMessageToVolunteer(item.getVolunteerId(), 1, 0, 
-                    "收到新评价", 
-                    "您的服务（" + item.getServiceName() + "）收到了用户评价，评分：5 星", 
-                    item.getId());
+
+                sendMessageToVolunteer(item.getVolunteerId(), 1, 0,
+                        "收到新评价",
+                        "您的服务（" + item.getServiceName() + "）收到了用户评价，评分：5 星",
+                        item.getId());
             }
         }
     }
@@ -978,15 +972,15 @@ public class OrderServiceImpl implements OrderService {
     public IPage<Order> getAdminOrderPage(Integer status, PageResultDTO pageResultDTO) {
         Page<Order> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-        
+
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
         }
-        
+
         wrapper.orderByDesc(Order::getCreateTime);
         return orderMapper.selectPage(pageParam, wrapper);
     }
-    
+
     @Override
     public IPage<Order> searchAdminOrder(
             Integer status, String orderNo, Long userId, String userName,
@@ -995,7 +989,7 @@ public class OrderServiceImpl implements OrderService {
     ) {
         Page<Order> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-        
+
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
         }
@@ -1014,16 +1008,16 @@ public class OrderServiceImpl implements OrderService {
         if (endDate != null && !endDate.trim().isEmpty()) {
             wrapper.le(Order::getCreateTime, endDate + " 23:59:59");
         }
-        
+
         wrapper.orderByDesc(Order::getCreateTime);
         return orderMapper.selectPage(pageParam, wrapper);
     }
-    
+
     @Override
     public Order getAdminOrderDetail(Long id) {
         return orderMapper.selectById(id);
     }
-    
+
     @Override
     public OrderVO getAdminOrderDetailVO(Long id) {
         Order order = orderMapper.selectById(id);
@@ -1035,7 +1029,7 @@ public class OrderServiceImpl implements OrderService {
         BeanUtils.copyProperties(order, orderVO);
 
         LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
-        orderItemWrapper.eq(OrderItem::getOrderId,id);
+        orderItemWrapper.eq(OrderItem::getOrderId, id);
         List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
         //List<OrderItem> items = orderItemMapper.selectByOrderId(id);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
@@ -1047,7 +1041,7 @@ public class OrderServiceImpl implements OrderService {
         orderVO.setItems(itemVOList);
         return orderVO;
     }
-    
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean adminCancelOrder(Long id) {
@@ -1067,11 +1061,11 @@ public class OrderServiceImpl implements OrderService {
         if (item == null) {
             return false;
         }
-        
+
         if (item.getItemStatus() != 0 && item.getItemStatus() != 1) {
             return false;
         }
-        
+
         if (order == null || order.getStatus() == 5 || order.getStatus() == 6 || order.getStatus() == 4) {
             return false;
         }
@@ -1105,7 +1099,7 @@ public class OrderServiceImpl implements OrderService {
         boolean updated = orderMapper.updateById(order) > 0;
         return updated;
     }
-    
+
     @Override
     public Long countOrders(LambdaQueryWrapper<Order> wrapper) {
         return orderMapper.selectCount(wrapper);
@@ -1161,10 +1155,10 @@ public class OrderServiceImpl implements OrderService {
 
         int currentPoints = volunteer.getPoints() != null ? volunteer.getPoints() : 0;
         int newPoints = currentPoints + earnedPoints;
-        
+
         volunteer.setPoints(newPoints);
         volunteerMapper.updateById(volunteer);
-        
+
         VolunteerPointsRecord record = new VolunteerPointsRecord();
         record.setVolunteerId(volunteerId);
         record.setOrderId(item.getOrderId());
@@ -1173,7 +1167,7 @@ public class OrderServiceImpl implements OrderService {
         record.setDescription("完成" + item.getServiceName() + "服务获得" + earnedPoints + "积分");
         record.setCreateTime(LocalDateTime.now());
         volunteerPointsRecordMapper.insert(record);
-        
+
         log.info("志愿者 {} 完成订单 {}，获得积分：{}，当前总积分：{}", volunteerId, item.getId(), earnedPoints, newPoints);
     }
 }

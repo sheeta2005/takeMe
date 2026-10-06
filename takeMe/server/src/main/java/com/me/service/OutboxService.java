@@ -18,7 +18,7 @@ public class OutboxService {
     private final OutboxMapper outboxMapper;
     private final ObjectMapper objectMapper;
 
-    // 必须加入业务事务，登记失败时业务数据也回滚。
+    // 写路径。
     @Transactional(propagation = Propagation.MANDATORY)
     public void enqueue(String exchange, String routingKey, Object payload) {
         OutboxMessage message = new OutboxMessage();

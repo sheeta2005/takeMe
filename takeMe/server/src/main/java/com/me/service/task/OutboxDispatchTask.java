@@ -39,6 +39,8 @@ public class OutboxDispatchTask {
             VolunteerStartTimeoutMessage.class.getName(), VolunteerStartTimeoutMessage.class,
             com.me.entity.Message.class.getName(), com.me.entity.Message.class);
 
+
+    //内部调用事物不生效，用该工具替代。
     public OutboxDispatchTask(OutboxMapper mapper, ObjectMapper objectMapper,
                               MessageProducer producer, PlatformTransactionManager manager) {
         this.outboxMapper = mapper;
