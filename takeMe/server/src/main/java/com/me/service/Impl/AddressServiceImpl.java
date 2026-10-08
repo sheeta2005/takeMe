@@ -25,6 +25,7 @@ public class AddressServiceImpl implements AddressService {
     private final AddressMapper addressMapper;
     private final UserMapper userMapper;
 
+    //查询用户地址列表
     @Override
     public List<AddressVO> getListByUserId(Long userId) {
         LambdaQueryWrapper<Address> wrapper = new LambdaQueryWrapper<>();
@@ -33,6 +34,7 @@ public class AddressServiceImpl implements AddressService {
         return list.stream().map(this::toVO).collect(Collectors.toList());
     }
 
+    //新增用户地址
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AddressVO add(AddressVO vo) {
@@ -52,6 +54,7 @@ public class AddressServiceImpl implements AddressService {
         return toVO(address);
     }
 
+    //修改用户地址
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(AddressVO vo) {
@@ -66,6 +69,7 @@ public class AddressServiceImpl implements AddressService {
         addressMapper.updateById(address);
     }
 
+    //删除用户地址
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
@@ -73,6 +77,7 @@ public class AddressServiceImpl implements AddressService {
         addressMapper.deleteById(id);
     }
 
+    //设置默认地址
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void setDefault(Long id) {
@@ -82,6 +87,7 @@ public class AddressServiceImpl implements AddressService {
         addressMapper.updateById(address);
     }
 
+    //锁定当前用户
     private Long lockCurrentUser() {
         Long userId = BaseContext.getLoginId();
         if (userId == null || userMapper.selectForUpdate(userId) == null) {
@@ -90,6 +96,7 @@ public class AddressServiceImpl implements AddressService {
         return userId;
     }
 
+    //查询并校验地址归属
     private Address ownedAddress(Long id, Long userId) {
         Address address = addressMapper.selectOne(new LambdaQueryWrapper<Address>()
                 .eq(Address::getId, id).eq(Address::getUserId, userId));
@@ -97,6 +104,7 @@ public class AddressServiceImpl implements AddressService {
         return address;
     }
 
+    //校验默认地址标识
     private int defaultValue(Integer value) {
         if (value == null) return 0;
         if (value != 0 && value != 1) throw new IllegalArgumentException("默认地址标识无效");
@@ -110,6 +118,7 @@ public class AddressServiceImpl implements AddressService {
         addressMapper.update(null, wrapper);
     }
 
+    //转换地址展示信息
     private AddressVO toVO(Address address) {
         AddressVO vo = new AddressVO();
         BeanUtils.copyProperties(address, vo);

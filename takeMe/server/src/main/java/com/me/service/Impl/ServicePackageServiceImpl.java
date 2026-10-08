@@ -27,6 +27,7 @@ import java.util.List;
 public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper, ServicePackage> implements ServicePackageService {
     private final RedisUtil redisUtil;
 
+    //新增服务套餐并清理缓存
     @Override
     public boolean save(ServicePackage service) {
         boolean changed = super.save(service);
@@ -34,6 +35,7 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
         return changed;
     }
 
+    //修改服务套餐并清理缓存
     @Override
     public boolean updateById(ServicePackage service) {
         ServicePackage old = getById(service.getId());
@@ -45,6 +47,7 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
         return changed;
     }
 
+    //删除服务套餐并清理缓存
     @Override
     public boolean removeById(Serializable id) {
         ServicePackage old = getById(id);
@@ -53,6 +56,7 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
         return changed;
     }
 
+    //清理服务目录缓存
     private void evict(Integer type) {
         Runnable eviction = () -> {
             try {
@@ -75,6 +79,7 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
         }
     }
 
+    //分页查询服务套餐
     @Override
     public IPage<ServicePackage> searchServicePackage(
             Integer type,
@@ -99,6 +104,7 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
         return this.page(page, wrapper);
     }
 
+    //按类型查询上架服务
     @Override
     @RedisCache(prefix = "service:available", keyArgs = {0}, expire = 2, nullExpire = 2)
     public List<ServicePackage> getAvailableServiceByType(Integer type) {

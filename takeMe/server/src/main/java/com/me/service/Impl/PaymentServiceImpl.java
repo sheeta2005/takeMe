@@ -28,11 +28,13 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderMapper orderMapper;
     private final OrderService orderService;
 
+    //模拟订单支付
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PaymentResultVO mockPayment(Long userId, PaymentDTO paymentDTO) {
         Long orderId = paymentDTO.getOrderId();
 
+        //锁定订单，避免并发支付
         Order order = orderMapper.selectForUpdate(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new OrderBusinessException("订单不存在");
@@ -88,12 +90,14 @@ public class PaymentServiceImpl implements PaymentService {
         return resultVO;
     }
 
+    //取消订单并处理退款
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrderWithRefund(Long userId, Long orderId) {
         orderService.cancelOrder(userId, orderId);
     }
 
+    //生成支付流水号
     private String generateTransactionNo() {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String uuid = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();

@@ -37,6 +37,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
     private static final int SERVICE_TYPE_MEAL = 2;
 
+    //查询购物车服务
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<CartItemVO> getCartItemList(Long userId) {
@@ -49,6 +50,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         return itemList.stream().map(this::convertToVO).collect(Collectors.toList());
     }
 
+    //添加服务到购物车
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void addItem(Long userId, CartItemDTO dto) {
@@ -96,6 +98,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         this.updateById(cart);
     }
 
+    //修改购物车餐饮数量
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void updateItemQuantity(Long userId, Long productId, Integer quantity) {
@@ -124,6 +127,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         this.updateById(cart);
     }
 
+    //删除购物车服务
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deleteItem(Long userId, Long productId) {
@@ -137,6 +141,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         this.updateById(cart);
     }
 
+    //清空购物车
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void clearCart(Long userId) {
@@ -150,6 +155,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         this.updateById(cart);
     }
 
+    //结算购物车并创建订单
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public OrderVO checkout(Long userId, String requestId) {
@@ -197,6 +203,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         return orderVO;
     }
 
+    //获取或创建购物车
     private Cart getOrCreateCart(Long userId) {
         // 与结算共用账号行锁，防止两个标签页重复建购物车或覆盖结算中的内容。
         if (userMapper.selectForUpdate(userId) == null) throw new IllegalArgumentException("账号不存在");
@@ -215,12 +222,14 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         return cart;
     }
 
+    //转换购物车服务实体
     private CartItem convertToEntity(CartItemDTO dto) {
         CartItem item = new CartItem();
         BeanUtils.copyProperties(dto, item);
         return item;
     }
 
+    //转换购物车服务展示信息
     private CartItemVO convertToVO(CartItem item) {
         CartItemVO vo = new CartItemVO();
         BeanUtils.copyProperties(item, vo);
