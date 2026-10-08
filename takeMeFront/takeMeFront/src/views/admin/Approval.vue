@@ -235,6 +235,7 @@ onMounted(() => {
   fetchApprovals()
 })
 
+//加载审批列表
 const fetchApprovals = async () => {
   loading.value = true
   try {
@@ -260,6 +261,7 @@ const fetchApprovals = async () => {
   }
 }
 
+//重置审批筛选条件
 const resetFilter = () => {
   filterType.value = ''
   filterStatus.value = ''
@@ -269,24 +271,28 @@ const resetFilter = () => {
   fetchApprovals()
 }
 
+//打开审批详情
 const openDetailDialog = (row: any) => {
   currentApproval.value = { ...row }
   approvalRemark.value = ''
   detailDialogVisible.value = true
 }
 
+//选择申请并提交通过
 const handleApprove = (row: any) => {
   currentApproval.value = { ...row }
   approvalRemark.value = ''
   confirmApprove()
 }
 
+//选择申请并提交驳回
 const handleReject = (row: any) => {
   currentApproval.value = { ...row }
   approvalRemark.value = ''
   confirmReject()
 }
 
+//确认通过申请并刷新列表
 const confirmApprove = async () => {
   try {
     await approveApplication(currentApproval.value.id, approvalRemark.value || undefined)
@@ -298,6 +304,7 @@ const confirmApprove = async () => {
   }
 }
 
+//确认驳回申请并刷新列表
 const confirmReject = async () => {
   if (!approvalRemark.value || !approvalRemark.value.trim()) {
     ElMessage.warning('请填写驳回原因')
@@ -314,6 +321,7 @@ const confirmReject = async () => {
   }
 }
 
+//获取审批类型名称
 const getTypeText = (type: string) => {
   const map: Record<string, string> = {
     service_days_change: '工作日期变更',
@@ -324,6 +332,7 @@ const getTypeText = (type: string) => {
   return map[type] || '未知'
 }
 
+//获取审批类型标签样式
 const getTypeTagType = (type: string) => {
   const map: Record<string, string> = {
     service_days_change: 'primary',
@@ -334,6 +343,7 @@ const getTypeTagType = (type: string) => {
   return map[type] || 'info'
 }
 
+//获取审批状态名称
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     pending: '待审核',
@@ -343,6 +353,7 @@ const getStatusText = (status: string) => {
   return map[status] || '未知'
 }
 
+//获取审批状态标签样式
 const getStatusTagType = (status: string) => {
   const map: Record<string, string> = {
     pending: 'warning',

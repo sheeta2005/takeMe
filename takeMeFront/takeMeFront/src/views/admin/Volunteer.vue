@@ -175,6 +175,7 @@ onMounted(() => {
   fetchVolunteers()
 })
 
+//加载志愿者列表
 const fetchVolunteers = async () => {
   loading.value = true
   try {
@@ -208,6 +209,7 @@ const fetchVolunteers = async () => {
   }
 }
 
+//重置志愿者筛选条件
 const resetFilter = () => {
   filterId.value = undefined
   filterKeyword.value = ''
@@ -218,20 +220,24 @@ const resetFilter = () => {
   fetchVolunteers()
 }
 
+//获取工作状态名称
 const getWorkStatusText = (status: number) => {
   const map = ['休息中', '待命中', '服务中']
   return map[status] || '未知'
 }
 
+//获取工作状态标签样式
 const getWorkStatusTagType = (status: number) => {
   const map = ['info', 'primary', 'success']
   return map[status] || 'info'
 }
 
+//打开志愿者详情
 const handleView = (row: any) => {
   router.push(`/admin/volunteer/detail/${row.id}`)
 }
 
+//切换志愿者启用状态
 const handleToggleStatus = async (row: any) => {
   const newStatus = row.status === 1 ? 0 : 1
   const action = newStatus === 1 ? '启用' : '禁用'
@@ -253,6 +259,7 @@ const handleToggleStatus = async (row: any) => {
   }
 }
 
+//删除志愿者并刷新列表
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定要删除该志愿者吗？此操作不可恢复！', '删除确认', {

@@ -182,6 +182,7 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'info'
 }
 
+//获取订单状态标签样式
 const getStatusType = (status: number) => {
   const map: Record<number, string> = {
     0: 'warning',
@@ -195,6 +196,7 @@ const getStatusType = (status: number) => {
   return map[status] || 'info'
 }
 
+//获取订单状态名称
 const getStatusText = (status: number) => {
   const map: Record<number, string> = {
     0: '待接单',
@@ -208,14 +210,17 @@ const getStatusText = (status: number) => {
   return map[status] || '未知'
 }
 
+//获取服务类型名称
 const getServiceTypeName = (type: number) => {
   return serviceTypeMap[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN', {
@@ -227,6 +232,7 @@ const formatTime = (time: string) => {
   })
 }
 
+//加载订单详情
 const loadOrderDetail = async (id: number) => {
   loading.value = true
   try {
@@ -241,10 +247,12 @@ const loadOrderDetail = async (id: number) => {
   }
 }
 
+//打开志愿者详情
 const goToVolunteerDetail = (volunteerId: number) => {
   router.push({ path: `/admin/volunteer/detail/${volunteerId}` })
 }
 
+//确认订单完成并刷新详情
 const handleComplete = async () => {
   if (!order.value?.id) return
 
@@ -263,6 +271,7 @@ const handleComplete = async () => {
   }
 }
 
+//取消订单并刷新详情
 const handleCancel = async () => {
   if (!order.value?.id) return
 
@@ -281,6 +290,7 @@ const handleCancel = async () => {
   }
 }
 
+//返回上一页
 const back = () => {
   router.back()
 }

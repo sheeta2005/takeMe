@@ -130,6 +130,7 @@ onMounted(() => {
   }
 })
 
+//加载志愿者详情
 const fetchVolunteerDetail = async (id: number) => {
   loading.value = true
   try {
@@ -145,6 +146,7 @@ const fetchVolunteerDetail = async (id: number) => {
   }
 }
 
+//转换服务日期名称
 const getServiceDaysText = (days: string | number) => {
   const dayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   if (typeof days === 'string') {
@@ -153,16 +155,19 @@ const getServiceDaysText = (days: string | number) => {
   return dayMap[days] || '未知'
 }
 
+//获取工作状态名称
 const getWorkStatusText = (status: number) => {
   const map = ['休息中', '待命中', '服务中']
   return map[status] || '未知'
 }
 
+//获取工作状态标签样式
 const getWorkStatusTagType = (status: number) => {
   const map = ['info', 'primary', 'success']
   return map[status] || 'info'
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN', {

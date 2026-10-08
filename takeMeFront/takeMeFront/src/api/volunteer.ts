@@ -86,6 +86,7 @@ export const deleteAvatar = () => {
   })
 }
 
+//提交服务日期变更
 export const updateServiceDays = (serviceDays: string) => {
   return request({
     url: '/api/volunteer/updateServiceDays',
@@ -200,6 +201,7 @@ export function getStudyDetail(id: number) {
   })
 }
 
+//查询志愿者已接服务
 export function getVolunteerOrderList(params: { pageNum: number; pageSize: number; status?: number }) {
   return request({
     url: '/api/volunteer/order/list',
@@ -208,6 +210,7 @@ export function getVolunteerOrderList(params: { pageNum: number; pageSize: numbe
   })
 }
 
+//查询可接取服务
 export function getAvailableOrderList(params: { pageNum: number; pageSize: number }) {
   return request({
     url: '/api/volunteer/order/available',
@@ -216,6 +219,7 @@ export function getAvailableOrderList(params: { pageNum: number; pageSize: numbe
   })
 }
 
+//查询志愿者订单详情
 export function getVolunteerOrderDetail(orderId: number) {
   return request({
     url: '/api/volunteer/order/detail',
@@ -224,6 +228,7 @@ export function getVolunteerOrderDetail(orderId: number) {
   })
 }
 
+//接取服务
 export function confirmOrder(orderItemId: number) {
   return request({
     url: '/api/volunteer/order/confirm',
@@ -232,6 +237,7 @@ export function confirmOrder(orderItemId: number) {
   })
 }
 
+//开始服务
 export function startService(orderItemId: number) {
   return request({
     url: '/api/volunteer/order/start',
@@ -240,6 +246,7 @@ export function startService(orderItemId: number) {
   })
 }
 
+//完成服务
 export function completeOrder(orderItemId: number) {
   return request({
     url: '/api/volunteer/order/complete',
@@ -248,6 +255,7 @@ export function completeOrder(orderItemId: number) {
   })
 }
 
+//放弃服务
 export function abandonOrder(orderItemId: number) {
   return request({
     url: '/api/volunteer/order/abandon',
@@ -256,6 +264,7 @@ export function abandonOrder(orderItemId: number) {
   })
 }
 
+//查询积分记录
 export function getPointsList() {
   return request({
     url: '/api/volunteer/points/list',
@@ -263,6 +272,7 @@ export function getPointsList() {
   })
 }
 
+//查询积分余额
 export function getPointsSummary() {
   return request({
     url: '/api/volunteer/points/summary',
@@ -270,6 +280,7 @@ export function getPointsSummary() {
   })
 }
 
+//充值志愿者积分
 export function addPoints(points?: number) {
   return request({
     url: '/api/volunteer/points/add',

@@ -85,6 +85,7 @@ onMounted(() => {
 
 const activeMenu = computed(() => route.path)
 
+//跳转选中的菜单页面
 const handleMenuSelect = (path: string) => {
   router.push(path)
 }

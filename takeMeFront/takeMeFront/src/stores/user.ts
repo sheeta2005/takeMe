@@ -28,6 +28,7 @@ export const useUserStore = defineStore('user', {
   }),
 
   actions: {
+    //保存用户登录信息
     setUserInfo(token: string, userId: string, username: string, role: number) {
       this.token = token
       this.userId = userId
@@ -39,10 +40,12 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem('role', String(role))
     },
 
+    //保存用户地址列表
     setAddresses(list: UserAddress[]) {
       this.addresses = list
     },
 
+    //加载并同步用户资料
     async getUserInfo() {
       if (!this.token) return false
       try {
@@ -63,6 +66,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+    //修改并同步用户资料
     async updateUserInfo(data: any) {
       try {
         await updateUserInfo(data)
@@ -82,6 +86,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+    //退出并清理用户登录状态
     async logout() {
       try {
         await logout()

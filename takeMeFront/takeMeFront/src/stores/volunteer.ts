@@ -72,6 +72,7 @@ export const useVolunteerStore = defineStore('volunteer', {
   },
 
   actions: {
+    //保存志愿者登录信息
     setVolunteerInfo(token: string, userId: string, username: string) {
       this.token = token
       this.userId = userId
@@ -84,6 +85,7 @@ export const useVolunteerStore = defineStore('volunteer', {
       localStorage.setItem('volunteerRole', '1')
     },
 
+    //加载志愿者资料
     async fetchVolunteerInfo() {
       if (!this.token) return false
       try {
@@ -96,6 +98,7 @@ export const useVolunteerStore = defineStore('volunteer', {
       }
     },
 
+    //修改并同步志愿者资料
     async updateVolunteerInfo(data: Partial<VolunteerInfo>) {
       try {
         await updateVolunteerInfo(data)
@@ -108,6 +111,7 @@ export const useVolunteerStore = defineStore('volunteer', {
       }
     },
 
+    //上传并同步志愿者头像
     async uploadAvatar(file: File) {
       try {
         const res = await uploadAvatar(file)
@@ -123,14 +127,17 @@ export const useVolunteerStore = defineStore('volunteer', {
       }
     },
 
+    //累计本地服务时长
     addServiceHours(hours: number) {
       this.totalServiceHours += hours
     },
 
+    //更新本地工作状态
     setWorkStatus(status: 0 | 1 | 2) {
       this.workStatus = status
     },
 
+    //退出并清理志愿者登录状态
     async logout() {
       try {
         await volunteerLogout()

@@ -136,11 +136,13 @@ const feedbackList = ref([
 const pendingCount = computed(() => feedbackList.value.filter(item => item.status === 'pending').length)
 const resolvedCount = computed(() => feedbackList.value.filter(item => item.status === 'resolved').length)
 
+//提示反馈关联订单详情
 const handleViewDetail = (row: any) => {
   // 跳转到订单详情或显示弹窗
   ElMessage.info(`查看订单 ${row.orderId} 的详情`)
 }
 
+//标记反馈已处理
 const handleResolve = (row: any) => {
   row.status = 'resolved'
   ElMessage.success('已标记为处理完成')

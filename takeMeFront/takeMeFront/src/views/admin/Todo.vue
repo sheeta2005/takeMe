@@ -107,12 +107,14 @@ const todoList = ref([
 const pendingCount = computed(() => todoList.value.filter(item => !item.done).length)
 const completedCount = computed(() => todoList.value.filter(item => item.done).length)
 
+//提示任务已完成
 const handleStatusChange = (row: any) => {
   if (row.done) {
     ElMessage.success('任务已完成')
   }
 }
 
+//删除本地待办任务
 const handleDelete = (row: any) => {
   const index = todoList.value.findIndex(item => item.id === row.id)
   if (index > -1) {
@@ -121,6 +123,7 @@ const handleDelete = (row: any) => {
   }
 }
 
+//获取任务优先级名称
 const getPriorityText = (priority: string) => {
   const map: Record<string, string> = {
     high: '高优先级',
@@ -130,6 +133,7 @@ const getPriorityText = (priority: string) => {
   return map[priority] || '普通'
 }
 
+//获取任务优先级标签样式
 const getPriorityType = (priority: string) => {
   const map: Record<string, string> = {
     high: 'danger',

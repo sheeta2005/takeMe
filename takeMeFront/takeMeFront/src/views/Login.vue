@@ -257,6 +257,7 @@ const registerRules = {
   ]
 }
 
+//清理用户登录状态
 const clearUserState = () => {
   userStore.$reset()
   localStorage.removeItem('token')
@@ -264,6 +265,7 @@ const clearUserState = () => {
   localStorage.removeItem('role')
 }
 
+//清理志愿者登录状态
 const clearVolunteerState = () => {
   volunteerStore.$reset()
   localStorage.removeItem('volunteerToken')
@@ -272,6 +274,7 @@ const clearVolunteerState = () => {
   localStorage.removeItem('volunteerRole')
 }
 
+//清理管理员登录状态
 const clearAdminState = () => {
   adminStore.token = ''
   adminStore.adminId = ''
@@ -282,6 +285,7 @@ const clearAdminState = () => {
   localStorage.removeItem('adminId')
 }
 
+//更新登录背景偏移
 const handleMouseMove = (e: MouseEvent) => {
   const x = (window.innerWidth / 2 - e.clientX) / speed
   const y = (window.innerHeight / 2 - e.clientY) / speed
@@ -300,6 +304,7 @@ onMounted(() => {
   }
 })
 
+//重置当前登录或注册表单
 const resetForm = () => {
   if (activeTab.value === 'login') {
     loginFormRef.value?.resetFields()
@@ -310,6 +315,7 @@ const resetForm = () => {
   }
 }
 
+//按角色登录并跳转首页
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password || loginForm.value.role === null) {
     ElMessage.warning('请填写完整的登录信息')
@@ -366,6 +372,7 @@ const handleLogin = async () => {
   }
 }
 
+//提交账号注册
 const handleRegister = async () => {
   if (!await registerFormRef.value?.validate()) return
 

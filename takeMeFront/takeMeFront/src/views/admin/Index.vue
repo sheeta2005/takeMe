@@ -399,22 +399,26 @@ const userGrowthChart = ref<HTMLDivElement | null>(null)
 
 let refreshTimer: number | null = null
 
+//获取订单状态名称
 const getStatusName = (status: number) => {
   const names = ['待接单', '已接单', '服务中', '待确认', '已完成', '已取消', '未支付']
   return names[status] || '未知'
 }
 
+//获取订单状态标签样式
 const getStatusType = (status: number) => {
   const types = ['warning', 'primary', 'primary', 'warning', 'success', 'danger', 'info']
   return types[status] || ''
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return ''
   const date = new Date(time)
   return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+//加载概览与近期订单
 const loadDashboardData = async () => {
   try {
     const res = await getDashboardData()
@@ -458,6 +462,7 @@ const loadDashboardData = async () => {
   }
 }
 
+//加载数据并绘制统计图
 const initCharts = async () => {
   if (orderAmountChart.value) {
     const chart = echarts.init(orderAmountChart.value)
@@ -660,10 +665,12 @@ const initCharts = async () => {
   }
 }
 
+//打开订单详情
 const viewOrderDetail = (orderId: number) => {
   router.push(`/admin/order/detail/${orderId}`)
 }
 
+//打开审批页面
 const goToApproval = () => {
   router.push('/admin/approval')
 }

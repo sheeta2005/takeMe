@@ -24,6 +24,7 @@ watch(() => props.src, (newVal) => {
   displaySrc.value = newVal || defaultAvatar
 })
 
+//头像加载失败时显示默认图片
 const handleError = () => {
   displaySrc.value = defaultAvatar
 }

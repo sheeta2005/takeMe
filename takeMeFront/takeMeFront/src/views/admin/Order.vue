@@ -137,16 +137,19 @@ const parseVolunteerId = (volunteerIds: string) => {
   return ids[0] || '未分配'
 }
 
+//获取订单状态名称
 const getStatusName = (status: number) => {
   const names = ['待接单', '已接单', '服务中', '待确认', '已完成', '已取消', '未支付']
   return names[status] || '未知'
 }
 
+//获取订单状态标签样式
 const getStatusType = (status: number) => {
   const types = ['warning', 'primary', 'warning', 'warning', 'success', 'danger', 'info']
   return types[status] || ''
 }
 
+//加载订单列表
 const fetchOrders = async () => {
   loading.value = true
   try {
@@ -171,11 +174,13 @@ const fetchOrders = async () => {
   }
 }
 
+//按筛选条件重新查询订单
 const handleFilter = () => {
   currentPage.value = 1
   fetchOrders()
 }
 
+//重置订单筛选条件
 const handleReset = () => {
   filterForm.status = undefined
   filterForm.orderNo = ''
@@ -183,10 +188,12 @@ const handleReset = () => {
   handleFilter()
 }
 
+//打开订单详情
 const handleDetail = (row: any) => {
   router.push({ name: 'AdminOrderDetail', params: { id: row.id } })
 }
 
+//确认订单完成并刷新列表
 const handleComplete = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定完成该订单吗？', '提示', { type: 'warning' })
@@ -200,6 +207,7 @@ const handleComplete = async (row: any) => {
   }
 }
 
+//取消订单并刷新列表
 const handleCancel = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定取消该订单吗？', '提示', { type: 'warning' })

@@ -6,6 +6,7 @@ import EcosystemIcon from './icons/IconEcosystem.vue'
 import CommunityIcon from './icons/IconCommunity.vue'
 import SupportIcon from './icons/IconSupport.vue'
 
+//在编辑器中打开项目说明
 const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
 </script>
 

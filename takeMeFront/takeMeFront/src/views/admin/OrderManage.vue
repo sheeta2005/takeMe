@@ -143,10 +143,12 @@ const serviceTypeMap = {
   companion: '陪伴服务'
 }
 
+//获取服务类型名称
 const getServiceTypeName = (type) => {
   return serviceTypeMap[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type) => {
   const map = {
     meal: 'warning',

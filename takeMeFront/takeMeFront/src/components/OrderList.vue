@@ -231,6 +231,7 @@ const availableTimeSlots = computed(() => {
   return allTimeSlots.filter(slot => parseInt(slot.value.split(':')[0]) > currentHour)
 })
 
+//选择预约日期并重置时段
 const selectDate = async (date: string) => {
   cartForm.value.serviceDate = date
   cartForm.value.serviceTime = ''
@@ -259,6 +260,7 @@ const loadAddressList = async () => {
   }
 }
 
+//加载已上架服务
 const fetchServiceList = async () => {
   try {
     const res = await getServiceList(props.type)
@@ -282,6 +284,7 @@ const openAddToCartModal = (item: any) => {
   nextTick(() => cartFormRef.value?.clearValidate())
 }
 
+//关闭并重置预约表单
 const cancelAddToCart = () => {
   addToCartVisible.value = false
   cartFormRef.value?.resetFields()

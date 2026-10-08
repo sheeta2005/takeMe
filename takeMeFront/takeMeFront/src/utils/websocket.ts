@@ -27,10 +27,12 @@ class WebSocketManager {
   private userId: string = ''
   private isConnected: boolean = false
 
+  //初始化实时连接地址
   constructor() {
     this.baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080'
   }
 
+  //建立当前账号实时连接
   connect(userType: string, userId: string) {
     if (this.userType === userType && this.userId === userId && this.isConnected) {
       console.log('WebSocket已连接，无需重复连接')
@@ -85,6 +87,7 @@ class WebSocketManager {
     }
   }
 
+  //按消息类型分发通知
   private handleMessage(message: WebSocketMessage) {
     switch (message.type) {
       case 'ORDER_STATUS_CHANGE':
@@ -99,6 +102,7 @@ class WebSocketManager {
     }
   }
 
+  //提示订单变更并通知页面
   private handleOrderStatusChange(data: OrderStatusChangeData) {
     console.log('收到订单状态变更通知:', data)
 
@@ -117,6 +121,7 @@ class WebSocketManager {
     }))
   }
 
+  //启动连接心跳
   private startHeartbeat() {
     this.heartbeatTimer = window.setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
@@ -125,6 +130,7 @@ class WebSocketManager {
     }, 30000)
   }
 
+  //停止连接心跳
   private stopHeartbeat() {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
@@ -132,6 +138,7 @@ class WebSocketManager {
     }
   }
 
+  //安排断线重连
   private reconnect() {
     if (this.reconnectTimer) return
 
@@ -144,6 +151,7 @@ class WebSocketManager {
     }, 5000)
   }
 
+  //断开连接并清理定时器
   disconnect() {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
@@ -159,6 +167,7 @@ class WebSocketManager {
     this.userId = ''
   }
 
+  //获取实时连接状态
   getConnectStatus(): boolean {
     return this.isConnected
   }

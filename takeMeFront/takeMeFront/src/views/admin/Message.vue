@@ -128,6 +128,7 @@ onMounted(() => {
   fetchMsgs()
 })
 
+//加载已发送消息
 const fetchMsgs = async () => {
   loading.value = true
   try {
@@ -147,6 +148,7 @@ const fetchMsgs = async () => {
   }
 }
 
+//重置消息筛选条件
 const resetFilter = () => {
   filterType.value = ''
   filterReceiverType.value = ''
@@ -154,6 +156,7 @@ const resetFilter = () => {
   fetchMsgs()
 }
 
+//删除消息并刷新列表
 const handleDelete = (msg: any) => {
   ElMessageBox.confirm('确定要删除该消息吗？', '提示', {
     confirmButtonText: '确定',
@@ -170,16 +173,19 @@ const handleDelete = (msg: any) => {
   }).catch(() => {})
 }
 
+//获取消息类型名称
 const getTypeText = (type: number) => {
   const map = ['系统通知', '任务通知', '温馨提醒']
   return map[type] || '未知'
 }
 
+//获取消息类型标签样式
 const getTypeTagType = (type: number) => {
   const map = ['info', 'primary', 'success']
   return map[type] || 'info'
 }
 
+//获取接收角色名称
 const getReceiverTypeText = (type: number) => {
   const map = ['管理员', '志愿者', '用户（老人）']
   return map[type] || '未知'

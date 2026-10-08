@@ -33,6 +33,7 @@ export const useCartStore = defineStore('cart', {
   },
 
   actions: {
+    //加载购物车服务
     async fetchCartList() {
       try {
         const res = await getCartList()
@@ -45,6 +46,7 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
+    //添加购物车服务并刷新列表
     async addItem(item: {
       serviceId: number
       serviceName: string
@@ -83,6 +85,7 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
+    //修改购物车餐饮数量
     async updateQuantity(cartItemId: number, quantity: number) {
       const item = this.items.find(i => i.id === cartItemId)
       if (!item) return
@@ -101,6 +104,7 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
+    //删除购物车服务并刷新列表
     async removeItem(cartItemId: number) {
       try {
         await deleteCartItem(cartItemId)
@@ -113,6 +117,7 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
+    //清空购物车
     async clearCart() {
       try {
         await clearCart()
@@ -124,10 +129,12 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
+    //清理本地购物车状态
     resetCart() {
       this.items = []
     },
 
+    //加载服务端购物车
     loadFromLocalStorage() {
       this.fetchCartList()
     }

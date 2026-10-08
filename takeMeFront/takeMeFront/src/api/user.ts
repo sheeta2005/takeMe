@@ -40,6 +40,7 @@ export function deleteAvatar() {
   })
 }
 
+//修改用户密码
 export function updatePassword(data: { oldPassword: string; newPassword: string }) {
   return request({
     url: '/api/user/updatePassword',
@@ -213,6 +214,7 @@ export function startService(orderItemId: number) {
   })
 }
 
+//查询志愿者详情
 export function getVolunteerDetail(volunteerId: number) {
   return request({
     url: '/api/user/volunteer/detail',

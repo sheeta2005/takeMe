@@ -157,6 +157,7 @@ onMounted(() => {
   }
 })
 
+//加载用户详情
 const fetchUserDetail = async (id: number) => {
   loading.value = true
   try {
@@ -172,6 +173,7 @@ const fetchUserDetail = async (id: number) => {
   }
 }
 
+//获取订单状态名称
 const getOrderStatusText = (status: number) => {
   const map: Record<number, string> = {
     0: '待接单',
@@ -184,6 +186,7 @@ const getOrderStatusText = (status: number) => {
   return map[status] || '未知'
 }
 
+//获取订单状态标签样式
 const getOrderStatusType = (status: number) => {
   const map: Record<number, string> = {
     0: 'warning',
@@ -196,6 +199,7 @@ const getOrderStatusType = (status: number) => {
   return map[status] || 'info'
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return '-'
   return new Date(time).toLocaleString('zh-CN', {

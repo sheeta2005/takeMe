@@ -135,15 +135,18 @@ const cartPopoverVisible = ref(false)
 const activeMenu = computed(() => route.path)
 const unreadMessageCount = ref(0)
 
+//跳转选中的菜单页面
 const handleMenuSelect = (path: string) => {
   router.push(path)
 }
 
+//打开购物车页面
 const goToCart = () => {
   cartPopoverVisible.value = false
   router.push('/user/cart')
 }
 
+//加载未读消息数量
 const fetchUnreadCount = async () => {
   try {
     const res = await getUnreadMessageCount()

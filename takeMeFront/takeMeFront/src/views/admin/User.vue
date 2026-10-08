@@ -169,6 +169,7 @@ onMounted(() => {
   fetchUsers()
 })
 
+//加载用户列表
 const fetchUsers = async () => {
   loading.value = true
   try {
@@ -204,6 +205,7 @@ const fetchUsers = async () => {
   }
 }
 
+//重置用户筛选条件
 const resetFilter = () => {
   filterId.value = undefined
   filterKeyword.value = ''
@@ -214,10 +216,12 @@ const resetFilter = () => {
   fetchUsers()
 }
 
+//打开用户详情
 const handleView = (row: any) => {
   router.push(`/admin/user/detail/${row.id}`)
 }
 
+//切换用户启用状态
 const handleToggleStatus = async (row: any) => {
   const newStatus = row.status === 1 ? 0 : 1
   const action = newStatus === 1 ? '启用' : '禁用'
@@ -239,6 +243,7 @@ const handleToggleStatus = async (row: any) => {
   }
 }
 
+//删除用户并刷新列表
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定要删除该用户吗？此操作不可恢复！', '删除确认', {

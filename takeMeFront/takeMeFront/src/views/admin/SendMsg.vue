@@ -163,6 +163,7 @@ onMounted(async () => {
   await loadElderList()
 })
 
+//加载可选志愿者
 const loadVolunteerList = async () => {
   try {
     const res = await searchVolunteer(1, 100)
@@ -172,6 +173,7 @@ const loadVolunteerList = async () => {
   }
 }
 
+//加载可选用户
 const loadElderList = async () => {
   try {
     const res = await searchUser(1, 100)
@@ -181,11 +183,13 @@ const loadElderList = async () => {
   }
 }
 
+//切换接收角色并清空选择
 const handleReceiverChange = () => {
   form.volunteerIds = []
   form.elderIds = []
 }
 
+//按接收范围发送消息
 const handleSend = async () => {
   await formRef.value?.validate()
   loading.value = true
@@ -234,6 +238,7 @@ const handleSend = async () => {
   }
 }
 
+//重置消息发送表单
 const handleReset = () => {
   formRef.value?.resetFields()
   form.receiverType = 'all_volunteer'

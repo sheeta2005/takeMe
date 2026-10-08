@@ -64,6 +64,7 @@ export const getDashboardData = () => {
   })
 }
 
+//查询近七日订单数量
 export const getOrderTrend7d = () => {
   return request({
     url: '/api/admin/order/trend7d',
@@ -71,6 +72,7 @@ export const getOrderTrend7d = () => {
   })
 }
 
+//查询近七日支付净额
 export const getOrderAmountTrend7d = () => {
   return request({
     url: '/api/admin/order/amount7d',
@@ -78,6 +80,7 @@ export const getOrderAmountTrend7d = () => {
   })
 }
 
+//查询服务类型分布
 export const getServiceTypeDist = () => {
   return request({
     url: '/api/admin/service/type/dist',
@@ -85,6 +88,7 @@ export const getServiceTypeDist = () => {
   })
 }
 
+//查询在线人数
 export const getOnlineStats = () => {
   return request({
     url: '/api/admin/online',
@@ -101,6 +105,7 @@ export const getOrderPage = (pageNum: number, pageSize: number, status?: number)
   })
 }
 
+//按条件查询订单
 export const searchOrder = (
   pageNum: number,
   pageSize: number,
@@ -118,6 +123,7 @@ export const searchOrder = (
   })
 }
 
+//查询订单详情
 export const getOrderDetail = (id: number) => {
   return request({
     url: `/api/admin/order/detail/${id}`,
@@ -125,6 +131,7 @@ export const getOrderDetail = (id: number) => {
   })
 }
 
+//确认订单完成
 export const completeOrder = (id: number) => {
   return request({
     url: `/api/admin/order/complete/${id}`,
@@ -132,6 +139,7 @@ export const completeOrder = (id: number) => {
   })
 }
 
+//取消订单
 export const cancelOrder = (id: number) => {
   return request({
     url: `/api/admin/order/cancel/${id}`,
@@ -139,6 +147,7 @@ export const cancelOrder = (id: number) => {
   })
 }
 
+//查询订单统计
 export const getOrderStatistics = () => {
   return request({
     url: '/api/admin/order/statistics',
@@ -163,6 +172,7 @@ export const searchVolunteer = (
   })
 }
 
+//查询志愿者详情
 export const getVolunteerDetail = (id: number) => {
   return request({
     url: `/api/admin/volunteer/detail/${id}`,
@@ -170,6 +180,7 @@ export const getVolunteerDetail = (id: number) => {
   })
 }
 
+//新增志愿者
 export const addVolunteer = (data: any) => {
   return request({
     url: '/api/admin/volunteer/add',
@@ -178,6 +189,7 @@ export const addVolunteer = (data: any) => {
   })
 }
 
+//修改志愿者资料
 export const updateVolunteer = (data: any) => {
   return request({
     url: '/api/admin/volunteer/update',
@@ -186,6 +198,7 @@ export const updateVolunteer = (data: any) => {
   })
 }
 
+//删除志愿者
 export const deleteVolunteer = (id: number) => {
   return request({
     url: `/api/admin/volunteer/delete/${id}`,
@@ -193,6 +206,7 @@ export const deleteVolunteer = (id: number) => {
   })
 }
 
+//修改志愿者启用状态
 export const updateVolunteerStatus = (id: number, status: number) => {
   return request({
     url: `/api/admin/volunteer/status/${id}`,
@@ -220,6 +234,7 @@ export const searchUser = (
   })
 }
 
+//查询用户详情
 export const getUserDetail = (id: number) => {
   return request({
     url: `/api/admin/user/detail/${id}`,
@@ -227,6 +242,7 @@ export const getUserDetail = (id: number) => {
   })
 }
 
+//新增用户
 export const addUser = (data: any) => {
   return request({
     url: '/api/admin/user/add',
@@ -235,6 +251,7 @@ export const addUser = (data: any) => {
   })
 }
 
+//修改用户资料
 export const updateUser = (data: any) => {
   return request({
     url: '/api/admin/user/update',
@@ -243,6 +260,7 @@ export const updateUser = (data: any) => {
   })
 }
 
+//删除用户
 export const deleteUser = (id: number) => {
   return request({
     url: `/api/admin/user/delete/${id}`,
@@ -250,6 +268,7 @@ export const deleteUser = (id: number) => {
   })
 }
 
+//修改用户启用状态
 export const updateUserStatus = (id: number, status: number) => {
   return request({
     url: `/api/admin/user/status/${id}`,
@@ -267,6 +286,7 @@ export const getMessagePage = (pageNum: number, pageSize: number, receiverType?:
   })
 }
 
+//分页查询发送记录
 export const getSentMessagePage = (pageNum: number, pageSize: number, receiverType?: number, type?: number) => {
   return request({
     url: '/api/admin/message/sent',
@@ -275,6 +295,7 @@ export const getSentMessagePage = (pageNum: number, pageSize: number, receiverTy
   })
 }
 
+//发送消息
 export const sendMessage = (data: any) => {
   return request({
     url: '/api/admin/message/send',
@@ -283,6 +304,7 @@ export const sendMessage = (data: any) => {
   })
 }
 
+//批量发送消息
 export const sendBatchMessage = (data: any) => {
   return request({
     url: '/api/admin/message/sendBatch',
@@ -291,6 +313,7 @@ export const sendBatchMessage = (data: any) => {
   })
 }
 
+//删除消息
 export const deleteMessage = (id: number) => {
   return request({
     url: `/api/admin/message/delete/${id}`,
@@ -298,6 +321,7 @@ export const deleteMessage = (id: number) => {
   })
 }
 
+//查询消息统计
 export const getMessageStatistics = () => {
   return request({
     url: '/api/admin/message/statistics',
@@ -314,6 +338,7 @@ export const getReviewPage = (pageNum: number, pageSize: number, rating?: number
   })
 }
 
+//查询评价详情
 export const getReviewDetail = (id: number) => {
   return request({
     url: `/api/admin/review/detail/${id}`,
@@ -321,6 +346,7 @@ export const getReviewDetail = (id: number) => {
   })
 }
 
+//删除评价
 export const deleteReview = (id: number) => {
   return request({
     url: `/api/admin/review/delete/${id}`,
@@ -328,6 +354,7 @@ export const deleteReview = (id: number) => {
   })
 }
 
+//查询评价统计
 export const getReviewStatistics = () => {
   return request({
     url: '/api/admin/review/statistics',
@@ -352,6 +379,7 @@ export const getApprovalPage = (
   })
 }
 
+//查询审批详情
 export const getApprovalDetail = (id: number) => {
   return request({
     url: `/api/admin/approval/detail/${id}`,
@@ -359,6 +387,7 @@ export const getApprovalDetail = (id: number) => {
   })
 }
 
+//通过审批申请
 export const approveApplication = (id: number, remark?: string) => {
   return request({
     url: `/api/admin/approval/approve/${id}`,
@@ -367,6 +396,7 @@ export const approveApplication = (id: number, remark?: string) => {
   })
 }
 
+//驳回审批申请
 export const rejectApplication = (id: number, remark: string) => {
   return request({
     url: `/api/admin/approval/reject/${id}`,
@@ -390,6 +420,7 @@ export const getServicePackagePage = (
   })
 }
 
+//查询服务套餐详情
 export const getServicePackageDetail = (id: number) => {
   return request({
     url: `/api/admin/service-package/detail/${id}`,
@@ -397,6 +428,7 @@ export const getServicePackageDetail = (id: number) => {
   })
 }
 
+//新增服务套餐
 export const addServicePackage = (data: any) => {
   return request({
     url: '/api/admin/service-package/add',
@@ -405,6 +437,7 @@ export const addServicePackage = (data: any) => {
   })
 }
 
+//修改服务套餐
 export const updateServicePackage = (data: any) => {
   return request({
     url: '/api/admin/service-package/update',
@@ -413,6 +446,7 @@ export const updateServicePackage = (data: any) => {
   })
 }
 
+//删除服务套餐
 export const deleteServicePackage = (id: number) => {
   return request({
     url: `/api/admin/service-package/delete/${id}`,
@@ -420,6 +454,7 @@ export const deleteServicePackage = (id: number) => {
   })
 }
 
+//修改服务套餐启用状态
 export const updateServicePackageStatus = (id: number, status: number) => {
   return request({
     url: `/api/admin/service-package/status/${id}`,

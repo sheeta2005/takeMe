@@ -78,6 +78,7 @@ import defaultAvatar from '@/assets/default-avatar.png'
 
 const adminStore = useAdminStore()
 
+//校验头像格式与大小
 const handleBeforeUpload = (file: File) => {
   const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
   const isValidSize = file.size / 1024 / 1024 < 5
@@ -93,6 +94,7 @@ const handleBeforeUpload = (file: File) => {
   return true
 }
 
+//压缩并上传管理员头像
 const handleAvatarUpload = async (options: any) => {
   const { file } = options
 
@@ -115,6 +117,7 @@ const handleAvatarUpload = async (options: any) => {
   }
 }
 
+//退出管理员登录
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm(

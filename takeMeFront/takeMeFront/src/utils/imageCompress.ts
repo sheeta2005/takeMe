@@ -1,3 +1,4 @@
+//压缩图片尺寸与质量
 export function compressImage(file: File, maxWidth = 800, quality = 0.8): Promise<File> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

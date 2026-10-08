@@ -16,6 +16,7 @@ export const useAdminStore = defineStore('admin', {
   }),
 
   actions: {
+    //保存管理员登录信息
     setAdminInfo(token: string, adminId: string, username: string, realName: string) {
       this.token = token
       this.adminId = adminId
@@ -27,6 +28,7 @@ export const useAdminStore = defineStore('admin', {
       localStorage.setItem('adminId', adminId)
     },
 
+    //加载管理员资料
     async fetchAdminInfo() {
       if (!this.token) return false
       try {
@@ -38,6 +40,7 @@ export const useAdminStore = defineStore('admin', {
       }
     },
 
+    //修改并同步管理员资料
     async updateAdminInfo(data: any) {
       try {
         await updateAdminInfo(data)
@@ -50,6 +53,7 @@ export const useAdminStore = defineStore('admin', {
       }
     },
 
+    //退出并清理管理员登录状态
     async logout() {
       try {
         await adminLogout()

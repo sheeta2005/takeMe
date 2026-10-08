@@ -197,6 +197,7 @@ onMounted(() => {
   fetchServicePackages()
 })
 
+//加载服务套餐列表
 const fetchServicePackages = async () => {
   loading.value = true
   try {
@@ -217,6 +218,7 @@ const fetchServicePackages = async () => {
   }
 }
 
+//重置服务套餐筛选条件
 const resetFilter = () => {
   filterKeyword.value = ''
   filterType.value = undefined
@@ -225,16 +227,19 @@ const resetFilter = () => {
   fetchServicePackages()
 }
 
+//获取服务类型名称
 const getServiceTypeText = (type: number) => {
   const map = ['代购服务', '助洁服务', '助餐服务', '助医服务', '陪伴服务']
   return map[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTagType = (type: number) => {
   const map = ['primary', 'success', 'warning', 'danger', 'info']
   return map[type] || 'info'
 }
 
+//打开新增套餐表单
 const handleAdd = () => {
   isEdit.value = false
   editForm.value = {
@@ -248,6 +253,7 @@ const handleAdd = () => {
   editDialogVisible.value = true
 }
 
+//打开编辑套餐表单
 const handleEdit = (row: any) => {
   isEdit.value = true
   editForm.value = {
@@ -261,6 +267,7 @@ const handleEdit = (row: any) => {
   editDialogVisible.value = true
 }
 
+//保存新增或编辑套餐
 const confirmEdit = async () => {
   if (!editForm.value.name || !editForm.value.type) {
     ElMessage.warning('请填写完整信息')
@@ -282,6 +289,7 @@ const confirmEdit = async () => {
   }
 }
 
+//切换套餐启用状态
 const handleToggleStatus = async (row: any) => {
   const newStatus = row.status === 1 ? 0 : 1
   const action = newStatus === 1 ? '启用' : '禁用'
@@ -303,6 +311,7 @@ const handleToggleStatus = async (row: any) => {
   }
 }
 
+//删除套餐并刷新列表
 const handleDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm('确定要删除该套餐吗？此操作不可恢复！', '删除确认', {

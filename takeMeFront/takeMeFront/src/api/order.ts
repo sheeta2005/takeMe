@@ -1,5 +1,6 @@
 import request from '@/utils/request'
 
+//查询用户订单列表
 export function getMyOrderList(params: { pageNum: number; pageSize: number; status?: number; orderNo?: string }) {
   return request({
     url: '/api/user/order/list',
@@ -8,6 +9,7 @@ export function getMyOrderList(params: { pageNum: number; pageSize: number; stat
   })
 }
 
+//创建订单
 export function createOrder(data: any) {
   return request({
     url: '/api/user/order/create',
@@ -16,6 +18,7 @@ export function createOrder(data: any) {
   })
 }
 
+//结算购物车
 export function checkoutCart(requestId: string) {
   return request({
     url: '/api/user/cart/checkout',
@@ -24,6 +27,7 @@ export function checkoutCart(requestId: string) {
   })
 }
 
+//取消订单
 export function cancelOrder(orderId: number) {
   return request({
     url: '/api/user/order/cancel',
@@ -32,6 +36,7 @@ export function cancelOrder(orderId: number) {
   })
 }
 
+//确认订单完成
 export function confirmOrder(orderId: number) {
   return request({
     url: '/api/user/order/confirm',
@@ -40,6 +45,7 @@ export function confirmOrder(orderId: number) {
   })
 }
 
+//提交订单评价
 export function evaluateOrder(orderId: number) {
   return request({
     url: '/api/user/order/evaluate',
@@ -48,6 +54,7 @@ export function evaluateOrder(orderId: number) {
   })
 }
 
+//按类型查询服务
 export function getServiceList(type: number) {
   return request({
     url: '/api/user/service/list',
@@ -56,6 +63,7 @@ export function getServiceList(type: number) {
   })
 }
 
+//查询用户订单详情
 export function getUserOrderDetail(orderId: number) {
   return request({
     url: '/api/user/order/detail',
@@ -64,6 +72,7 @@ export function getUserOrderDetail(orderId: number) {
   })
 }
 
+//查询购物车服务
 export function getCartList() {
   return request({
     url: '/api/user/cart/list',
@@ -71,6 +80,7 @@ export function getCartList() {
   })
 }
 
+//模拟订单支付
 export function mockPayment(data: { orderId: number }) {
   return request({
     url: '/api/user/payment/mock',
@@ -79,6 +89,7 @@ export function mockPayment(data: { orderId: number }) {
   })
 }
 
+//取消订单并退款
 export function cancelOrderWithRefund(orderId: number) {
   return request({
     url: '/api/user/payment/cancel',
@@ -87,6 +98,7 @@ export function cancelOrderWithRefund(orderId: number) {
   })
 }
 
+//添加服务到购物车
 export function addToCart(data: {
   serviceId: number
   serviceName: string
@@ -105,6 +117,7 @@ export function addToCart(data: {
   })
 }
 
+//修改购物车数量
 export function updateCartItem(cartItemId: number, quantity: number) {
   return request({
     url: '/api/user/cart/update',
@@ -113,6 +126,7 @@ export function updateCartItem(cartItemId: number, quantity: number) {
   })
 }
 
+//删除购物车服务
 export function deleteCartItem(cartItemId: number) {
   return request({
     url: '/api/user/cart/delete',
@@ -121,6 +135,7 @@ export function deleteCartItem(cartItemId: number) {
   })
 }
 
+//清空购物车
 export function clearCart() {
   return request({
     url: '/api/user/cart/clear',
@@ -128,6 +143,7 @@ export function clearCart() {
   })
 }
 
+//取消单项服务
 export function cancelOrderItem(orderItemId: number) {
   return request({
     url: '/api/user/order/cancelItem',
@@ -136,6 +152,7 @@ export function cancelOrderItem(orderItemId: number) {
   })
 }
 
+//评价单项服务
 export function evaluateOrderItem(orderItemId: number, rating: number, comment: string) {
   return request({
     url: '/api/user/order/evaluateItem',

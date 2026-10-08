@@ -99,6 +99,7 @@ onMounted(async () => {
   userName.value = volunteerStore.realName || '志愿者'
 })
 
+//跳转选中的菜单页面
 const handleMenuSelect = (path: string) => {
   router.push(path)
 }
