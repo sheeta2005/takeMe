@@ -229,8 +229,10 @@ onMounted(async () => {
   }
 })
 
+//返回上一页
 const goBack = () => router.back()
 
+//提交服务预约订单
 const submitOrder = async () => {
   if (!canSubmit.value || !serviceId.value) return
   submitting.value = true

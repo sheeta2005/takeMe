@@ -108,6 +108,7 @@ const currentMonthIndex = ref(currentDate.getMonth())
 
 const workDaysArray = ref<number[]>([])
 
+//同步服务日期到日历
 const updateWorkDaysArray = () => {
   if (!volunteerStore.serviceDays) {
     workDaysArray.value = []
@@ -176,6 +177,7 @@ const calendarDays = computed(() => {
   return result
 })
 
+//切换到上个月
 const prevMonth = () => {
   if (currentMonthIndex.value === 0) {
     currentMonthIndex.value = 11
@@ -185,6 +187,7 @@ const prevMonth = () => {
   }
 }
 
+//切换到下个月
 const nextMonth = () => {
   if (currentMonthIndex.value === 11) {
     currentMonthIndex.value = 0
@@ -194,12 +197,14 @@ const nextMonth = () => {
   }
 }
 
+//获取请假状态标签样式
 const getTagType = (status: number) => {
   if (status === 1) return 'success'
   if (status === 0) return 'warning'
   return 'info'
 }
 
+//提交请假申请
 const submitLeaveForm = async () => {
   if (leaveForm.value.type === undefined || leaveForm.value.type === null || !leaveForm.value.time.length || !leaveForm.value.reason) {
     ElMessage.warning('请完善请假信息')
@@ -221,6 +226,7 @@ const submitLeaveForm = async () => {
   }
 }
 
+//加载请假记录
 const loadLeaveList = async () => {
   try {
     const res = await getLeaveList()

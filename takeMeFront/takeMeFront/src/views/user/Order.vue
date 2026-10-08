@@ -181,18 +181,22 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'info'
 }
 
+//获取订单状态名称
 const getStatusText = (status: number) => {
   return statusMap[status] || '未知状态'
 }
 
+//获取订单状态标签样式
 const getStatusTagType = (status: number) => {
   return statusTagMap[status] || 'info'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN', {
@@ -204,6 +208,7 @@ const formatTime = (time: string) => {
   })
 }
 
+//加载用户订单列表
 const loadOrders = async () => {
   loading.value = true
   try {
@@ -224,27 +229,32 @@ const loadOrders = async () => {
   }
 }
 
+//按订单号重新查询
 const handleSearch = () => {
   currentPage.value = 1
   loadOrders()
 }
 
+//按订单状态重新查询
 const handleFilterChange = () => {
   currentPage.value = 1
   loadOrders()
 }
 
+//切换每页数量并重新查询
 const handleSizeChange = (size: number) => {
   pageSize.value = size
   currentPage.value = 1
   loadOrders()
 }
 
+//切换订单页码
 const handlePageChange = (page: number) => {
   currentPage.value = page
   loadOrders()
 }
 
+//打开订单详情
 const goToDetail = (orderId: number) => {
   if (!orderId) {
     ElMessage.error('订单ID无效')
@@ -253,6 +263,7 @@ const goToDetail = (orderId: number) => {
   router.push(`/user/order/detail/${orderId}`)
 }
 
+//打开订单支付页
 const handleRepay = (orderId: number) => {
   router.push(`/user/payment?orderId=${orderId}`)
 }

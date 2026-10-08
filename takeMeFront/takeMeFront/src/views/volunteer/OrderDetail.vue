@@ -268,6 +268,7 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'danger'
 }
 
+//获取服务状态标签样式
 const getStatusType = (status: number) => {
   const map: Record<number, string> = {
     0: 'info',
@@ -281,6 +282,7 @@ const getStatusType = (status: number) => {
   return map[status] || 'info'
 }
 
+//获取服务状态名称
 const getStatusText = (status: number) => {
   const map: Record<number, string> = {
     0: '待接单',
@@ -294,14 +296,17 @@ const getStatusText = (status: number) => {
   return map[status] || '未知'
 }
 
+//获取服务类型名称
 const getServiceTypeName = (type: number) => {
   return serviceTypeMap[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN', {
@@ -313,6 +318,7 @@ const formatTime = (time: string) => {
   })
 }
 
+//加载志愿者订单详情
 const loadOrderDetail = async (id: number) => {
   loading.value = true
   try {
@@ -327,11 +333,13 @@ const loadOrderDetail = async (id: number) => {
   }
 }
 
+//打开单项服务详情
 const showServiceDetail = (service: any) => {
   currentService.value = service
   serviceDetailVisible.value = true
 }
 
+//确认完成服务并刷新详情
 const handleCompleteOrder = async (orderItemId: number) => {
   if (!order.value?.id) return
 
@@ -356,6 +364,7 @@ const handleCompleteOrder = async (orderItemId: number) => {
   }
 }
 
+//确认放弃服务并刷新详情
 const handleAbandonOrder = async (orderItemId: number) => {
   if (!order.value?.id) return
 
@@ -389,6 +398,7 @@ onMounted(() => {
   }
 })
 
+//返回上一页
 const back = () => {
   router.back()
 }

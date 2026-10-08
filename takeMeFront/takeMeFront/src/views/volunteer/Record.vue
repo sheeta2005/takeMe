@@ -147,18 +147,22 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'danger'
 }
 
+//获取服务状态名称
 const getStatusText = (status: number) => {
   return statusMap[status] || '未知状态'
 }
 
+//获取服务类型名称
 const getServiceTypeName = (type: number) => {
   return serviceTypeMap[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
+//加载已完成服务记录
 const loadRecords = async () => {
   loading.value = true
   try {
@@ -193,22 +197,26 @@ const loadRecords = async () => {
   }
 }
 
+//重新查询服务记录
 const handleSearch = () => {
   currentPage.value = 1
   loadRecords()
 }
 
+//切换每页数量并重新查询
 const handleSizeChange = (size: number) => {
   pageSize.value = size
   currentPage.value = 1
   loadRecords()
 }
 
+//切换服务记录页码
 const handlePageChange = (page: number) => {
   currentPage.value = page
   loadRecords()
 }
 
+//打开服务所属订单详情
 const goToDetail = (orderId: number) => {
   router.push(`/volunteer/order/${orderId}`)
 }

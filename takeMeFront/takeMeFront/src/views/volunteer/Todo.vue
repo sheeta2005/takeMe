@@ -170,6 +170,7 @@ const volunteerStore = useVolunteerStore()
 const loading = ref(true)
 const myServices = ref<any[]>([])
 
+//判断服务是否可在当前时间开始
 const canStartService = (service: any): boolean => {
   if (!service.serviceDate || !service.serviceTime) {
     return true
@@ -187,6 +188,7 @@ const canStartService = (service: any): boolean => {
   }
 }
 
+//获取服务开始时间提示
 const getStartServiceTip = (service: any): string => {
   if (!service.serviceDate || !service.serviceTime) {
     return ''
@@ -244,22 +246,27 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'danger'
 }
 
+//获取服务状态名称
 const getStatusText = (status: number) => {
   return statusMap[status] || '未知'
 }
 
+//获取服务状态标签样式
 const getStatusType = (status: number) => {
   return statusTypeMap[status] || 'info'
 }
 
+//获取服务类型名称
 const getServiceTypeName = (type: number) => {
   return serviceTypeMap[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
+//加载当前志愿者未完成服务
 const loadMyServices = async () => {
   loading.value = true
   try {
@@ -294,10 +301,12 @@ const loadMyServices = async () => {
   }
 }
 
+//刷新当前服务列表
 const refreshData = () => {
   loadMyServices()
 }
 
+//确认开始服务
 const startService = async (service: any) => {
   if (!canStartService(service)) {
     ElMessage.warning(getStartServiceTip(service))
@@ -325,6 +334,7 @@ const startService = async (service: any) => {
   }
 }
 
+//确认完成服务
 const completeService = async (service: any) => {
   try {
     await ElMessageBox.confirm(
@@ -347,6 +357,7 @@ const completeService = async (service: any) => {
   }
 }
 
+//确认放弃服务
 const abandonService = async (service: any) => {
   try {
     await ElMessageBox.confirm(

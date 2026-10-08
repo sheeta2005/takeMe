@@ -121,12 +121,14 @@ const rules = {
   ]
 }
 
+//新增地址输入项
 const addAddress = () => {
   if (form.value.addresses.length < 3) {
     form.value.addresses.push({ id: null, address: '', isDefault: 0 })
   }
 }
 
+//删除地址并移除输入项
 const removeAddress = async (index: number, addr: any) => {
   try {
     if (addr.id) {
@@ -138,6 +140,7 @@ const removeAddress = async (index: number, addr: any) => {
   }
 }
 
+//加载用户资料与地址表单
 const initForm = async () => {
   await userStore.getUserInfo()
   form.value = {
@@ -168,6 +171,7 @@ const initForm = async () => {
   }
 }
 
+//校验头像格式与大小
 const handleBeforeUpload = (file: File) => {
   const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)
   const isValidSize = file.size / 1024 / 1024 < 5
@@ -183,6 +187,7 @@ const handleBeforeUpload = (file: File) => {
   return true
 }
 
+//压缩并上传用户头像
 const handleAvatarUpload = async (options: any) => {
   const { file } = options
 
@@ -206,6 +211,7 @@ const handleAvatarUpload = async (options: any) => {
   }
 }
 
+//保存用户资料与地址
 const submitForm = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
@@ -249,6 +255,7 @@ const submitForm = async () => {
   }
 }
 
+//返回用户资料页
 const back = () => router.push('/user/info')
 
 onMounted(() => initForm())

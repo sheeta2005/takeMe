@@ -187,6 +187,7 @@ const volunteerData = ref({
   rating: '0.0'
 })
 
+//加载志愿者资料与首页统计
 const loadVolunteerData = async () => {
   try {
     await volunteerStore.fetchVolunteerInfo()
@@ -224,6 +225,7 @@ const loadVolunteerData = async () => {
   }
 }
 
+//绘制服务统计图
 const initChart = async (typeCounts: Record<number, number>) => {
   if (!serviceChart.value) return
 
@@ -284,6 +286,7 @@ onUnmounted(() => {
   window.removeEventListener('orderStatusChange', handleOrderStatusChange)
 })
 
+//处理首页服务变更提醒
 const handleOrderStatusChange = (event: CustomEvent) => {
   const data = event.detail
 

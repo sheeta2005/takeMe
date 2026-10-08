@@ -33,10 +33,12 @@ const router = useRouter()
 const userStore = useUserStore()
 const isLoggingOut = ref(false)
 
+//打开密码修改页
 const goPasswordChange = () => {
   router.push('/user/password-change')
 }
 
+//确认退出用户登录
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm(

@@ -73,6 +73,7 @@ const form = ref({
   confirmPassword: ''
 })
 
+//校验两次新密码是否一致
 const validateConfirmPassword = (rule: any, value: string, callback: any) => {
   if (value !== form.value.newPassword) {
     callback(new Error('两次输入的密码不一致'))
@@ -95,6 +96,7 @@ const rules = {
   ]
 }
 
+//提交用户密码修改
 const submitForm = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
@@ -121,6 +123,7 @@ const submitForm = async () => {
   }
 }
 
+//返回用户设置页
 const back = () => router.push('/user/setting')
 </script>
 

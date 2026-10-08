@@ -203,6 +203,7 @@ const handleBeforeUpload = (file: File) => {
   return true
 }
 
+//压缩并上传志愿者头像
 const handleAvatarUpload = async (options: any) => {
   const { file } = options
 

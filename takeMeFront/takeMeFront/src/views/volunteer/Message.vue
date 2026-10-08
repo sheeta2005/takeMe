@@ -124,6 +124,7 @@ onMounted(() => {
   loadMessages()
 })
 
+//加载志愿者消息列表
 const loadMessages = async () => {
   loading.value = true
   try {
@@ -146,6 +147,7 @@ const loadMessages = async () => {
   }
 }
 
+//重置消息筛选条件
 const resetFilter = () => {
   filterType.value = ''
   filterRead.value = ''
@@ -153,6 +155,7 @@ const resetFilter = () => {
   loadMessages()
 }
 
+//标记已读并打开消息详情
 const handleRowClick = (row: any) => {
   if (!row.id) return
   if (row.isRead === 0) {
@@ -163,6 +166,7 @@ const handleRowClick = (row: any) => {
   router.push(`/volunteer/message/detail/${row.id}`)
 }
 
+//标记消息已读或打开详情
 const handleMarkRead = async (row: any) => {
   if (!row.id) return
   if (row.isRead === 0) {
@@ -179,11 +183,13 @@ const handleMarkRead = async (row: any) => {
   }
 }
 
+//获取消息类型名称
 const getTypeText = (type: number): string => {
   const map: Record<number, string> = { 0: '系统通知', 1: '任务通知', 2: '温馨提醒' }
   return map[type] || '未知'
 }
 
+//获取消息类型标签样式
 const getTypeTagType = (type: number): string => {
   const map: Record<number, string> = { 0: 'info', 1: 'primary', 2: 'success' }
   return map[type] || ''

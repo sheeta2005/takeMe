@@ -188,6 +188,7 @@ const currentPageItems = computed(() => {
   return cartStore.items.slice(start, end)
 })
 
+//获取服务类型名称
 const getServiceTypeName = (type: number) => {
   const typeMap: Record<number, string> = {
     0: '代购服务',
@@ -199,6 +200,7 @@ const getServiceTypeName = (type: number) => {
   return typeMap[type] || '未知服务'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   const tagMap: Record<number, string> = {
     0: 'primary',
@@ -210,10 +212,12 @@ const getServiceTypeTag = (type: number) => {
   return tagMap[type] || 'info'
 }
 
+//切换购物车页码
 const handlePageChange = (page: number) => {
   currentPage.value = page
 }
 
+//减少数量或删除服务
 const decreaseQuantity = async (item: any) => {
   if (item.quantity === 1) {
     try {
@@ -241,6 +245,7 @@ const decreaseQuantity = async (item: any) => {
   }
 }
 
+//增加餐饮服务数量
 const increaseQuantity = async (item: any) => {
   if (item.serviceType === 2) {
     await cartStore.updateQuantity(item.id, item.quantity + 1)
@@ -249,6 +254,7 @@ const increaseQuantity = async (item: any) => {
   }
 }
 
+//确认删除购物车服务
 const removeItem = async (cartItemId: number) => {
   try {
     await ElMessageBox.confirm('确定删除？', '提示', {
@@ -267,6 +273,7 @@ const removeItem = async (cartItemId: number) => {
   }
 }
 
+//确认清空购物车
 const clearCart = async () => {
   try {
     await ElMessageBox.confirm('确定清空？', '提示', {
@@ -280,11 +287,13 @@ const clearCart = async () => {
   }
 }
 
+//打开购物车服务详情
 const viewItemDetail = (item: any) => {
   currentDetailItem.value = item
   detailVisible.value = true
 }
 
+//校验购物车并打开结算页
 const goToCheckout = () => {
   if (cartStore.items.length === 0) {
     ElMessage.warning('购物车为空')

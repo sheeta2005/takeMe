@@ -326,6 +326,7 @@ onUnmounted(() => {
   window.removeEventListener(`orderStatusChange_${orderId}`, handleOrderStatusChange)
 })
 
+//提示订单变更并刷新详情
 const handleOrderStatusChange = (event: CustomEvent) => {
   const data = event.detail
   ElMessage.success(`订单状态已更新: ${getStatusText(data.newStatus)}`)
@@ -363,6 +364,7 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'info'
 }
 
+//获取订单状态标签样式
 const getStatusType = (status: number) => {
   const map: Record<number, string> = {
     0: 'warning',
@@ -376,6 +378,7 @@ const getStatusType = (status: number) => {
   return map[status] || 'info'
 }
 
+//获取订单状态名称
 const getStatusText = (status: number) => {
   const map: Record<number, string> = {
     0: '待接单',
@@ -389,14 +392,17 @@ const getStatusText = (status: number) => {
   return map[status] || '未知'
 }
 
+//获取服务类型名称
 const getServiceTypeName = (type: number) => {
   return serviceTypeMap[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN', {
@@ -408,6 +414,7 @@ const formatTime = (time: string) => {
   })
 }
 
+//加载用户订单详情
 const loadOrderDetail = async () => {
   loading.value = true
   try {
@@ -427,11 +434,13 @@ const loadOrderDetail = async () => {
   }
 }
 
+//打开单项服务详情
 const showServiceDetail = (service: any) => {
   currentService.value = service
   serviceDetailVisible.value = true
 }
 
+//加载并展示志愿者详情
 const showVolunteerDetail = async (volunteerId: number) => {
   serviceDetailVisible.value = false
 
@@ -447,6 +456,7 @@ const showVolunteerDetail = async (volunteerId: number) => {
   }
 }
 
+//取消订单并刷新详情
 const handleCancelOrder = async () => {
   if (!order.value?.id) return
 
@@ -470,6 +480,7 @@ const handleCancelOrder = async () => {
   }
 }
 
+//确认订单完成并刷新详情
 const handleConfirmOrder = async () => {
   if (!order.value?.id) return
 
@@ -498,16 +509,19 @@ const handleConfirmOrder = async () => {
   }
 }
 
+//打开订单评价页
 const goToReview = () => {
   if (!order.value?.id) return
   router.push(`/user/order/review/${order.value.id}`)
 }
 
+//打开订单支付页
 const handleRepayOrder = () => {
   if (!order.value?.id) return
   router.push(`/user/payment?orderId=${order.value.id}`)
 }
 
+//返回上一页
 const back = () => {
   router.back()
 }

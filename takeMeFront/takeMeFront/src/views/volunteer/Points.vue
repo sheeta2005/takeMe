@@ -62,6 +62,7 @@ const recharging = ref(false)
 const summary = ref<any>({})
 const pointsList = ref<any[]>([])
 
+//加载积分余额与记录
 const loadPointsData = async () => {
   loading.value = true
   try {
@@ -84,6 +85,7 @@ const loadPointsData = async () => {
   }
 }
 
+//确认充值志愿者积分
 const handleRecharge = async () => {
   try {
     await ElMessageBox.confirm(
@@ -114,12 +116,14 @@ const handleRecharge = async () => {
   }
 }
 
+//打开积分关联订单
 const goToOrderDetail = (orderId?: number) => {
   if (orderId) {
     router.push(`/volunteer/order/${orderId}`)
   }
 }
 
+//格式化显示时间
 const formatTime = (timeStr: string) => {
   if (!timeStr) return '-'
   const date = new Date(timeStr)

@@ -68,6 +68,7 @@ const defaultAddress = computed(() => {
   return addr?.address || '未填写'
 })
 
+//加载用户地址
 const loadAddress = async () => {
   try {
     const res = await getUserAddressList()
@@ -78,6 +79,7 @@ const loadAddress = async () => {
   }
 }
 
+//打开资料编辑页
 const goEdit = () => router.push('/user/info/edit')
 
 onMounted(async () => {

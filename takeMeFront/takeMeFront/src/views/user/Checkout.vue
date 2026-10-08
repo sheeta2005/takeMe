@@ -61,6 +61,7 @@ const totalPrice = computed(() => {
   }, 0)
 })
 
+//加载待结算服务
 const loadCart = async () => {
   loading.value = true
   try {
@@ -78,6 +79,7 @@ const loadCart = async () => {
   }
 }
 
+//提交购物车结算并打开支付页
 const submitOrder = async () => {
   if (submitting.value) return
   if (cartList.value.length === 0) {
@@ -108,6 +110,7 @@ const submitOrder = async () => {
   }
 }
 
+//返回购物车
 const goBack = () => router.push('/user/cart')
 
 onMounted(() => {

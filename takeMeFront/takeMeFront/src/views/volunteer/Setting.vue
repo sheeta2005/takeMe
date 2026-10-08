@@ -30,6 +30,7 @@ import { ElMessageBox } from 'element-plus'
 const router = useRouter()
 const volunteerStore = useVolunteerStore()
 
+//提示字体调节功能状态
 const goFontSize = () => {
   ElMessage.info('字体调节功能开发中')
 }

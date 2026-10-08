@@ -197,6 +197,7 @@ const newsList = [
   { title: '代购服务支持生活用品、药品代买', date: '2025-01-04' },
 ]
 
+//加载用户资料与首页统计
 const loadUserData = async () => {
   try {
     await userStore.getUserInfo()
@@ -231,6 +232,7 @@ onUnmounted(() => {
   window.removeEventListener('orderStatusChange', handleOrderStatusChange)
 })
 
+//处理首页订单变更提醒
 const handleOrderStatusChange = (event: CustomEvent) => {
   const data = event.detail
 

@@ -209,6 +209,7 @@ const hasInProgressService = ref(false)
 const filterServiceType = ref<number | undefined>(undefined)
 const filterServiceId = ref<string>('')
 
+//判断服务是否可在当前时间接取
 const canAcceptService = (service: any): boolean => {
   if (!service.serviceDate || !service.serviceTime) {
     return true
@@ -227,6 +228,7 @@ const canAcceptService = (service: any): boolean => {
   }
 }
 
+//获取服务接取时间提示
 const getAcceptButtonTip = (service: any): string => {
   if (!service.serviceDate || !service.serviceTime) {
     return ''
@@ -267,10 +269,12 @@ const filteredServices = computed(() => {
   return list
 })
 
+//响应筛选操作
 const applyFilter = () => {
   // filteredServices is computed, auto-updates
 }
 
+//重置可接服务筛选条件
 const resetFilter = () => {
   filterServiceType.value = undefined
   filterServiceId.value = ''
@@ -292,14 +296,17 @@ const serviceTypeTagMap: Record<number, string> = {
   4: 'danger'
 }
 
+//获取服务类型名称
 const getServiceTypeName = (type: number) => {
   return serviceTypeMap[type] || '未知'
 }
 
+//获取服务类型标签样式
 const getServiceTypeTag = (type: number) => {
   return serviceTypeTagMap[type] || 'info'
 }
 
+//检查是否已有未完成服务
 const checkInProgressService = async () => {
   try {
     const res = await getVolunteerOrderList({
@@ -322,6 +329,7 @@ const checkInProgressService = async () => {
   }
 }
 
+//加载可接取服务
 const loadAvailableServices = async () => {
   loading.value = true
   try {
@@ -353,23 +361,27 @@ const loadAvailableServices = async () => {
   }
 }
 
+//刷新可接服务与进行中状态
 const refreshData = () => {
   currentPage.value = 1
   loadAvailableServices()
   checkInProgressService()
 }
 
+//切换每页数量并重新查询
 const handleSizeChange = (size: number) => {
   pageSize.value = size
   currentPage.value = 1
   loadAvailableServices()
 }
 
+//切换可接服务页码
 const handlePageChange = (page: number) => {
   currentPage.value = page
   loadAvailableServices()
 }
 
+//校验接单条件并接取服务
 const acceptService = async (service: any) => {
   if (volunteerStore.status === 0) {
     ElMessage.error('账号异常，无法接取服务')

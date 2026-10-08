@@ -60,6 +60,7 @@ onMounted(() => {
   }
 })
 
+//加载消息详情并标记已读
 const fetchMessageDetail = async (id: number) => {
   loading.value = true
   try {
@@ -84,6 +85,7 @@ const fetchMessageDetail = async (id: number) => {
   }
 }
 
+//打开消息关联订单
 const goToOrder = () => {
   if (!message.value?.relatedOrderId) {
     ElMessage.info('暂无关联订单')
@@ -92,18 +94,21 @@ const goToOrder = () => {
   router.push(`/user/order/detail/${message.value.relatedOrderId}`)
 }
 
+//获取消息类型名称
 const getTypeText = (type?: number): string => {
   if (type === undefined) return '未知'
   const map = { 0: '系统通知', 1: '订单通知', 2: '服务通知' }
   return map[type] || '未知'
 }
 
+//获取消息类型标签样式
 const getTypeTagType = (type?: number): string => {
   if (type === undefined) return ''
   const map = { 0: 'primary', 1: 'warning', 2: 'success' }
   return map[type] || ''
 }
 
+//格式化显示时间
 const formatTime = (time: string) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN', {

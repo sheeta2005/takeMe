@@ -60,14 +60,17 @@
 // ... existing code ...
 import { cancelOrderItem, evaluateOrderItem } from '@/api/order'
 
+//判断服务项是否可取消
 const canCancelItem = (item: any) => {
   return item.itemStatus === 0 || item.itemStatus === 1
 }
 
+//判断服务项是否可评价
 const canEvaluateItem = (item: any) => {
   return item.itemStatus === 3 || item.itemStatus === 4
 }
 
+//确认取消单项服务
 const handleCancelItem = async (orderItemId: number) => {
   try {
     await ElMessageBox.confirm('确认取消该服务项？', '提示', {
@@ -89,6 +92,7 @@ const handleCancelItem = async (orderItemId: number) => {
   }
 }
 
+//提交服务评分与评价
 const handleEvaluateItem = async (item: any) => {
   try {
     const { value } = await ElMessageBox.prompt('请输入评价内容（可选）', '评分', {
@@ -113,6 +117,7 @@ const handleEvaluateItem = async (item: any) => {
   }
 }
 
+//打开服务评分弹窗
 const showRatingDialog = async (): Promise<number> => {
   return new Promise((resolve) => {
     ElMessageBox({

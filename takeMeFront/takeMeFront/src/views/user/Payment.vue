@@ -85,6 +85,7 @@ const itemsCount = computed(() => {
   return orderInfo.value.items?.length || 0
 })
 
+//加载待支付订单
 const loadOrderDetail = async () => {
   const orderId = route.query.orderId
 
@@ -118,6 +119,7 @@ const loadOrderDetail = async () => {
   }
 }
 
+//提交模拟支付并打开订单
 const handlePayment = async () => {
   const orderId = route.query.orderId
 
@@ -147,6 +149,7 @@ const handlePayment = async () => {
   }
 }
 
+//返回订单详情或列表
 const goBack = () => {
   const orderId = route.query.orderId
   if (orderId) {

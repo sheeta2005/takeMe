@@ -83,6 +83,7 @@ const rules = {
   ]
 }
 
+//加载待评价订单详情
 const fetchOrderDetail = async () => {
   const orderId = Number(route.params.id)
   if (!orderId || isNaN(orderId)) {
@@ -105,6 +106,7 @@ const fetchOrderDetail = async () => {
   }
 }
 
+//提交服务评分与评价
 const submitReview = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
@@ -136,6 +138,7 @@ const submitReview = async () => {
   }
 }
 
+//返回上一页
 const goBack = () => router.back()
 
 onMounted(() => {
