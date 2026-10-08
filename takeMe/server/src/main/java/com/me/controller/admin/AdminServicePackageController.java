@@ -19,6 +19,7 @@ public class AdminServicePackageController {
 
     private final ServicePackageService servicePackageService;
 
+    //分页查询服务套餐
     @Operation(summary = "分页查")
     @GetMapping("/page")
     public Result<PageResultVO<ServicePackage>> getServicePackagePage(
@@ -37,6 +38,7 @@ public class AdminServicePackageController {
         return Result.success(result);
     }
 
+    //新增服务套餐
     @Operation(summary = "增")
     @PostMapping("/create")
     public Result<Void> createServicePackage(@RequestBody ServicePackage servicePackage) {
@@ -47,6 +49,7 @@ public class AdminServicePackageController {
         return Result.success();
     }
 
+    //修改服务套餐
     @Operation(summary = "改")
     @PostMapping("/update")
     public Result<Void> updateServicePackage(@RequestBody ServicePackage servicePackage) {
@@ -57,6 +60,7 @@ public class AdminServicePackageController {
         return Result.success();
     }
 
+    //删除服务套餐
     @Operation(summary = "删")
     @PostMapping("/delete/{id}")
     public Result<Void> deleteServicePackage(@PathVariable Long id) {

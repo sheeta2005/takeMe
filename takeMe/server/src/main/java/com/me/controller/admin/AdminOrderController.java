@@ -25,6 +25,7 @@ public class AdminOrderController {
 
     private final OrderService orderService;
 
+    //分页查询订单
     @Operation(summary = "分页查询订单", description = "按状态筛选订单列表，支持分页")
     @GetMapping("/page")
     public Result<PageResultVO<Order>> getOrderPage(
@@ -41,6 +42,7 @@ public class AdminOrderController {
         return Result.success(result);
     }
 
+    //按条件查询订单
     @Operation(summary = "高级搜索订单", description = "支持多条件组合搜索订单")
     @GetMapping("/search")
     public Result<PageResultVO<Order>> searchOrder(
@@ -68,6 +70,7 @@ public class AdminOrderController {
         return Result.success(result);
     }
 
+    //查询订单详情
     @Operation(summary = "查询订单详情", description = "根据订单ID获取完整订单信息（包含订单项）")
     @GetMapping("/detail/{id}")
     public Result<OrderVO> getOrderDetail(@Parameter(description = "订单ID", required = true) @PathVariable Long id) {
@@ -78,6 +81,7 @@ public class AdminOrderController {
         return Result.success(order);
     }
 
+    //管理员取消订单
     @Operation(summary = "取消订单", description = "管理员取消指定订单")
     @PostMapping("/cancel/{id}")
     public Result<Void> cancelOrder(@PathVariable Long id) {
@@ -88,6 +92,7 @@ public class AdminOrderController {
         return Result.success();
     }
 
+    //管理员取消单项服务
     @Operation(summary = "取消单项服务", description = "管理员取消订单中的某个服务项")
     @PostMapping("/cancelItem/{orderItemId}")
     public Result<Void> cancelOrderItem(@PathVariable Long orderItemId) {
@@ -98,6 +103,7 @@ public class AdminOrderController {
         return Result.success();
     }
 
+    //管理员确认订单完成
     @Operation(summary = "完成订单", description = "管理员手动标记订单为已完成")
     @PostMapping("/complete/{id}")
     public Result<Void> completeOrder(@Parameter(description = "订单ID", required = true) @PathVariable Long id) {
@@ -108,6 +114,7 @@ public class AdminOrderController {
         return Result.success();
     }
 
+    //统计各状态订单数量
     @Operation(summary = "订单统计", description = "获取各状态订单数量统计")
     @GetMapping("/statistics")
     public Result<Map<String, Object>> getOrderStatistics() {

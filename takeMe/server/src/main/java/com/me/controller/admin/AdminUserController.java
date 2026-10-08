@@ -26,6 +26,7 @@ public class AdminUserController {
     private final UserService userService;
     private final AddressMapper addressMapper;
 
+    //分页查询用户
     @Operation(summary = "分页查")
     @GetMapping("/page")
     public Result<PageResultVO<Map<String, Object>>> getUserPage(
@@ -66,6 +67,7 @@ public class AdminUserController {
         PageResultVO<Map<String, Object>> result = PageResultVO.from(resultPage);
         return Result.success(result);
     }
+    //按条件查询用户
     @Operation(summary = "搜索")
     @GetMapping("/search")
     public Result<PageResultVO<Map<String, Object>>> searchUser(
@@ -115,6 +117,7 @@ public class AdminUserController {
         return Result.success(result);
     }
 
+    //查询用户详情
     @Operation(summary = "查详情")
     @GetMapping("/detail/{id}")
     public Result<Map<String, Object>> getUserDetail(@PathVariable Long id) {
@@ -148,6 +151,7 @@ public class AdminUserController {
         return Result.success(result);
     }
 
+    //用户逻辑删除
     @Operation(summary = "逻辑删")
     @DeleteMapping("/delete/{id}")
     public Result<Void> deleteUser(@PathVariable Long id) {
@@ -163,6 +167,7 @@ public class AdminUserController {
         }
         return Result.success();
     }
+    //修改用户启用状态
     @Operation(summary = "改状态")
     @PostMapping("/status/{id}")
     public Result<Void> updateUserStatus(@PathVariable Long id, @RequestParam Integer status) {

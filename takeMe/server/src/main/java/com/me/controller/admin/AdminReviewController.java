@@ -19,6 +19,7 @@ public class AdminReviewController {
 
     private final ReviewService reviewService;
 
+    //分页查询评价
     @Operation(summary = "分页获取评价")
     @GetMapping("/page")
     public Result<PageResultVO<Review>> getReviewPage(
@@ -35,6 +36,7 @@ public class AdminReviewController {
         return Result.success(result);
     }
 
+    //查询评价详情
     @Operation(summary = "查看评价详情")
     @GetMapping("/detail/{id}")
     public Result<Review> getReviewDetail(@PathVariable Long id) {
@@ -45,6 +47,7 @@ public class AdminReviewController {
         return Result.success(review);
     }
 
+    //删除评价
     @Operation(summary = "删除评价")
     @PostMapping("/delete/{id}")
     public Result<Void> deleteReview(@PathVariable Long id) {
@@ -54,6 +57,7 @@ public class AdminReviewController {
         }
         return Result.success();
     }
+    //查询评价统计
     @Operation(summary = "提供评论数据")
     @GetMapping("/statistics")
     public Result<Object> getReviewStatistics() {

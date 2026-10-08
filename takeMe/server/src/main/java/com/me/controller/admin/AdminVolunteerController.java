@@ -35,6 +35,7 @@ public class AdminVolunteerController {
     private final OrderItemMapper orderItemMapper;
     private final ReviewMapper reviewMapper;
 
+    //分页查询志愿者
     @Operation(summary = "分页查")
     @GetMapping("/page")
     public Result<PageResultVO<Volunteer>> getVolunteerPage(
@@ -51,6 +52,7 @@ public class AdminVolunteerController {
         PageResultVO<Volunteer> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
+    //按条件查询志愿者
     @Operation(summary = "搜索")
     @GetMapping("/search")
     public Result<PageResultVO<Volunteer>> searchVolunteer(
@@ -72,6 +74,7 @@ public class AdminVolunteerController {
         PageResultVO<Volunteer> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
+    //查询志愿者详情
     @Operation(summary = "查详情")
     @GetMapping("/detail/{id}")
     public Result<Map<String, Object>> getVolunteerDetail(@PathVariable Long id) {
@@ -107,6 +110,7 @@ public class AdminVolunteerController {
         
         return Result.success(result);
     }
+    //志愿者逻辑删除
     @Operation(summary = "删")
     @DeleteMapping("/delete/{id}")
     public Result<Void> deleteVolunteer(@PathVariable Long id) {
@@ -122,6 +126,7 @@ public class AdminVolunteerController {
         }
         return Result.success();
     }
+    //修改志愿者启用状态
     @Operation(summary = "改状态")
     @PostMapping("/status/{id}")
     public Result<Void> updateVolunteerStatus(@PathVariable Long id, @RequestParam Integer status) {
