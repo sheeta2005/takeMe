@@ -5,9 +5,11 @@ package com.me.exception;
  */
 public class AccountLockedException extends BaseException {
 
+    //创建账号停用异常
     public AccountLockedException() {
     }
 
+    //创建账号停用异常
     public AccountLockedException(String msg) {
         super(msg);
     }

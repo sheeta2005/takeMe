@@ -29,6 +29,7 @@ public class VolunteerApprovalConsumer {
         TYPE_TEXT_MAP.put("register", "注册");
     }
 
+    //处理志愿者审批结果通知
     @RabbitListener(queues = "#{@volunteerApprovalQueue}", containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleVolunteerApprovalResult(ApprovalResultMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
         try {

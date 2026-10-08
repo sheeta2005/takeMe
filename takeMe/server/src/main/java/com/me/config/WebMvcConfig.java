@@ -28,6 +28,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         this.userInterceptor = userInterceptor;
     }
 
+    //注册各角色登录拦截器
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // 管理员拦截器：拦截所有 /api/admin/**

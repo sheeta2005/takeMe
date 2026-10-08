@@ -13,6 +13,7 @@ public class ServiceTimeValidator {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
+    //校验服务接单时间
     public static void validateCanAcceptOrder(String serviceDate, String serviceTime) {
         if (serviceDate == null || serviceTime == null) {
             return;
@@ -45,6 +46,7 @@ public class ServiceTimeValidator {
         }
     }
 
+    //校验服务开始时间
     public static void validateCanStartService(String serviceDate, String serviceTime) {
         if (serviceDate == null || serviceTime == null) {
             return;
@@ -70,6 +72,7 @@ public class ServiceTimeValidator {
         }
     }
 
+    //判断服务是否处于可见时间段
     public static boolean isWithinVisibleRange(String serviceDate, String serviceTime) {
         if (serviceDate == null || serviceTime == null) {
             return true;

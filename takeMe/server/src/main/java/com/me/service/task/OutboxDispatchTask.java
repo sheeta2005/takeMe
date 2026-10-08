@@ -50,6 +50,7 @@ public class OutboxDispatchTask {
         this.transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
+    //扫描并投递到期消息
     @Scheduled(fixedDelay = 1000)
     public void dispatch() {
         if (!enabled) return;
@@ -63,6 +64,7 @@ public class OutboxDispatchTask {
         }
     }
 
+    //投递单条消息并更新重试状态
     public void dispatchOne(String id) {
         transaction.executeWithoutResult(status -> {
             OutboxMessage message = outboxMapper.selectDueForUpdate(id);

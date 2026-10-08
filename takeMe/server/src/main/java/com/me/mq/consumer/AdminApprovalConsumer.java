@@ -35,6 +35,7 @@ public class AdminApprovalConsumer {
         TYPE_TEXT_MAP.put("register", "注册");
     }
 
+    //处理管理员审批提醒
     @RabbitListener(queues = RabbitMQConfig.APPROVAL_ADMIN_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleAdminApprovalNotification(ApprovalSubmitMessage message,
                                                 org.springframework.amqp.core.Message msg,

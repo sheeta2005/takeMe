@@ -23,6 +23,7 @@ public class BroadcastNotificationConsumer {
     private final VolunteerMapper volunteerMapper;
     private final MessageService messageService;
 
+    //分批保存群发通知
     @RabbitListener(queues = RabbitMQConfig.BROADCAST_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handle(Message template, org.springframework.amqp.core.Message raw) {
         if (template.getReceiverType() == null

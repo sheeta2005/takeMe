@@ -14,6 +14,7 @@ public class MiddlewareStatusListener {
 
     private final MiddlewareSwitchConfig middlewareSwitchConfig;
 
+    //输出中间件启用状态
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         log.info("==================== 中间件状态 ====================");

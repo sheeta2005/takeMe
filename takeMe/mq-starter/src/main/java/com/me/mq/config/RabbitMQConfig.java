@@ -112,6 +112,7 @@ public class RabbitMQConfig {
         return factory;
     }
 
+    //配置群发交换机与队列
     @Bean
     public Declarables broadcastTopology() {
         DirectExchange exchange = new DirectExchange(BROADCAST_EXCHANGE, true, false);
@@ -119,6 +120,7 @@ public class RabbitMQConfig {
         return new Declarables(exchange, queue, BindingBuilder.bind(queue).to(exchange).with("broadcast"));
     }
 
+    //配置消费失败交换机与队列
     @Bean
     public Declarables consumerFailedTopology() {
         DirectExchange exchange = new DirectExchange(CONSUMER_FAILED_EXCHANGE, true, false);
@@ -127,12 +129,14 @@ public class RabbitMQConfig {
                 BindingBuilder.bind(queue).to(exchange).with(CONSUMER_FAILED_ROUTING_KEY));
     }
 
+    //创建消息拓扑管理器
     @Bean
     public RabbitAdmin rabbitAdmin(RabbitTemplate rabbitTemplate) {
         return new RabbitAdmin(rabbitTemplate);
     }
 
 
+    //配置订单交换机
     @Bean
     public DirectExchange orderExchange() {
         return new DirectExchange(ORDER_EXCHANGE, true, false);
@@ -157,11 +161,13 @@ public class RabbitMQConfig {
         return new FanoutExchange(APPROVAL_SUBMIT_FANOUT_EXCHANGE, true, false);
     }
 
+    //配置审批结果交换机
     @Bean
     public DirectExchange approvalResultDirectExchange() {
         return new DirectExchange(APPROVAL_RESULT_DIRECT_EXCHANGE, true, false);
     }
 
+    //配置服务开始超时交换机
     @Bean
     public DirectExchange volunteerStartTimeoutExchange() {
         return new DirectExchange(VOLUNTEER_START_TIMEOUT_EXCHANGE, true, false);
@@ -241,6 +247,7 @@ public class RabbitMQConfig {
         return QueueBuilder.durable(VOLUNTEER_START_TIMEOUT_QUEUE).build();
     }
 
+    //绑定订单延时队列
     @Bean
     public Binding orderDelayBinding(Queue orderDelayQueue, DirectExchange orderExchange) {
         return BindingBuilder.bind(orderDelayQueue)

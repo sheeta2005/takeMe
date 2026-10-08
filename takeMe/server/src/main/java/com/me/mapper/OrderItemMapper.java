@@ -17,6 +17,7 @@ public interface OrderItemMapper extends BaseMapper<OrderItem> {
     @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     OrderItem selectForUpdate(@Param("id") Long id);
 
+    //查询并锁定订单服务项
     @Select("SELECT * FROM order_item WHERE order_id = #{orderId} ORDER BY id FOR UPDATE")
     @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     List<OrderItem> selectByOrderForUpdate(@Param("orderId") Long orderId);
@@ -31,6 +32,7 @@ public interface OrderItemMapper extends BaseMapper<OrderItem> {
     int clearVolunteer(@Param("id") Long id, @Param("oldStatus") Integer oldStatus,
                        @Param("status") Integer status, @Param("volunteerId") Long volunteerId);
 
+    //按原状态更新服务项
     @Update("UPDATE order_item SET item_status = #{status} WHERE id = #{id} AND item_status = #{oldStatus}")
     int changeStatus(@Param("id") Long id, @Param("oldStatus") Integer oldStatus, @Param("status") Integer status);
 }

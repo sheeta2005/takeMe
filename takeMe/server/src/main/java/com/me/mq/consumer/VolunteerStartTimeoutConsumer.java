@@ -18,6 +18,7 @@ public class VolunteerStartTimeoutConsumer {
 
     private final OrderService orderService;
 
+    //处理志愿者超时未开始服务
     @RabbitListener(queues = RabbitMQConfig.VOLUNTEER_START_TIMEOUT_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleVolunteerStartTimeout(VolunteerStartTimeoutMessage message,
                                             org.springframework.amqp.core.Message msg,

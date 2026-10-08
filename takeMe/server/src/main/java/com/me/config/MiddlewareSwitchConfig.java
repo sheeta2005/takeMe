@@ -25,10 +25,12 @@ public class MiddlewareSwitchConfig {
         private boolean enabled = true;
     }
 
+    //判断Redis是否启用
     public boolean isRedisEnabled() {
         return enabled && redis.isEnabled();
     }
 
+    //判断RabbitMQ是否启用
     public boolean isRabbitmqEnabled() {
         return enabled && rabbitmq.isEnabled();
     }

@@ -31,6 +31,7 @@ public class UserNotificationConsumer {
         STATUS_TEXT_MAP.put(5, "已取消");
     }
 
+    //处理用户订单变更通知
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_USER_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleUserNotification(OrderStatusChangeMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
         try {
@@ -82,6 +83,7 @@ public class UserNotificationConsumer {
     }
 
 
+    //生成用户通知标题
     private String buildTitle(OrderStatusChangeMessage message) {
         // 服务项发生动作但父订单聚合状态未变时，仍明确展示本次动作。
         if (message.getRemark() != null) return message.getRemark();
@@ -102,6 +104,7 @@ public class UserNotificationConsumer {
         }
     }
 
+    //生成用户通知内容
     private String buildContent(OrderStatusChangeMessage message) {
         String oldStatusText = STATUS_TEXT_MAP.getOrDefault(message.getOldStatus(), "未知");
         String newStatusText = STATUS_TEXT_MAP.getOrDefault(message.getNewStatus(), "未知");

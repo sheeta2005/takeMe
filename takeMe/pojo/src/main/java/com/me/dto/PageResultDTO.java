@@ -20,6 +20,7 @@ public class PageResultDTO {
         this.pageNum = pageNum;
     }
 
+    //限制每页查询数量
     public void setPageSize(Integer pageSize) {
         if (pageSize == null || pageSize < 1 || pageSize > 100) {
             throw new IllegalArgumentException("每页数量必须在1到100之间");

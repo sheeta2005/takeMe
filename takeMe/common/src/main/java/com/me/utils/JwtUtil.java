@@ -84,6 +84,7 @@ public class JwtUtil {
         return claims.get("role", Integer.class);
     }
 
+    //判断登录令牌是否失效
     public boolean isExpired(String token) {
         try {
             Claims claims = parseJWT(token);

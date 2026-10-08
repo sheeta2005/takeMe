@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface VolunteerLeaveMapper extends BaseMapper<VolunteerLeave> {
+    //查询并锁定请假记录
     @Select("SELECT * FROM volunteer_leave WHERE id = #{id} FOR UPDATE")
     @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     VolunteerLeave selectForUpdate(@Param("id") Long id);

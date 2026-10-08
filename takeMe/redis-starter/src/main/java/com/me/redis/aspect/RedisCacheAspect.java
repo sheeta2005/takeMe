@@ -26,6 +26,7 @@ public class RedisCacheAspect {
     private static final Object MISS = new Object();
     private static final Object NULL_VALUE = new Object();
 
+    //优先读取缓存并合并回源
     @Around("@annotation(redisCache)")
     public Object around(ProceedingJoinPoint joinPoint, RedisCache redisCache) throws Throwable {
         String cacheKey = buildCacheKey(joinPoint, redisCache.prefix(), redisCache.keyArgs());
@@ -52,6 +53,7 @@ public class RedisCacheAspect {
         }
     }
 
+    //读取缓存及空值标记
     private Object read(String key) {
         try {
             Object value = redisUtil.get(key);
@@ -63,6 +65,7 @@ public class RedisCacheAspect {
         }
     }
 
+    //计算带随机偏移的缓存时长
     private long jitterSeconds(long minutes) {
         // 注解仍以分钟配置；实际 TTL 加减 10%，避免一批键同时到期。
         long seconds = Math.max(1, TimeUnit.MINUTES.toSeconds(minutes));
@@ -70,6 +73,7 @@ public class RedisCacheAspect {
         return Math.max(1, seconds + ThreadLocalRandom.current().nextLong(-spread, spread + 1));
     }
 
+    //按指定参数生成缓存键
     private String buildCacheKey(ProceedingJoinPoint joinPoint, String prefix, int[] keyArgs) {
         StringBuilder key = new StringBuilder(prefix);
         if (keyArgs.length > 0) {

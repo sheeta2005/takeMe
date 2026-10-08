@@ -8,6 +8,7 @@ import com.me.entity.ServicePackage;
 import java.util.List;
 
 public interface ServicePackageService extends IService<ServicePackage> {
+    //分页查询服务套餐
     IPage<ServicePackage> searchServicePackage(
             Integer type,
             Integer status,

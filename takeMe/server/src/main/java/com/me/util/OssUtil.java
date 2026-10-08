@@ -43,12 +43,14 @@ public class OssUtil {
 
     private OSS ossClient;
 
+    //初始化对象存储客户端
     @PostConstruct
     public void init() {
         this.ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
         log.info("OSS Client initialized, bucket: {}", bucketName);
     }
 
+    //关闭对象存储客户端
     @PreDestroy
     public void destroy() {
         if (ossClient != null) {
@@ -57,6 +59,7 @@ public class OssUtil {
         }
     }
 
+    //上传文件并返回访问地址
     public String uploadFile(byte[] fileContent, String originalFilename, String identityType) {
         validateFile(originalFilename, fileContent.length);
 
@@ -74,6 +77,7 @@ public class OssUtil {
         }
     }
 
+    //删除对象存储文件
     public void deleteFile(String fileUrl) {
         if (fileUrl == null || fileUrl.isEmpty()) {
             return;
@@ -90,6 +94,7 @@ public class OssUtil {
         }
     }
 
+    //校验文件格式与大小
     private void validateFile(String filename, long fileSize) {
         if (filename == null || filename.isEmpty()) {
             throw new IllegalArgumentException("文件名不能为空");
@@ -105,6 +110,7 @@ public class OssUtil {
         }
     }
 
+    //获取文件扩展名
     private String getFileExtension(String filename) {
         int lastDotIndex = filename.lastIndexOf(".");
         if (lastDotIndex == -1) {
@@ -113,12 +119,14 @@ public class OssUtil {
         return filename.substring(lastDotIndex + 1);
     }
 
+    //生成对象存储文件路径
     private String generateObjectKey(String identityType, String extension) {
         String datePath = LocalDate.now().format(DATE_FORMATTER);
         String uuid = UUID.randomUUID().toString().replace("-", "");
         return datePath + "/" + identityType + "/" + uuid + "." + extension;
     }
 
+    //从访问地址提取文件路径
     private String extractObjectKey(String fileUrl) {
         if (fileUrl.startsWith(domain)) {
             return fileUrl.substring(domain.length() + 1);

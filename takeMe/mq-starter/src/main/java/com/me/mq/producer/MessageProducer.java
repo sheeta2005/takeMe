@@ -21,6 +21,7 @@ public class MessageProducer {
     @Value("#{${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true}}")
     private boolean rabbitmqEnabled;
 
+    //生成事件标识并投递消息
     public void sendMessage(String exchange, String routingKey, Object message) {
         if (!rabbitmqEnabled) {
             log.debug("RabbitMQ 已禁用，跳过消息投递 exchange={}, routingKey={}", exchange, routingKey);

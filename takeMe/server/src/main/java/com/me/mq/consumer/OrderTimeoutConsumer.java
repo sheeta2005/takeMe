@@ -19,6 +19,7 @@ public class OrderTimeoutConsumer {
 
     private final OrderService orderService;
 
+    //处理订单未接服务超时
     @RabbitListener(queues = RabbitMQConfig.ORDER_CANCEL_DLX_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleOrderTimeout(OrderTimeoutMessage message, Message msg, Channel channel) {
         try {

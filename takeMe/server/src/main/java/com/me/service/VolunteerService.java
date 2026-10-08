@@ -22,6 +22,7 @@ public interface VolunteerService extends IService<Volunteer> {
      */
     Volunteer getByUsername(String username);
 
+    //分页查询志愿者
     IPage<Volunteer> searchVolunteer(
             String username,
             Long id,
@@ -45,11 +46,15 @@ public interface VolunteerService extends IService<Volunteer> {
      */
     int releaseVolunteerServices(Long volunteerId);
 
+    //更新志愿者头像
     void updateAvatar(Long volunteerId, String avatarUrl);
 
+    //删除志愿者头像
     void deleteAvatar(Long volunteerId);
 
+    //分页查询启用志愿者编号
     java.util.List<Long> getAllVolunteerIds(int pageNum, int pageSize);
 
+    //志愿者逻辑删除
     boolean logicalDeleteVolunteer(Long volunteerId);
 }

@@ -20,6 +20,7 @@ public class JacksonConfig {
 
     private static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
+    //配置JSON与时间序列化
     @Bean
     public ObjectMapper objectMapper() {
         JavaTimeModule javaTimeModule = new JavaTimeModule();

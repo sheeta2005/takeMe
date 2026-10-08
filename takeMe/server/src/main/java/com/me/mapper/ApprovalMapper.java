@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface ApprovalMapper extends BaseMapper<Approval> {
+    //查询并锁定审批记录
     @Select("SELECT * FROM approval WHERE id = #{id} FOR UPDATE")
     @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     Approval selectForUpdate(@Param("id") Long id);

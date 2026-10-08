@@ -23,10 +23,12 @@ public interface OrderMapper extends BaseMapper<Order> {
     Map<String, Object> selectDashboardOrderCounts(@Param("start") LocalDateTime start,
                                                   @Param("end") LocalDateTime end);
 
+    //按提交标识查询并锁定订单
     @Select("SELECT * FROM `order` WHERE user_id = #{userId} AND request_id = #{requestId} FOR UPDATE")
     @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     Order selectByRequestForUpdate(@Param("userId") Long userId, @Param("requestId") String requestId);
 
+    //查询并锁定订单
     @Select("SELECT * FROM `order` WHERE id = #{id} FOR UPDATE")
     @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     Order selectForUpdate(@Param("id") Long id);

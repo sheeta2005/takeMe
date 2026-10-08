@@ -15,11 +15,13 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
     private final JwtUtil jwtUtil;
     private final AccountAccessService accountAccessService;
 
+    //初始化管理员鉴权依赖
     public JwtTokenAdminInterceptor(JwtUtil jwtUtil, AccountAccessService accountAccessService) {
         this.jwtUtil = jwtUtil;
         this.accountAccessService = accountAccessService;
     }
 
+    //校验管理员登录令牌
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (!(handler instanceof HandlerMethod)) {
@@ -52,6 +54,7 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
         }
     }
 
+    //清理请求登录信息
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         BaseContext.clear();

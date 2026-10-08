@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @MapperScan("com.me.mapper")
 @EnableScheduling
 public class TakeMeApplication {
+    //启动养老服务应用
     public static void main(String[] args) {
         SpringApplication.run(TakeMeApplication.class, args);
     }

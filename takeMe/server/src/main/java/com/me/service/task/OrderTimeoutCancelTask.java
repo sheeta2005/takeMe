@@ -23,6 +23,7 @@ public class OrderTimeoutCancelTask {
     private final OrderItemMapper orderItemMapper;
     private final OrderService orderService;
 
+    //扫描并取消超时订单及服务
     @Scheduled(fixedDelay = 300000)
     public void cancelTimeoutOrders() {
         // 每项在独立事务中复核预约时间，避免首项超时取消整单。

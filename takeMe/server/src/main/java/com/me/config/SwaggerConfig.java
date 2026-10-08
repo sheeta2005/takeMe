@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Profile;
 @Profile("dev")
 public class SwaggerConfig {
 
+    //配置接口文档信息
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()

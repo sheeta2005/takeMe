@@ -11,6 +11,7 @@ import java.util.List;
 
 @Mapper
 public interface OutboxMapper extends BaseMapper<OutboxMessage> {
+    //查询到期待发送消息编号
     @Select("SELECT id FROM mq_outbox WHERE status = 0 AND next_attempt_time <= NOW() ORDER BY create_time, id LIMIT 20")
     List<String> findDueIds();
 

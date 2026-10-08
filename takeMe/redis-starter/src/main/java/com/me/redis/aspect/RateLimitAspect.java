@@ -28,6 +28,7 @@ public class RateLimitAspect {
     @Value("${rate-limit.login-ip-count:1000}")
     private int loginIpCount;
 
+    //拦截并限制请求频率
     @Around("@annotation(rateLimit)")
     public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
         String identifier = resolveIdentifier(joinPoint);
@@ -47,6 +48,7 @@ public class RateLimitAspect {
         return joinPoint.proceed();
     }
 
+    //获取账号限流标识
     private String resolveIdentifier(ProceedingJoinPoint joinPoint) {
         Long userId = BaseContext.getLoginId();
         if (userId != null) {
@@ -62,6 +64,7 @@ public class RateLimitAspect {
         return getIp();
     }
 
+    //获取请求来源地址
     private String getIp() {
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attrs == null) {

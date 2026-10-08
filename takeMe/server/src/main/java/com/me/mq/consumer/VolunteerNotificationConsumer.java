@@ -30,6 +30,7 @@ public class VolunteerNotificationConsumer {
         STATUS_TEXT_MAP.put(5, "已取消");
     }
 
+    //处理志愿者订单变更通知
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_VOLUNTEER_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleVolunteerNotification(OrderStatusChangeMessage message, org.springframework.amqp.core.Message msg, Channel channel) {
         try {
@@ -72,6 +73,7 @@ public class VolunteerNotificationConsumer {
     }
 
 
+    //生成志愿者通知标题
     private String buildTitle(OrderStatusChangeMessage message) {
         Integer newStatus = message.getNewStatus();
         switch (newStatus) {
@@ -83,6 +85,7 @@ public class VolunteerNotificationConsumer {
         }
     }
 
+    //生成志愿者通知内容
     private String buildContent(OrderStatusChangeMessage message) {
         String oldStatusText = STATUS_TEXT_MAP.getOrDefault(message.getOldStatus(), "未知");
         String newStatusText = STATUS_TEXT_MAP.getOrDefault(message.getNewStatus(), "未知");

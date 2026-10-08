@@ -16,6 +16,7 @@ import java.lang.reflect.Method;
 @Slf4j
 public class BizLogAspect {
 
+    //记录业务操作与执行耗时
     @Around("@annotation(com.me.annotation.BizLog)")
     public Object logBizOperation(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();

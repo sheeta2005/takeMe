@@ -5,6 +5,7 @@ package com.me.exception;
  */
 public class PasswordEditFailedException extends BaseException{
 
+    //创建密码修改失败异常
     public PasswordEditFailedException(String msg){
         super(msg);
     }

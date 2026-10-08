@@ -23,6 +23,7 @@ public class OrderWebSocketEndpoint {
     private static ObjectMapper objectMapper;
     private boolean authenticated;
 
+    //获取消息序列化器
     private static ObjectMapper getObjectMapper() {
         if (objectMapper == null) {
             objectMapper = SpringContextUtil.getBean(ObjectMapper.class);
@@ -30,6 +31,7 @@ public class OrderWebSocketEndpoint {
         return objectMapper;
     }
 
+    //校验身份并登记实时连接
     @OnOpen
     public void onOpen(Session session, @PathParam("userType") String userType, @PathParam("userId") String userId) {
         try {
@@ -82,6 +84,7 @@ public class OrderWebSocketEndpoint {
         }
     }
 
+    //移除已断开的实时连接
     @OnClose
     public void onClose(Session session, @PathParam("userType") String userType, @PathParam("userId") String userId) {
         if (!authenticated) return;
@@ -100,6 +103,7 @@ public class OrderWebSocketEndpoint {
         }
     }
 
+    //推送新消息提醒
     public static void sendMessageReminder(Integer role, Long receiverId, com.me.entity.Message message) {
         try {
             WebSocketSessionManager manager = SpringContextUtil.getBean(WebSocketSessionManager.class);
@@ -116,12 +120,14 @@ public class OrderWebSocketEndpoint {
         }
     }
 
+    //记录连接异常并清理会话
     @OnError
     public void onError(Session session, Throwable error, @PathParam("userType") String userType, @PathParam("userId") String userId) {
         log.error("WebSocket错误: userType={}, userId={}", userType, userId, error);
         onClose(session, userType, userId);
     }
 
+    //向用户推送订单状态
     public static void sendMessageToUser(String userId, OrderStatusChangeWsMessage message) {
         try {
             WebSocketMessage wsMessage = WebSocketMessage.builder()
@@ -144,6 +150,7 @@ public class OrderWebSocketEndpoint {
         }
     }
 
+    //向志愿者推送订单状态
     public static void sendMessageToVolunteer(String volunteerId, OrderStatusChangeWsMessage message) {
         try {
             WebSocketMessage wsMessage = WebSocketMessage.builder()
@@ -166,6 +173,7 @@ public class OrderWebSocketEndpoint {
         }
     }
 
+    //向管理员推送订单状态
     public static void sendMessageToAdmin(String adminId, OrderStatusChangeWsMessage message) {
         try {
             WebSocketMessage wsMessage = WebSocketMessage.builder()

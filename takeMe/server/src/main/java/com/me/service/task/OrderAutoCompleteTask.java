@@ -22,6 +22,7 @@ public class OrderAutoCompleteTask {
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
 
+    //自动确认超时未确认订单
     @Scheduled(cron = "0 0 2 * * ?")
     @Transactional(rollbackFor = Exception.class)
     public void autoCompleteOrders() {

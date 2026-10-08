@@ -24,6 +24,7 @@ public class AutoReviewTask {
     private final OrderItemMapper orderItemMapper;
     private final ReviewMapper reviewMapper;
 
+    //为超时未评价订单补默认好评
     @Scheduled(cron = "0 0 2 * * ?")
     public void autoEvaluateCompletedOrders() {
         log.info("开始执行订单自动评价定时任务");

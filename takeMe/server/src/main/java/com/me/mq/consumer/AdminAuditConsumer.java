@@ -28,6 +28,7 @@ public class AdminAuditConsumer {
         STATUS_TEXT_MAP.put(5, "已取消");
     }
 
+    //记录订单状态变更审计
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_ADMIN_QUEUE, containerFactory = "reliableRabbitListenerContainerFactory")
     public void handleAdminAudit(OrderStatusChangeMessage message, Message msg, Channel channel) {
         try {
