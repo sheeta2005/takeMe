@@ -26,6 +26,7 @@ public class UserLoginController {
     private final UserService userService;
     private final JwtUtil jwtUtil;
 
+    //用户登录
     @Operation(summary = "登入")
     @RateLimit(prefix = "rate:user:login", count = 10, period = 60)
     @PostMapping("/login")
@@ -43,6 +44,7 @@ public class UserLoginController {
         return Result.success(loginVO);
     }
 
+    //用户注册
     @Operation(summary = "注册")
     @PostMapping("/register")
     public Result<Void> register(@RequestBody UserRegisterDTO registerDTO) {
@@ -53,6 +55,7 @@ public class UserLoginController {
         return Result.success();
     }
 
+    //修改用户密码
     @Operation(summary = "更新密码")
     @PostMapping("/updatePassword")
     public Result<Void> updatePassword(
@@ -71,6 +74,7 @@ public class UserLoginController {
         return Result.success();
     }
 
+    //用户退出登录
     @Operation(summary = "登出")
     @PostMapping("/logout")
     public Result<Void> logout() {

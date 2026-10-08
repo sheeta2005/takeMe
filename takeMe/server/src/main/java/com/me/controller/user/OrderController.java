@@ -98,6 +98,7 @@ public class OrderController {
         return Result.success();
     }
 
+    //评价单项服务
     @Operation(summary = "评价")
     @PostMapping("/evaluateItem")
     public Result<Void> evaluateItem(
@@ -123,6 +124,7 @@ public class OrderController {
         return Result.success();
     }
 
+    //取消单项服务
     @Operation(summary = "取消一项服务")
     @PostMapping("/cancelItem")
     public Result<Void> cancelItem(

@@ -23,6 +23,7 @@ public class CartController {
     private final CartService cartService;
     private final JwtUtil jwtUtil;
 
+    //查询购物车服务
     @Operation(summary = "列表查")
     @GetMapping("/list")
     public Result<List<CartItemVO>> getCartList(@RequestHeader("Authorization") String authHeader) {
@@ -31,6 +32,7 @@ public class CartController {
         return Result.success(list);
     }
 
+    //添加服务到购物车
     @Operation(summary = "增")
     @PostMapping("/add")
     public Result addToCart(
@@ -46,6 +48,7 @@ public class CartController {
         }
     }
 
+    //修改购物车数量
     @Operation(summary = "改")
     @PostMapping("/update")
     public Result updateCartItem(
@@ -64,6 +67,7 @@ public class CartController {
         }
     }
 
+    //删除购物车服务
     @Operation(summary = "删")
     @PostMapping("/delete")
     public Result deleteCartItem(
@@ -76,6 +80,7 @@ public class CartController {
         return Result.success();
     }
 
+    //清空购物车
     @Operation(summary = "删所有")
     @PostMapping("/clear")
     public Result clearCart(@RequestHeader("Authorization") String authHeader) {
@@ -84,6 +89,7 @@ public class CartController {
         return Result.success();
     }
 
+    //结算购物车
     @Operation(summary = "购买")
     @PostMapping("/checkout")
     public Result<OrderVO> checkout(@RequestHeader("Authorization") String authHeader,

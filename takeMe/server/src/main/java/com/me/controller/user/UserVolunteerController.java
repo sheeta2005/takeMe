@@ -29,6 +29,7 @@ public class UserVolunteerController {
     private final OrderItemMapper orderItemMapper;
     private final ReviewMapper reviewMapper;
 
+    //查询志愿者详情
     @Operation(summary = "查志愿者详情")
     @GetMapping("/detail")
     public Result<Map<String, Object>> getVolunteerDetail(@RequestParam Long volunteerId) {

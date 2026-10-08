@@ -19,6 +19,7 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final JwtUtil jwtUtil;
 
+    //模拟订单支付
     @PostMapping("/mock")
     @Operation(summary = "模拟支付", description = "对未支付订单进行模拟支付")
     public Result<PaymentResultVO> mockPayment(
@@ -33,6 +34,7 @@ public class PaymentController {
         }
     }
 
+    //取消订单并处理退款
     @PostMapping("/cancel")
     @Operation(summary = "取消订单并退款", description = "取消已支付订单并生成退款流水")
     public Result<Void> cancelOrder(
