@@ -50,6 +50,7 @@ public class OrderServiceImpl implements OrderService {
     private final ServicePackageMapper servicePackageMapper;
     private final PaymentTransactionMapper paymentTransactionMapper;
 
+    //分页查询用户订单
     @Override
     public IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
@@ -90,6 +91,7 @@ public class OrderServiceImpl implements OrderService {
         return voPage;
     }
 
+    //分页查询志愿者服务
     @Override
     public IPage<OrderVO> getVolunteerOrderList(Long volunteerId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
         if (volunteerId == null) {
@@ -112,6 +114,7 @@ public class OrderServiceImpl implements OrderService {
         return voPage;
     }
 
+    //分页查询可接取服务
     @Override
     public IPage<OrderVO> getAvailableOrderList(PageResultDTO pageResultDTO) {
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
@@ -141,6 +144,7 @@ public class OrderServiceImpl implements OrderService {
         return voPage;
     }
 
+    //组装志愿者订单信息
     private List<OrderVO> buildVolunteerRecords(List<OrderItem> items, boolean availableOnly) {
         if (items.isEmpty()) return List.of();
         // 两个志愿者列表共用本页批量装配，父订单和老人各只查一次。
@@ -186,6 +190,7 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
     }
 
+    //查询用户订单详情
     @Override
     public OrderVO getOrderDetail(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
@@ -210,6 +215,7 @@ public class OrderServiceImpl implements OrderService {
         return orderVO;
     }
 
+    //查询志愿者订单详情
     @Override
     public OrderVO getVolunteerOrderDetail(Long volunteerId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
@@ -244,6 +250,7 @@ public class OrderServiceImpl implements OrderService {
         return orderVO;
     }
 
+    //创建订单及服务项
     @Override
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     @BizLog(value = "创建订单", logParams = false)
@@ -264,6 +271,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         int totalPrice = 0;
+        //计算金额
         for (OrderItemDTO item : itemDTOList) {
             ServicePackage service = item.getServiceId() == null ? null
                     : servicePackageMapper.selectById(item.getServiceId());
@@ -349,6 +357,7 @@ public class OrderServiceImpl implements OrderService {
         return orderVO;
     }
 
+    //用户取消订单
     @Override
     @BizLog(value = "取消订单", logParams = false)
     @Transactional(rollbackFor = Exception.class)
@@ -364,7 +373,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
 
-    //rc
+    //转rc
     @Override
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public void volunteerConfirmOrder(Long volunteerId, Long orderItemId) {
@@ -373,6 +382,7 @@ public class OrderServiceImpl implements OrderService {
         if (volunteer == null || !Integer.valueOf(1).equals(volunteer.getStatus())) {
             throw new OrderBusinessException("志愿者不存在或已停用");
         }
+
         if (!orderItemMapper.selectActiveForVolunteer(volunteerId).isEmpty()) {
             throw new OrderBusinessException("您有正在进行中的服务，请先完成当前服务");
         }
@@ -417,6 +427,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //志愿者放弃服务并扣除积分
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void volunteerAbandonOrder(Long volunteerId, Long orderItemId) {
@@ -469,6 +480,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //志愿者开始服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void volunteerStartService(Long volunteerId, Long orderItemId) {
@@ -504,6 +516,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //志愿者完成服务并结算积分
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void volunteerCompleteOrder(Long volunteerId, Long orderItemId) {
@@ -536,6 +549,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //用户确认开始服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void userStartService(Long userId, Long orderItemId) {
@@ -563,6 +577,7 @@ public class OrderServiceImpl implements OrderService {
         sendStatusChangeMessage(order, oldStatus, order.getStatus(), "用户确认开始服务");
     }
 
+    //用户取消单项服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrderItem(Long userId, Long orderItemId) {
@@ -584,6 +599,7 @@ public class OrderServiceImpl implements OrderService {
         cancelItem(order, item, "用户取消单项服务");
     }
 
+    //停用志愿者时取消已接服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean releaseAssignedItem(Long volunteerId, Long orderItemId) {
@@ -596,6 +612,7 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
+    //取消超时未支付订单
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void expireUnpaidOrder(Long orderId) {
@@ -606,6 +623,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //取消订单内超时未接服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void expirePendingItems(Long orderId) {
@@ -618,6 +636,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //取消超时未接的单项服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void expirePendingItem(Long orderItemId) {
@@ -630,6 +649,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //取消超时未开始的服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void expireAcceptedItem(Long orderItemId, Long volunteerId) {
@@ -644,6 +664,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //获取服务预约时间
     private LocalDateTime appointment(OrderItem item) {
         return LocalDateTime.of(LocalDate.parse(item.getServiceDate()), LocalTime.parse(item.getServiceTime()));
     }
@@ -657,6 +678,7 @@ public class OrderServiceImpl implements OrderService {
         item.setItemStatus(status);
     }
 
+    //更新服务项状态
     private void changeItemStatus(OrderItem item, int status) {
         if (orderItemMapper.changeStatus(item.getId(), item.getItemStatus(), status) != 1) {
             throw new IllegalStateException("服务状态已变化，请重试");
@@ -664,6 +686,7 @@ public class OrderServiceImpl implements OrderService {
         item.setItemStatus(status);
     }
 
+    //取消全部服务并登记退款
     private void cancelAllItems(Order order, String reason) {
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(order.getId());
         if (items.stream().anyMatch(item -> item.getItemStatus() != 0
@@ -690,6 +713,7 @@ public class OrderServiceImpl implements OrderService {
         sendStatusChangeMessage(order, oldStatus, 5, reason);
     }
 
+    //取消单项服务并登记退款
     private void cancelItem(Order order, OrderItem item, String reason) {
         Integer oldStatus = order.getStatus();
         Long volunteerId = item.getVolunteerId();
@@ -702,6 +726,7 @@ public class OrderServiceImpl implements OrderService {
         sendStatusChangeMessage(updated, oldStatus, updated.getStatus(), reason);
     }
 
+    //登记取消服务的模拟退款
     private void recordMockRefunds(Order order, List<OrderItem> cancelled, String reason) {
         if (cancelled.isEmpty()) return;
         LambdaQueryWrapper<PaymentTransaction> paymentQuery = new LambdaQueryWrapper<>();
@@ -740,6 +765,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //更新订单接单志愿者列表
     private void updateOrderVolunteerIds(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(orderId);
 
@@ -759,6 +785,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //更新父订单状态
     private Integer updateOrderStatus(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(orderId);
 
@@ -819,6 +846,7 @@ public class OrderServiceImpl implements OrderService {
         return oldStatus;
     }
 
+    //判断全部服务是否已取消
     private boolean checkAllItemsCancelled(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectByOrderForUpdate(orderId);
 
@@ -829,10 +857,12 @@ public class OrderServiceImpl implements OrderService {
         return items.stream().allMatch(item -> item.getItemStatus() == 5);
     }
 
+    //登记订单状态变更通知
     private void sendStatusChangeMessage(Order order, Integer oldStatus, Integer newStatus, String remark) {
         sendStatusChangeMessage(order, oldStatus, newStatus, remark, null);
     }
 
+    //登记订单状态变更通知
     private void sendStatusChangeMessage(Order order, Integer oldStatus, Integer newStatus, String remark, Long volunteerId) {
         if (oldStatus == null) {
             return;
@@ -855,6 +885,7 @@ public class OrderServiceImpl implements OrderService {
                 order.getId(), oldStatus, newStatus);
     }
 
+    //用户确认订单完成
     @Override
     @Transactional(rollbackFor = Exception.class)
     @BizLog(value = "志愿者接单", logParams = false)
@@ -883,6 +914,7 @@ public class OrderServiceImpl implements OrderService {
         sendStatusChangeMessage(order, oldStatus, 4, "用户确认服务完成");
     }
 
+    //提交或修改服务评价
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void evaluateOrderItem(Long userId, Long orderItemId, Integer rating, String comment) {
@@ -929,6 +961,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //为未评价服务补默认好评
     private void autoEvaluateUnreviewedItems(Long orderId) {
         LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
         itemWrapper.eq(OrderItem::getOrderId, orderId);
@@ -968,6 +1001,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    //分页查询管理端订单
     @Override
     public IPage<Order> getAdminOrderPage(Integer status, PageResultDTO pageResultDTO) {
         Page<Order> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
@@ -981,6 +1015,7 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.selectPage(pageParam, wrapper);
     }
 
+    //按条件查询管理端订单
     @Override
     public IPage<Order> searchAdminOrder(
             Integer status, String orderNo, Long userId, String userName,
@@ -1013,11 +1048,13 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.selectPage(pageParam, wrapper);
     }
 
+    //查询管理端订单记录
     @Override
     public Order getAdminOrderDetail(Long id) {
         return orderMapper.selectById(id);
     }
 
+    //查询管理端订单及服务详情
     @Override
     public OrderVO getAdminOrderDetailVO(Long id) {
         Order order = orderMapper.selectById(id);
@@ -1042,6 +1079,7 @@ public class OrderServiceImpl implements OrderService {
         return orderVO;
     }
 
+    //管理员取消订单
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean adminCancelOrder(Long id) {
@@ -1053,6 +1091,7 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
+    //管理员取消单项服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean adminCancelOrderItem(Long orderItemId) {
@@ -1073,6 +1112,7 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
+    //管理员确认订单完成
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean adminCompleteOrder(Long id) {
@@ -1100,15 +1140,18 @@ public class OrderServiceImpl implements OrderService {
         return updated;
     }
 
+    //按条件统计订单数量
     @Override
     public Long countOrders(LambdaQueryWrapper<Order> wrapper) {
         return orderMapper.selectCount(wrapper);
     }
 
+    //生成订单编号
     private String generateOrderNo() {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().replace("-", "");
     }
 
+    //发送订单业务通知
     private void sendMessage(Long receiverId, Integer receiverType, Integer type, String title, String content, Long relatedOrderId) {
         com.me.entity.Message message = new com.me.entity.Message();
         message.setReceiverId(receiverId);
@@ -1122,6 +1165,7 @@ public class OrderServiceImpl implements OrderService {
         messageService.sendMessage(message);
     }
 
+    //通知服务所属志愿者
     private void sendMessageToVolunteer(Long volunteerId, Integer receiverType, Integer type, String title, String content, Long relatedOrderId) {
         if (volunteerId == null) {
             return;
@@ -1129,6 +1173,7 @@ public class OrderServiceImpl implements OrderService {
         sendMessage(volunteerId, receiverType, type, title, content, relatedOrderId);
     }
 
+    //结算服务积分并登记流水
     private void addPointsForCompletedOrder(Long volunteerId, OrderItem item) {
         if (item.getItemPrice() == null || item.getItemPrice() <= 0) {
             log.warn("订单项 {} 的价格无效，跳过积分计算", item.getId());
