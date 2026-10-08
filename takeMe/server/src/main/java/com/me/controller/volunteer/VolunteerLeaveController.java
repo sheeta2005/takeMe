@@ -20,6 +20,7 @@ public class VolunteerLeaveController {
 
     private final VolunteerLeaveService volunteerLeaveService;
 
+    //查询请假记录
     @Operation(summary = "查询假条")
     @GetMapping("/list")
     public Result<List<VolunteerLeaveVO>> list() {
@@ -28,6 +29,7 @@ public class VolunteerLeaveController {
         return Result.success(list);
     }
 
+    //提交请假申请
     @Operation(summary = "请假")
     @PostMapping("/submit")
     public Result<Void> submit(@RequestBody VolunteerLeave leave) {

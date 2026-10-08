@@ -25,6 +25,7 @@ public class VolunteerLoginController {
     private final VolunteerService volunteerService;
     private final JwtUtil jwtUtil;
 
+    //志愿者登录
     @Operation(summary = "登录")
     @RateLimit(prefix = "rate:volunteer:login", count = 10, period = 60)
     @PostMapping("/login")
@@ -42,6 +43,7 @@ public class VolunteerLoginController {
         return Result.success(loginVO);
     }
 
+    //志愿者注册
     @Operation(summary = "注册")
     @PostMapping("/register")
     public Result<Void> register(@RequestBody UserRegisterDTO registerDTO) {
@@ -52,6 +54,7 @@ public class VolunteerLoginController {
         return Result.success();
     }
 
+    //志愿者退出登录
     @Operation(summary = "登出")
     @PostMapping("/logout")
     public Result<Void> logout() {

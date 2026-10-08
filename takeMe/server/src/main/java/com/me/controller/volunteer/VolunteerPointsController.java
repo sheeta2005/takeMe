@@ -19,6 +19,7 @@ public class VolunteerPointsController {
 
     private final VolunteerPointsService volunteerPointsService;
 
+    //查询积分记录
     @Operation(summary = "查积分列表")
     @GetMapping("/list")
     public Result<List<VolunteerPointsRecordVO>> list() {
@@ -27,6 +28,7 @@ public class VolunteerPointsController {
         return Result.success(list);
     }
 
+    //查询积分余额
     @Operation(summary = "查总积分")
     @GetMapping("/summary")
     public Result<VolunteerPointsRecordVO> summary() {
@@ -35,6 +37,7 @@ public class VolunteerPointsController {
         return Result.success(summary);
     }
 
+    //充值志愿者积分
     @Operation(summary = "充值积分")
     @PostMapping("/add")
     public Result<String> addPoints(@RequestParam(defaultValue = "100") Integer points) {

@@ -20,6 +20,7 @@ public class VolunteerMessageController {
 
     private final MessageService messageService;
 
+    //分页查询志愿者消息
     @Operation(summary = "查列表")
     @GetMapping("/list")
     public Result<PageResultVO<MessageVO>> list(
@@ -40,6 +41,7 @@ public class VolunteerMessageController {
         return Result.success(result);
     }
 
+    //标记消息已读
     @Operation(summary = "已读")
     @PostMapping("/read/{id}")
     public Result<Void> markAsRead(@PathVariable Long id) {
@@ -51,6 +53,7 @@ public class VolunteerMessageController {
         return Result.success();
     }
 
+    //标记全部消息已读
     @Operation(summary = "全部已读")
     @PostMapping("/read-all")
     public Result<Void> markAllAsRead() {
@@ -63,6 +66,7 @@ public class VolunteerMessageController {
         return Result.success();
     }
 
+    //查询未读消息数量
     @Operation(summary = "查未读数量")
     @GetMapping("/unread-count")
     public Result<Integer> getUnreadCount() {

@@ -21,6 +21,7 @@ public class VolunteerAvatarController {
     private final VolunteerService volunteerService;
     private final OssUtil ossUtil;
 
+    //上传志愿者头像
     @PostMapping("/upload")
     @Operation(summary = "上传志愿者头像")
     public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file) {
@@ -47,6 +48,7 @@ public class VolunteerAvatarController {
         return Result.success(avatarUrl);
     }
 
+    //删除志愿者头像
     @DeleteMapping
     @Operation(summary = "删除志愿者头像")
     public Result<Void> deleteAvatar() {

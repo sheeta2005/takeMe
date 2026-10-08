@@ -20,6 +20,7 @@ public class VolunteerOrderController {
 
     private final OrderService orderService;
 
+    //分页查询已接服务
     @Operation(summary = "查进行中服务列表")
     @GetMapping("/list")
     public Result<PageResultVO<OrderVO>> list(
@@ -38,6 +39,7 @@ public class VolunteerOrderController {
         return Result.success(result);
     }
 
+    //分页查询可接服务
     @Operation(summary = "查可领取订单列表")
     @GetMapping("/available")
     public Result<PageResultVO<OrderVO>> available(
@@ -53,6 +55,7 @@ public class VolunteerOrderController {
         return Result.success(result);
     }
 
+    //查询服务详情
     @Operation(summary = "查服务详情")
     @GetMapping("/detail")
     public Result<OrderVO> detail(@RequestParam Long orderId) {
@@ -61,6 +64,7 @@ public class VolunteerOrderController {
         return Result.success(orderVO);
     }
 
+    //志愿者接取服务
     @Operation(summary = "确认接单")
     @PostMapping("/confirm")
     public Result<Void> confirm(@RequestParam Long orderItemId) {
@@ -69,6 +73,7 @@ public class VolunteerOrderController {
         return Result.success();
     }
 
+    //志愿者放弃服务
     @Operation(summary = "放弃服务")
     @PostMapping("/abandon")
     public Result<Void> abandon(@RequestParam Long orderItemId) {
@@ -77,6 +82,7 @@ public class VolunteerOrderController {
         return Result.success();
     }
 
+    //志愿者完成服务
     @Operation(summary = "完成服务")
     @PostMapping("/complete")
     public Result<Void> complete(@RequestParam Long orderItemId) {
@@ -85,6 +91,7 @@ public class VolunteerOrderController {
         return Result.success();
     }
 
+    //志愿者开始服务
     @Operation(summary = "开始服务")
     @PostMapping("/start")
     public Result<Void> start(@RequestParam Long orderItemId) {

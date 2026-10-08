@@ -33,6 +33,7 @@ public class VolunteerController {
     private final OrderItemMapper orderItemMapper;
     private final ApprovalMapper approvalMapper;
 
+    //查询志愿者资料
     @Operation(summary = "查询信息")
     @GetMapping("/info")
     public Result<Volunteer> getInfo() {
@@ -54,6 +55,7 @@ public class VolunteerController {
         return Result.success(volunteer);
     }
 
+    //修改志愿者资料
     @Operation(summary = "更新信息")
     @PostMapping("/update")
     @Transactional(rollbackFor = Exception.class)
