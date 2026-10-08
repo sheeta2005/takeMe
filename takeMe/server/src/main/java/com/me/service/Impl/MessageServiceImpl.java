@@ -34,6 +34,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     private final MessageMapper messageMapper;
     private final OutboxService outboxService;
 
+    //分页查询接收消息
     @Override
     public IPage<MessageVO> list(Long receiverId, Integer receiverType, Integer type, Integer isRead, PageResultDTO pageResultDTO) {
         Page<Message> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
@@ -57,6 +58,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         return voPage;
     }
 
+    //转换消息展示信息
     @Override
     public MessageVO convertToVO(Message message) {
         MessageVO vo = new MessageVO();
@@ -70,6 +72,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         return vo;
     }
 
+    //标记消息已读
     @Override
     public boolean markAsRead(Long messageId, Integer receiverType, Long receiverId) {
         // 不同角色的数字 ID 可能相同，必须同时校验角色与账号。
@@ -78,6 +81,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
                 .eq(Message::getReceiverId, receiverId).set(Message::getIsRead, 1));
     }
 
+    //标记全部消息已读
     @Override
     public boolean markAllAsRead(Integer receiverType, Long receiverId) {
         LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
@@ -91,6 +95,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         return this.update(updateMessage, wrapper);
     }
 
+    //统计未读消息
     @Override
     public int getUnreadCount(Integer receiverType, Long receiverId) {
         LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
@@ -101,6 +106,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         return Math.toIntExact(this.count(wrapper));
     }
 
+    //发送单条或群发消息
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void sendMessage(Message message) {
@@ -122,6 +128,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         }
     }
 
+    //按事件标识保存通知
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void sendEventMessage(Message message, String eventId) {
@@ -137,6 +144,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         messageMapper.insertEventNotification(message);
     }
 
+    //分页查询管理端消息
     @Override
     public IPage<Message> getAdminMessagePage(Integer receiverType, Integer type, PageResultDTO pageResultDTO) {
         Page<Message> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
@@ -153,6 +161,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         return messageMapper.selectPage(page, wrapper);
     }
 
+    //分页查询发送记录
     @Override
     public IPage<Message> getSentMessagePage(Integer receiverType, Integer type, PageResultDTO pageResultDTO) {
         Page<Message> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
@@ -170,6 +179,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         return messageMapper.selectPage(page, wrapper);
     }
 
+    //批量发送消息
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void sendBatchMessage(List<MessageDTO> messages) {
@@ -196,11 +206,13 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         entityList.forEach(this::sendMessage);
     }
 
+    //删除消息
     @Override
     public boolean deleteMessage(Long messageId) {
         return this.removeById(messageId);
     }
 
+    //统计消息数量与类型
     @Override
     public Map<String, Object> getMessageStatistics() {
         Map<String, Object> stats = new HashMap<>();

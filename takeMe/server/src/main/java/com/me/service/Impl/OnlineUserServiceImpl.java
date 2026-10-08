@@ -14,6 +14,7 @@ public class OnlineUserServiceImpl implements OnlineUserService {
 
     private final WebSocketSessionManager sessionManager;
 
+    //统计各角色在线人数
     @Override
     public Map<String, Object> getOnlineStats() {
         // 单 JVM 部署复用实时连接，不将一天内登录误算为在线。
@@ -24,6 +25,7 @@ public class OnlineUserServiceImpl implements OnlineUserService {
                 "adminCount", adminCount, "volunteerCount", volunteerCount, "userCount", userCount);
     }
 
+    //统计有效连接数量
     private long count(Map<String, Session> sessions) {
         return sessions.values().stream().filter(Session::isOpen).count();
     }

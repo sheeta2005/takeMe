@@ -32,6 +32,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
     private final VolunteerMapper volunteerMapper;
     private final OutboxService outboxService;
 
+    //分页查询审批记录
     @Override
     public IPage<Approval> getApprovalPage(
             String type,
@@ -67,17 +68,20 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         return this.page(page, wrapper);
     }
 
+    //查询审批详情
     @Override
     public Approval getApprovalDetail(Long id) {
         return this.getById(id);
     }
 
+    //通过审批申请
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean approveApplication(Long id, String remark) {
         return decide(id, "approved", remark);
     }
 
+    //拒绝审批申请
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean rejectApplication(Long id, String remark) {
@@ -136,6 +140,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
         return true;
     }
 
+    //登记审批结果通知
     private void sendApprovalResultMessage(Approval approval, String result, String remark) {
         ApprovalResultMessage resultMessage = ApprovalResultMessage.builder()
             .approvalId(approval.getId())

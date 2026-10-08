@@ -35,6 +35,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final PaymentTransactionMapper paymentTransactionMapper;
     private final VolunteerPointsRecordMapper pointsRecordMapper;
 
+    //查询管理端概览数据
     @Override
     @RedisCache(prefix = "admin:dashboard:data", expire = 1, nullExpire = 2)
     public Map<String, Object> getDashboardData() {
@@ -75,6 +76,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         return data;
     }
 
+    //统计近七日订单数量
     @Override
     @RedisCache(prefix = "admin:dashboard:trend:7d", expire = 30, nullExpire = 5)
     public List<Integer> getOrderTrend7d() {
@@ -91,6 +93,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         return trend;
     }
 
+    //统计近七日支付净额
     @Override
     @RedisCache(prefix = "admin:dashboard:amount:7d", expire = 30, nullExpire = 5)
     public List<Integer> getOrderAmountTrend7d() {
@@ -105,6 +108,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         return trend;
     }
 
+    //统计服务类型分布
     @Override
     @RedisCache(prefix = "admin:dashboard:service:dist", expire = 30, nullExpire = 5)
     public List<Map<String, Object>> getServiceTypeDist() {
