@@ -35,6 +35,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
     private final MessageService messageService;
     private final OutboxService outboxService;
 
+    //查询志愿者请假记录
     @Override
     public List<VolunteerLeaveVO> getListByVolunteerId(Long volunteerId) {
         LambdaQueryWrapper<VolunteerLeave> wrapper = new LambdaQueryWrapper<>();
@@ -49,6 +50,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
         }).collect(Collectors.toList());
     }
 
+    //提交请假申请
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void submit(VolunteerLeave leave) {
@@ -93,6 +95,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
                 approval.getId(), leave.getVolunteerId());
     }
 
+    //发送请假通知
     private void sendMessage(Long receiverId, Integer receiverType, Integer type, 
                              String title, String content, Long relatedOrderId) {
         Message msg = new Message();

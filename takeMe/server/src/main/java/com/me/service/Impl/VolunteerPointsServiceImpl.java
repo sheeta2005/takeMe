@@ -25,6 +25,7 @@ public class VolunteerPointsServiceImpl implements VolunteerPointsService {
     private final VolunteerPointsRecordMapper volunteerPointsRecordMapper;
     private final VolunteerMapper volunteerMapper;
 
+    //查询志愿者积分记录
     @Override
     public List<VolunteerPointsRecordVO> getListByVolunteerId(Long volunteerId) {
         LambdaQueryWrapper<VolunteerPointsRecord> wrapper = new LambdaQueryWrapper<>();
@@ -39,6 +40,7 @@ public class VolunteerPointsServiceImpl implements VolunteerPointsService {
         }).collect(Collectors.toList());
     }
 
+    //查询志愿者积分余额
     @Override
     public VolunteerPointsRecordVO getSummary(Long volunteerId) {
         Volunteer volunteer = volunteerMapper.selectById(volunteerId);
@@ -58,6 +60,7 @@ public class VolunteerPointsServiceImpl implements VolunteerPointsService {
         return summary;
     }
 
+    //充值志愿者积分并登记流水
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addPoints(Long volunteerId, Integer points) {

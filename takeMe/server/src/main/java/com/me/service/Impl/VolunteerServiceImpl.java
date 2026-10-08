@@ -40,6 +40,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     private final OrderService orderService;
 
 
+    //校验志愿者登录
     @Override
     public Volunteer login(LoginDTO loginDTO) {
         // 1. 根据账号查询志愿者
@@ -58,6 +59,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         return volunteer;
     }
 
+    //根据用户名查询志愿者
     @Override
     public Volunteer getByUsername(String username) {
         return lambdaQuery()
@@ -65,6 +67,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
                 .one();
     }
 
+    //分页查询志愿者
     @Override
     public IPage<Volunteer> searchVolunteer(
             String username,
@@ -107,6 +110,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         return this.page(pageParam, wrapper);
     }
     
+    //注册志愿者并创建审批
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean register(UserRegisterDTO registerDTO) {
@@ -157,6 +161,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         return saved;
     }
     
+    //释放志愿者进行中的服务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int releaseVolunteerServices(Long volunteerId) {
@@ -188,6 +193,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         return count;
     }
 
+    //更新志愿者头像
     @Override
     public void updateAvatar(Long volunteerId, String avatarUrl) {
         Volunteer volunteer = this.getById(volunteerId);
@@ -207,6 +213,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         log.info("Volunteer {} avatar updated: {}", volunteerId, avatarUrl);
     }
 
+    //删除志愿者头像
     @Override
     public void deleteAvatar(Long volunteerId) {
         Volunteer volunteer = this.getById(volunteerId);
@@ -225,6 +232,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         log.info("Volunteer {} avatar deleted", volunteerId);
     }
 
+    //分页查询启用志愿者编号
     @Override
     public java.util.List<Long> getAllVolunteerIds(int pageNum, int pageSize) {
         Page<Volunteer> page = new Page<>(pageNum, pageSize);

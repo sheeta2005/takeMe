@@ -21,6 +21,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     private final PasswordEncoder passwordEncoder;
     private final OssUtil ossUtil;
 
+    //校验管理员登录
     @Override
     public Admin login(LoginDTO loginDTO) {
         LambdaQueryWrapper<Admin> queryWrapper = new LambdaQueryWrapper<>();
@@ -44,6 +45,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         return admin;
     }
 
+    //修改管理员资料
     @Override
     public boolean updateAdminInfo(Admin admin) {
         admin.setUsername(null);
@@ -53,6 +55,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         return this.updateById(admin);
     }
 
+    //更新管理员头像
     @Override
     public void updateAvatar(Long adminId, String avatarUrl) {
         Admin admin = this.getById(adminId);
@@ -71,6 +74,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         log.info("Admin {} avatar updated: {}", adminId, avatarUrl);
     }
 
+    //删除管理员头像
     @Override
     public void deleteAvatar(Long adminId) {
         Admin admin = this.getById(adminId);

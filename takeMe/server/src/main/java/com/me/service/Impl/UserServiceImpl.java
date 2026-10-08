@@ -28,6 +28,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     private final PasswordEncoder passwordEncoder;
     private final OssUtil ossUtil;
 
+    //校验用户登录
     @Override
     public User login(LoginDTO loginDTO) {
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
@@ -43,6 +44,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         return user;
     }
 
+    //注册用户账号
     @Override
     public boolean register(UserRegisterDTO registerDTO) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
@@ -62,6 +64,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         return this.save(user);
     }
 
+    //修改用户密码
     @Override
     public boolean updatePassword(Long userId, String oldPassword, String newPassword) {
         User user = this.getById(userId);
@@ -78,6 +81,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
                 .eq(User::getId, userId).set(User::getPassword, passwordEncoder.encode(newPassword)));
     }
 
+    //分页查询用户
     @Override
     public IPage<User> searchUser(
             String keyword,
@@ -125,6 +129,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         return this.page(pageParam, wrapper);
     }
 
+    //更新用户头像
     @Override
     public void updateAvatar(Long userId, String avatarUrl) {
         User user = this.getById(userId);
@@ -143,6 +148,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         log.info("User {} avatar updated: {}", userId, avatarUrl);
     }
 
+    //删除用户头像
     @Override
     public void deleteAvatar(Long userId) {
         User user = this.getById(userId);
@@ -161,6 +167,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         log.info("User {} avatar deleted", userId);
     }
 
+    //分页查询启用用户编号
     @Override
     public java.util.List<Long> getAllUserIds(int pageNum, int pageSize) {
         Page<User> page = new Page<>(pageNum, pageSize);
@@ -175,6 +182,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    //用户逻辑删除
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean logicalDeleteUser(Long userId) {
