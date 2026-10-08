@@ -23,11 +23,13 @@ public class AdminLoginController {
     private final JwtUtil jwtUtil;
 
 
+    //初始化管理员登录依赖
     public AdminLoginController(AdminService adminService, JwtUtil jwtUtil) {
         this.adminService = adminService;
         this.jwtUtil = jwtUtil;
     }
 
+    //管理员登录
     @Operation(summary = "登录")
     @RateLimit(prefix = "rate:admin:login", count = 10, period = 60)
     @PostMapping("/login")
@@ -40,6 +42,7 @@ public class AdminLoginController {
         return Result.success(loginVO);
     }
 
+    //管理员退出登录
     @Operation(summary = "登出")
     @PostMapping("/logout")
     public Result<Void> logout() {

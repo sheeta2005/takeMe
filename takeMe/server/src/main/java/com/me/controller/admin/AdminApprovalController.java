@@ -19,6 +19,7 @@ public class AdminApprovalController {
 
     private final ApprovalService approvalService;
 
+    //分页查询审批记录
     @Operation(summary = "审批界面分页")
     @GetMapping("/page")
     public Result<PageResultVO<Approval>> getApprovalPage(
@@ -42,6 +43,7 @@ public class AdminApprovalController {
         return Result.success(result);
     }
 
+    //查询审批详情
     @Operation(summary = "查询审批详情")
     @GetMapping("/detail/{id}")
     public Result<Approval> getApprovalDetail(@PathVariable Long id) {
@@ -52,6 +54,7 @@ public class AdminApprovalController {
         return Result.success(approval);
     }
 
+    //通过审批申请
     @Operation(summary = "通过审批")
     @PostMapping("/approve/{id}")
     public Result<Void> approveApplication(@PathVariable Long id, @RequestParam(required = false) String remark) {
@@ -62,6 +65,7 @@ public class AdminApprovalController {
         return Result.success();
     }
 
+    //拒绝审批申请
     @Operation(summary = "拒绝审批")
     @PostMapping("/reject/{id}")
     public Result<Void> rejectApplication(@PathVariable Long id, @RequestParam String remark) {

@@ -21,6 +21,7 @@ public class AdminDashboardController {
     private final AdminDashboardService adminDashboardService;
     private final OnlineUserService onlineUserService;
 
+    //查询管理端概览数据
     @Operation(summary = "获取仪表盘信息")
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> getDashboardData() {
@@ -28,6 +29,7 @@ public class AdminDashboardController {
         return Result.success(data);
     }
     
+    //查询近七日订单数量
     @Operation(summary = "获取订单七天数量趋势")
     @GetMapping("/order/trend7d")
     public Result<List<Integer>> getOrderTrend7d() {
@@ -35,6 +37,7 @@ public class AdminDashboardController {
         return Result.success(trend);
     }
     
+    //查询近七日支付净额
     @Operation(summary = "获取订单七天金额趋势")
     @GetMapping("/order/amount7d")
     public Result<List<Integer>> getOrderAmountTrend7d() {
@@ -42,6 +45,7 @@ public class AdminDashboardController {
         return Result.success(trend);
     }
     
+    //查询服务类型分布
     @Operation(summary = "获取服务分布信息")
     @GetMapping("/service/type/dist")
     public Result<List<Map<String, Object>>> getServiceTypeDist() {
@@ -49,6 +53,7 @@ public class AdminDashboardController {
         return Result.success(dist);
     }
     
+    //查询各角色在线人数
     @Operation(summary = "分类统计在线人数")
     @GetMapping("/online")
     public Result<Map<String, Object>> getOnlineStats() {

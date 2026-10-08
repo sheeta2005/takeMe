@@ -21,6 +21,7 @@ public class AdminAvatarController {
     private final AdminService adminService;
     private final OssUtil ossUtil;
 
+    //上传管理员头像
     @PostMapping("/upload")
     @Operation(summary = "上传管理员头像")
     public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file) {
@@ -47,6 +48,7 @@ public class AdminAvatarController {
         return Result.success(avatarUrl);
     }
 
+    //删除管理员头像
     @DeleteMapping
     @Operation(summary = "删除管理员头像")
     public Result<Void> deleteAvatar() {

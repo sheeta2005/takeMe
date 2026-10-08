@@ -25,6 +25,7 @@ public class AdminMessageController {
 
     private final MessageService messageService;
 
+    //分页查询消息
     @Operation(summary = "分页查询消息", description = "查询所有消息列表，支持按接收者类型和消息类型筛选")
     @GetMapping("/page")
     public Result<PageResultVO<Message>> getMessagePage(
@@ -42,6 +43,7 @@ public class AdminMessageController {
         return Result.success(result);
     }
 
+    //分页查询发送记录
     @Operation(summary = "查询发送的消息", description = "查询管理员发送的消息列表")
     @GetMapping("/sent")
     public Result<PageResultVO<Message>> getSentMessagePage(
@@ -59,6 +61,7 @@ public class AdminMessageController {
         return Result.success(result);
     }
 
+    //发送消息
     @Operation(summary = "发送单条消息", description = "向指定用户/志愿者发送消息")
     @PostMapping("/send")
     public Result<Void> sendMessage(@RequestBody MessageDTO messageDTO) {
@@ -77,6 +80,7 @@ public class AdminMessageController {
         return Result.success();
     }
 
+    //批量发送消息
     @Operation(summary = "批量发送消息", description = "向多个用户/志愿者批量发送消息")
     @PostMapping("/sendBatch")
     public Result<Void> sendBatchMessage(@RequestBody List<MessageDTO> messages) {
@@ -84,6 +88,7 @@ public class AdminMessageController {
         return Result.success();
     }
 
+    //删除消息
     @Operation(summary = "删除消息", description = "删除指定的消息")
     @DeleteMapping("/delete/{id}")
     public Result<Void> deleteMessage(@Parameter(description = "消息ID", required = true) @PathVariable Long id) {
@@ -94,6 +99,7 @@ public class AdminMessageController {
         return Result.success();
     }
 
+    //标记消息已读
     @Operation(summary = "标记消息为已读", description = "将指定消息标记为已读状态")
     @PostMapping("/read/{id}")
     public Result<Void> markAsRead(@Parameter(description = "消息ID", required = true) @PathVariable Long id) {
@@ -104,6 +110,7 @@ public class AdminMessageController {
         return Result.success();
     }
 
+    //标记管理员全部消息已读
     @Operation(summary = "全部标记已读", description = "将指定类型的所有消息标记为已读")
     @PostMapping("/read-all")
     public Result<Void> markAllAsRead(@Parameter(description = "接收者类型", required = true) @RequestParam Integer receiverType) {
@@ -114,6 +121,7 @@ public class AdminMessageController {
         return Result.success();
     }
 
+    //查询消息统计
     @Operation(summary = "消息统计", description = "获取消息总数、未读数、已读数等统计信息")
     @GetMapping("/statistics")
     public Result<Map<String, Object>> getMessageStatistics() {
