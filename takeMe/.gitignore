@@ -1,4 +1,6 @@
 target/
+# 防止从后端目录直接启动时提交本地日志。
+/logs/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

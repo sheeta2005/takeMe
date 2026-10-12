@@ -13,7 +13,9 @@ $snapshot = @{
     队列 = @($queues | Select-Object name,messages,messages_ready,messages_unacknowledged,consumers)
 }
 $snapshot | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $root "tools\results\$Name.json") -Encoding utf8
-Copy-Item (Join-Path $root 'tools\.runtime\gc.log') (Join-Path $root "tools\results\$Name-gc.log")
+# 旧进程记录仍使用原路径；新进程记录保存统一目录中的实际 GC 路径。
+$gcLog = if ($record.gcLog) { $record.gcLog } else { Join-Path $root 'tools/.runtime/gc.log' }
+Copy-Item -LiteralPath $gcLog -Destination (Join-Path $root "tools\results\$Name-gc.log")
 $snapshot
 $env:MYSQL_PWD = $state.TAKEME_TEST_DB_PASSWORD
 & 'D:\tool\MySQL\MySQL Server 8.0\bin\mysql.exe' "-u$($state.TAKEME_TEST_DB_USER)" `

@@ -44,10 +44,6 @@ me:
     secret: ${TAKEME_JWT_SECRET}
     expiration: ${TAKEME_JWT_EXPIRATION:86400000}
 
-  logging:
-    file:
-      path: ${TAKEME_LOG_DIR:./logs}
-
   middleware:
     enabled: ${TAKEME_MIDDLEWARE_ENABLED:true}
     redis:

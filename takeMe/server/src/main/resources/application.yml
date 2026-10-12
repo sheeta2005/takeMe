@@ -114,4 +114,5 @@ aliyun:
 
 logging:
   file:
-    path: ${me.logging.file.path}
+    # 启动入口统一以仓库根目录为工作目录；支持外部指定日志目录。
+    path: ${TAKEME_LOG_DIR:./logs/dev}

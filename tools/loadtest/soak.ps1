@@ -15,7 +15,7 @@ $manifest = [ordered]@{
     构建SHA256 = (Get-FileHash -LiteralPath $processRecord.jar -Algorithm SHA256).Hash
     逻辑处理器数 = $machine.NumberOfLogicalProcessors
     物理内存GB = [math]::Round($machine.TotalPhysicalMemory / 1GB, 2)
-    JVM参数 = '-Xms1024m -Xmx1024m -XX:+UseG1GC'
+    JVM参数 = '-Xms1024m -Xmx1024m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError'
     JMeter版本 = '5.6.3'; Java版本 = '21.0.7'; 推送连接数 = 600; 采样间隔秒 = 30
 }
 $environment = (Get-Content (Join-Path $runtime 'environment.json') -Raw | ConvertFrom-Json).environment

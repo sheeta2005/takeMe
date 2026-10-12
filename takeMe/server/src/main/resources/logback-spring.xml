@@ -4,7 +4,7 @@
     <!-- ==================== 1. 读取 Spring 配置 ==================== -->
     <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="takeMe"/>
     <springProperty scope="context" name="SERVER_PORT" source="server.port" defaultValue="8080"/>
-    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="./logs"/>
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="./logs/dev"/>
 
     <!-- 定义日志文件名前缀：项目名-端口 -->
     <property name="LOG_FILE_PREFIX" value="${APP_NAME}-${SERVER_PORT}"/>

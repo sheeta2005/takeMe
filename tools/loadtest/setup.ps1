@@ -16,12 +16,15 @@ $secret = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
 $environment = @{
     TAKEME_TEST_DB_USER = $DbUser; TAKEME_TEST_DB_PASSWORD = $DbPassword
     TAKEME_TEST_MQ_USER = $MqUser; TAKEME_TEST_MQ_PASSWORD = $MqPassword
-    TAKEME_TEST_JWT_SECRET = $secret; TAKEME_TEST_LOG_DIR = ($runtime.Replace('\','/') + '/logs')
+    TAKEME_TEST_JWT_SECRET = $secret
 }
 # 运行时文件仅包含本机凭据，不纳入版本控制。
 if ($Resume) {
     $saved = (Get-Content (Join-Path $runtime 'environment.json') -Raw | ConvertFrom-Json).environment
-    foreach ($property in $saved.PSObject.Properties) { $environment[$property.Name] = $property.Value }
+    # 日志路径由启动入口统一管理，不恢复旧状态中的 .runtime/logs。
+    foreach ($property in $saved.PSObject.Properties) {
+        if ($property.Name -ne 'TAKEME_TEST_LOG_DIR') { $environment[$property.Name] = $property.Value }
+    }
 } else {
     @{ environment = $environment } | ConvertTo-Json | Set-Content (Join-Path $runtime 'environment.json') -Encoding utf8
 }

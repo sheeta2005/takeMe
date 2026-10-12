@@ -18,10 +18,12 @@ me:
     password: ${TAKEME_TEST_MQ_PASSWORD}
   jwt:
     secret: ${TAKEME_TEST_JWT_SECRET}
-  logging:
-    file:
-      path: ${TAKEME_TEST_LOG_DIR}
 logging:
+  file:
+    # 与普通开发日志隔离，由压测启动脚本同步 JVM 日志目录。
+    path: ${TAKEME_TEST_LOG_DIR:./logs/loadtest}
   level:
     com.me: WARN
+    # mapper 有独立的 DEBUG 配置，压测时需显式关闭 SQL 调试日志。
+    com.me.mapper: WARN
     org.springframework: WARN
