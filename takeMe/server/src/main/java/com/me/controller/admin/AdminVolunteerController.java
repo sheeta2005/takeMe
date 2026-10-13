@@ -83,6 +83,7 @@ public class AdminVolunteerController {
             return Result.error("志愿者不存在");
         }
         volunteer.setPassword(null);
+        volunteer.setWorkStatus(volunteerService.getWorkStatus(volunteer));
 
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrderItem::getVolunteerId, id);

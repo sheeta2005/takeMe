@@ -9,6 +9,7 @@ import com.me.entity.Order;
 import com.me.vo.OrderVO;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 public interface OrderService {
     //分页查询用户订单
@@ -22,6 +23,9 @@ public interface OrderService {
     //停用志愿者时取消已接服务
     boolean releaseAssignedItem(Long volunteerId, Long orderItemId);
 
+    // 请假批准时释放预约时间冲突的服务，不扣积分、不取消订单。
+    void releaseForLeave(Long volunteerId, LocalDateTime start, LocalDateTime end);
+
     //用户取消订单
     void cancelOrder(Long userId, Long orderId);
 
@@ -30,6 +34,9 @@ public interface OrderService {
 
     //提交或修改服务评价
     void evaluateOrderItem(Long userId, Long orderItemId, Integer rating, String comment);
+
+    // 超过整单完成三天且未评价时补默认好评，与人工评价共用锁顺序。
+    boolean autoEvaluateOrderItem(Long orderItemId);
 
     //用户确认开始服务
     void userStartService(Long userId, Long orderItemId);
@@ -69,6 +76,9 @@ public interface OrderService {
 
     //分页查询可接取服务
     IPage<OrderVO> getAvailableOrderList(PageResultDTO pageResultDTO);
+
+    // 过滤当前志愿者已批准请假期间的预约。
+    IPage<OrderVO> getAvailableOrderList(Long volunteerId, PageResultDTO pageResultDTO);
 
     //分页查询管理端订单
     IPage<Order> getAdminOrderPage(Integer status, PageResultDTO pageResultDTO);

@@ -51,6 +51,9 @@ public class VolunteerController {
 
         volunteer.setTotalServiceHours(completedServices.intValue());
 
+        // 工作状态由后端实时计算，前端与接单校验保持一致。
+        volunteer.setWorkStatus(volunteerService.getWorkStatus(volunteer));
+
         volunteer.setPassword(null);
         return Result.success(volunteer);
     }

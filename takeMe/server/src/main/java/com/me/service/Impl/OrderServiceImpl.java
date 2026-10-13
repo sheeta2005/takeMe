@@ -15,6 +15,7 @@ import com.me.mq.config.RabbitMQConfig;
 import com.me.service.MessageService;
 import com.me.service.OrderService;
 import com.me.service.OutboxService;
+import com.me.service.VolunteerAvailabilityService;
 import com.me.vo.OrderItemVO;
 import com.me.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class OrderServiceImpl implements OrderService {
     private final VolunteerPointsRecordMapper volunteerPointsRecordMapper;
     private final ServicePackageMapper servicePackageMapper;
     private final PaymentTransactionMapper paymentTransactionMapper;
+    private final VolunteerAvailabilityService availabilityService;
 
     //分页查询用户订单
     @Override
@@ -70,6 +72,11 @@ public class OrderServiceImpl implements OrderService {
                         .in(OrderItem::getOrderId, orderIds).orderByAsc(OrderItem::getId))
                 .stream().collect(Collectors.groupingBy(OrderItem::getOrderId));
 
+        // 按本页订单批量读取评价，避免每个服务项单独查询。
+        Map<Long, Review> reviewsByItem = orderIds.isEmpty() ? Map.of()
+                : reviewMapper.selectList(new LambdaQueryWrapper<Review>().in(Review::getOrderId, orderIds))
+                .stream().collect(Collectors.toMap(Review::getOrderItemId, review -> review));
+
         List<OrderVO> records = orderPage.getRecords().stream().map(order -> {
             OrderVO vo = new OrderVO();
             BeanUtils.copyProperties(order, vo);
@@ -79,6 +86,8 @@ public class OrderServiceImpl implements OrderService {
             List<OrderItemVO> itemVOList = orderItems.stream().map(item -> {
                 OrderItemVO itemVO = new OrderItemVO();
                 BeanUtils.copyProperties(item, itemVO);
+                itemVO.setReview(reviewsByItem.get(item.getId()));
+                itemVO.setReviewed(itemVO.getReview() != null);
                 return itemVO;
             }).collect(Collectors.toList());
             vo.setItems(itemVOList);
@@ -117,6 +126,11 @@ public class OrderServiceImpl implements OrderService {
     //分页查询可接取服务
     @Override
     public IPage<OrderVO> getAvailableOrderList(PageResultDTO pageResultDTO) {
+        return getAvailableOrderList(null, pageResultDTO);
+    }
+
+    @Override
+    public IPage<OrderVO> getAvailableOrderList(Long volunteerId, PageResultDTO pageResultDTO) {
         LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.isNull(OrderItem::getVolunteerId);
         wrapper.eq(OrderItem::getItemStatus, 0);
@@ -133,6 +147,12 @@ public class OrderServiceImpl implements OrderService {
                 .and(w -> w.lt(OrderItem::getServiceDate, endDate)
                         .or().le(OrderItem::getServiceTime, end.format(timeFormat)));
         wrapper.inSql(OrderItem::getOrderId, "SELECT id FROM `order` WHERE status IN (0, 1, 2)");
+        // 在分页前排除请假冲突，确保列表总数与实际可接服务一致。
+        if (volunteerId != null) {
+            wrapper.apply("NOT EXISTS (SELECT 1 FROM volunteer_leave vl WHERE vl.volunteer_id = {0} "
+                    + "AND vl.status = 1 AND TIMESTAMP(order_item.service_date, order_item.service_time) "
+                    + "BETWEEN vl.start_time AND vl.end_time)", volunteerId);
+        }
         wrapper.orderByDesc(OrderItem::getCreateTime, OrderItem::getId);
 
         Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), wrapper);
@@ -205,9 +225,14 @@ public class OrderServiceImpl implements OrderService {
         orderItemWrapper.eq(OrderItem::getOrderId, orderId);
         List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
         // List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
+        Map<Long, Review> reviewsByItem = reviewMapper.selectList(
+                new LambdaQueryWrapper<Review>().eq(Review::getOrderId, orderId))
+                .stream().collect(Collectors.toMap(Review::getOrderItemId, review -> review));
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
             BeanUtils.copyProperties(item, vo);
+            vo.setReview(reviewsByItem.get(item.getId()));
+            vo.setReviewed(vo.getReview() != null);
             return vo;
         }).collect(Collectors.toList());
 
@@ -406,6 +431,8 @@ public class OrderServiceImpl implements OrderService {
         com.me.utils.ServiceTimeValidator.validateCanAcceptOrder(
                 item.getServiceDate(), item.getServiceTime()
         );
+
+        availabilityService.validateCanAccept(volunteer, item);
 
         OrderItem claimed = new OrderItem();
         claimed.setVolunteerId(volunteerId);
@@ -610,6 +637,33 @@ public class OrderServiceImpl implements OrderService {
                 || (item.getItemStatus() != 1 && item.getItemStatus() != 2)) return false;
         cancelItem(order, item, "志愿者已停用，服务取消");
         return true;
+    }
+
+    // 请假释放与审批同一事务，沿用解绑和父订单状态汇总，不走主动放弃扣分。
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void releaseForLeave(Long volunteerId, LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null || end.isBefore(start)) {
+            throw new IllegalArgumentException("请假起止时间无效");
+        }
+        for (OrderItem candidate : orderItemMapper.selectActiveForVolunteer(volunteerId)) {
+            LocalDateTime time = appointment(candidate);
+            if (time.isBefore(start) || time.isAfter(end)) continue;
+            Order order = orderMapper.selectByItemForUpdate(candidate.getId());
+            OrderItem item = orderItemMapper.selectForUpdate(candidate.getId());
+            if (order == null || item == null || !volunteerId.equals(item.getVolunteerId())
+                    || (item.getItemStatus() != 1 && item.getItemStatus() != 2)
+                    || appointment(item).isBefore(start) || appointment(item).isAfter(end)) continue;
+            clearItemVolunteer(item, 0);
+            updateOrderVolunteerIds(item.getOrderId());
+            Integer oldStatus = updateOrderStatus(item.getOrderId());
+            // 服务已解绑，提醒保留预约信息，不附带志愿者已无权访问的订单链接。
+            sendMessageToVolunteer(volunteerId, 1, 0, "请假批准，冲突服务已释放",
+                    "您的请假已获批准，预约于" + item.getServiceDate() + " " + item.getServiceTime()
+                            + "的服务「" + item.getServiceName() + "」已自动释放，不扣除积分。", null);
+            Order updated = orderMapper.selectById(order.getId());
+            sendStatusChangeMessage(updated, oldStatus, updated.getStatus(), "请假批准，服务重新开放接取", volunteerId);
+        }
     }
 
     //取消超时未支付订单
@@ -921,12 +975,13 @@ public class OrderServiceImpl implements OrderService {
         if (rating == null || rating < 1 || rating > 5) {
             throw new IllegalArgumentException("评分必须为1至5星");
         }
-        OrderItem item = orderItemMapper.selectById(orderItemId);
+        // 人工评价和默认好评都先锁主订单、再锁服务项，串行处理同一服务的评价。
+        Order order = orderMapper.selectByItemForUpdate(orderItemId);
+        OrderItem item = orderItemMapper.selectForUpdate(orderItemId);
         if (item == null) {
             throw new OrderBusinessException("服务项目不存在");
         }
 
-        Order order = orderMapper.selectById(item.getOrderId());
         if (order == null || !order.getUserId().equals(userId)) {
             throw new OrderBusinessException("无权评价此服务");
         }
@@ -935,9 +990,7 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderBusinessException("服务未完成，无法评价");
         }
 
-        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
-        reviewWrapper.eq(Review::getOrderItemId, orderItemId);
-        Review existingReview = reviewMapper.selectOne(reviewWrapper);
+        Review existingReview = reviewMapper.selectByItemForUpdate(orderItemId);
 
         if (existingReview != null) {
             existingReview.setRating(rating);
@@ -959,6 +1012,30 @@ public class OrderServiceImpl implements OrderService {
                     "您的服务（" + item.getServiceName() + "）收到了用户评价，评分：" + rating + " 星",
                     item.getId());
         }
+    }
+
+    // 定时扫描只负责发现候选项；写入前在事务锁内重新检查资格和已有评价。
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean autoEvaluateOrderItem(Long orderItemId) {
+        Order order = orderMapper.selectByItemForUpdate(orderItemId);
+        OrderItem item = orderItemMapper.selectForUpdate(orderItemId);
+        if (order == null || item == null || order.getStatus() != 4 || order.getCompleteTime() == null
+                || order.getCompleteTime().isAfter(LocalDateTime.now().minusDays(3))
+                || (item.getItemStatus() != 3 && item.getItemStatus() != 4) || item.getVolunteerId() == null) {
+            return false;
+        }
+        if (reviewMapper.selectByItemForUpdate(orderItemId) != null) return false;
+        Review review = new Review();
+        review.setOrderId(order.getId());
+        review.setOrderItemId(item.getId());
+        review.setUserId(order.getUserId());
+        review.setVolunteerId(item.getVolunteerId());
+        review.setRating(5);
+        review.setComment("系统默认好评");
+        review.setCreateTime(LocalDateTime.now());
+        reviewMapper.insert(review);
+        return true;
     }
 
     //为未评价服务补默认好评

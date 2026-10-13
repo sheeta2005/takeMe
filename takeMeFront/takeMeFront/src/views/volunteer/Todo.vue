@@ -16,16 +16,16 @@
     />
 
     <el-alert
-      v-if="volunteerStore.status === 1 && volunteerStore.workStatus === 0"
-      title="请好好休息"
-      description="您当前处于休息状态，请休息后再查看待办。"
+      v-if="volunteerStore.status === 1 && [0, 3].includes(volunteerStore.workStatus)"
+      :title="volunteerStore.workStatus === 3 ? '请假中' : '休息中'"
+      description="您仍可查看和处理已有待办；请假批准后，预约时间冲突的服务会自动释放。"
       type="warning"
       :closable="false"
       show-icon
       style="margin-bottom: 24px"
     />
 
-    <template v-if="volunteerStore.status === 1 && volunteerStore.workStatus !== 0">
+    <template v-if="volunteerStore.status === 1">
       <el-skeleton :rows="3" animated v-if="loading" />
 
       <template v-else>
@@ -145,7 +145,7 @@
       </template>
     </template>
 
-    <el-empty v-if="volunteerStore.status === 0 || (volunteerStore.status === 1 && volunteerStore.workStatus === 0)" description="暂不可用" :image-size="200" />
+    <el-empty v-if="volunteerStore.status === 0" description="暂不可用" :image-size="200" />
   </div>
 </template>
 
@@ -267,7 +267,9 @@ const getServiceTypeTag = (type: number) => {
 }
 
 //加载当前志愿者未完成服务
+// 休息或请假仅限制接单，不隐藏已有待办；操作后同步实时工作状态。
 const loadMyServices = async () => {
+  await volunteerStore.fetchVolunteerInfo()
   loading.value = true
   try {
     const res = await getVolunteerOrderList({
@@ -382,7 +384,7 @@ const abandonService = async (service: any) => {
 
 onMounted(async () => {
   await volunteerStore.fetchVolunteerInfo()
-  if (volunteerStore.status === 1 && volunteerStore.workStatus !== 0) {
+  if (volunteerStore.status === 1) {
     loadMyServices()
   } else {
     loading.value = false

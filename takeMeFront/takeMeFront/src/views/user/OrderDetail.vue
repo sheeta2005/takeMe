@@ -100,6 +100,18 @@
               <span class="subtotal-cell">¥{{ row.itemPrice }}</span>
             </template>
           </el-table-column>
+          <el-table-column v-if="order.status === 4" label="评价" width="120" align="center">
+            <template #default="{ row }">
+              <el-button
+                v-if="[3, 4].includes(row.itemStatus)"
+                :type="row.reviewed ? 'info' : 'warning'"
+                link
+                @click="goToReview(row.id)"
+              >
+                {{ row.reviewed ? '修改评价' : '评价' }}
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
 
         <div class="total-summary">
@@ -143,25 +155,6 @@
           确认服务完成
         </el-button>
 
-        <el-button
-          v-if="order.status === 4 && order.isReviewed === 0"
-          type="warning"
-          size="large"
-          @click="goToReview"
-        >
-          <el-icon><Star /></el-icon>
-          评价服务
-        </el-button>
-
-        <el-button
-          v-if="order.status === 4 && order.isReviewed === 1"
-          type="info"
-          size="large"
-          @click="goToReview"
-        >
-          <el-icon><Edit /></el-icon>
-          修改评价
-        </el-button>
       </div>
 
       <div class="back-section">
@@ -301,7 +294,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Document, List, CircleCheck, CloseBold, Back, Star, Edit, User, ChatDotRound, Wallet
+  Document, List, CircleCheck, CloseBold, Back, User, ChatDotRound, Wallet
 } from '@element-plus/icons-vue'
 import { getUserOrderDetail, cancelOrder, confirmOrder } from '@/api/order'
 import { getVolunteerDetail } from '@/api/user'
@@ -509,10 +502,10 @@ const handleConfirmOrder = async () => {
   }
 }
 
-//打开订单评价页
-const goToReview = () => {
+// 从服务项入口携带明确的评价对象，主订单编号仍用于查询和返回详情。
+const goToReview = (orderItemId: number) => {
   if (!order.value?.id) return
-  router.push(`/user/order/review/${order.value.id}`)
+  router.push({ path: `/user/order/review/${order.value.id}`, query: { orderItemId } })
 }
 
 //打开订单支付页

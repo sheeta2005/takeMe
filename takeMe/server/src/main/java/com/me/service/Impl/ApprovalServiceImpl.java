@@ -15,6 +15,7 @@ import com.me.mq.config.RabbitMQConfig;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.OutboxService;
 import com.me.service.ApprovalService;
+import com.me.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
     private final VolunteerLeaveMapper volunteerLeaveMapper;
     private final VolunteerMapper volunteerMapper;
     private final OutboxService outboxService;
+    private final OrderService orderService;
 
     //分页查询审批记录
     @Override
@@ -104,6 +106,13 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
                     throw new IllegalStateException("请假记录不存在或已审批");
                 }
                 LambdaUpdateWrapper<VolunteerLeave> update = new LambdaUpdateWrapper<>();
+                if (approved) {
+                    // 与接单共用志愿者行锁；释放、通知及审批结果必须一起提交或回滚。
+                    if (volunteerMapper.selectForUpdate(leave.getVolunteerId()) == null) {
+                        throw new IllegalStateException("志愿者不存在");
+                    }
+                    orderService.releaseForLeave(leave.getVolunteerId(), leave.getStartTime(), leave.getEndTime());
+                }
                 update.eq(VolunteerLeave::getId, leave.getId()).eq(VolunteerLeave::getStatus, 0)
                         .set(VolunteerLeave::getStatus, approved ? 1 : 2);
                 if (volunteerLeaveMapper.update(null, update) != 1) {

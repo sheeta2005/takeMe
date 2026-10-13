@@ -1,5 +1,10 @@
 /简历项目经历第2至第6项面试提问.txt
 
 # 运行日志与 JVM 诊断文件不纳入版本控制。
-/logs/
+/logs/**
+# 保留开发诊断目录骨架，IDEA 可直接启动 JVM，无需 Shell Script 前置任务。
+!/logs/
+!/logs/dev/
+!/logs/dev/diagnostics/
+!/logs/dev/diagnostics/.gitkeep
 *.hprof

@@ -66,7 +66,7 @@ export const useVolunteerStore = defineStore('volunteer', {
 
 
     workStatusText: (state) => {
-      const statusMap = ['休息中', '待命中', '服务中']
+      const statusMap = ['休息中', '待命中', '服务中', '请假中']
       return statusMap[state.workStatus] || '未知'
     }
   },
@@ -133,7 +133,7 @@ export const useVolunteerStore = defineStore('volunteer', {
     },
 
     //更新本地工作状态
-    setWorkStatus(status: 0 | 1 | 2) {
+    setWorkStatus(status: 0 | 1 | 2 | 3) {
       this.workStatus = status
     },
 

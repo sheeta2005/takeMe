@@ -14,6 +14,7 @@ import com.me.mapper.OrderItemMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
 import com.me.service.OrderService;
+import com.me.service.VolunteerAvailabilityService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.util.OssUtil;
@@ -38,6 +39,12 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     private final ApprovalMapper approvalMapper;
     private final OssUtil ossUtil;
     private final OrderService orderService;
+    private final VolunteerAvailabilityService availabilityService;
+
+    @Override
+    public int getWorkStatus(Volunteer volunteer) {
+        return availabilityService.getWorkStatus(volunteer);
+    }
 
 
     //校验志愿者登录
@@ -107,7 +114,10 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
             wrapper.orderByDesc(Volunteer::getCreateTime);
         }
         
-        return this.page(pageParam, wrapper);
+        IPage<Volunteer> result = this.page(pageParam, wrapper);
+        // 仅在响应中计算，不回写工作状态，避免跨日期后再次失效。
+        result.getRecords().forEach(v -> v.setWorkStatus(getWorkStatus(v)));
+        return result;
     }
     
     //注册志愿者并创建审批

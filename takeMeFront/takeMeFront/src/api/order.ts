@@ -45,13 +45,9 @@ export function confirmOrder(orderId: number) {
   })
 }
 
-//提交订单评价
-export function evaluateOrder(orderId: number) {
-  return request({
-    url: '/api/user/order/evaluate',
-    method: 'post',
-    params: { orderId }
-  })
+//评价以服务项为对象，沿用同一提交接口。
+export function evaluateOrder(orderItemId: number, rating: number, comment: string) {
+  return evaluateOrderItem(orderItemId, rating, comment)
 }
 
 //按类型查询服务

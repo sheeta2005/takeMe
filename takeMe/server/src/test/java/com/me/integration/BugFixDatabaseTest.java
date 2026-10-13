@@ -59,7 +59,8 @@ class BugFixDatabaseTest {
     private static final String SERVER_URL = System.getProperty("takeme.test.mysql.url",
             "jdbc:mysql://localhost:3306/?serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false");
     private static final String USER = System.getProperty("takeme.test.mysql.user", "root");
-    private static final String PASSWORD = System.getProperty("takeme.test.mysql.password", "");
+    private static final String PASSWORD = System.getProperty("takeme.test.mysql.password",
+            System.getenv().getOrDefault("TAKEME_TEST_MYSQL_PASSWORD", ""));
     private static final String SCHEMA = "takeme_fix_test_" + UUID.randomUUID().toString().replace("-", "");
     private static final List<String> TABLES = List.of("order", "order_item", "volunteer", "user", "admin",
             "service_package", "payment_transaction", "volunteer_points_record", "review",
@@ -92,6 +93,10 @@ class BugFixDatabaseTest {
                     new FileSystemResource("../../docs/migrations/20261005_sql_performance.sql"), "UTF-8");
             ScriptUtils.executeSqlScript(connection, performanceScript);
             ScriptUtils.executeSqlScript(connection, performanceScript);
+            var reviewScript = new EncodedResource(
+                    new FileSystemResource("../../docs/migrations/20261013_review_unique.sql"), "UTF-8");
+            ScriptUtils.executeSqlScript(connection, reviewScript);
+            ScriptUtils.executeSqlScript(connection, reviewScript);
             // 增量迁移必须可重复执行。
             ScriptUtils.executeSqlScript(connection, script);
         }
@@ -126,6 +131,9 @@ class BugFixDatabaseTest {
                 + "VALUES (1, '测试志愿者', 'fixture1', 'fixture1', 1, 100, '0')");
         jdbc.update("INSERT INTO volunteer (id, real_name, username, phone, status, points) "
                 + "VALUES (2, '测试志愿者2', 'fixture2', 'fixture2', 1, 100)");
+        // 接单用例按当天排班，避免测试结果随星期变化。
+        jdbc.update("UPDATE volunteer SET service_days = ?",
+                String.valueOf(LocalDateTime.now(java.time.ZoneId.of("Asia/Shanghai")).getDayOfWeek().getValue() % 7));
         jdbc.update("INSERT INTO `user` (id, username, real_name, phone, status) "
                 + "VALUES (1, 'fixture1', '测试老人', 'fixture1', 1), (2, 'fixture2', '测试老人2', 'fixture2', 1)");
     }
@@ -598,6 +606,139 @@ class BugFixDatabaseTest {
         assertEquals(0, number("SELECT status FROM volunteer_leave WHERE id = 2"));
     }
 
+    // 用真实数据库验证批准请假的过滤、解绑、消息与事务边界。
+    @Test
+    void approvedFutureLeaveFiltersListAndRejectsClaimAtBoundary() {
+        order(10, 11, 0, null);
+        LocalDateTime appointment = jdbc.queryForObject(
+                "SELECT TIMESTAMP(service_date, service_time) FROM order_item WHERE id = 11", LocalDateTime.class);
+        leave(1, appointment, appointment, 1);
+        OrderService service = context.getBean(OrderService.class);
+        assertEquals(1, context.getBean(VolunteerService.class).getWorkStatus(
+                context.getBean(VolunteerService.class).getById(1L)));
+        assertEquals(0, service.getAvailableOrderList(1L, new com.me.dto.PageResultDTO()).getTotal());
+        assertEquals(1, service.getAvailableOrderList(2L, new com.me.dto.PageResultDTO()).getTotal());
+        assertTrue(assertThrows(RuntimeException.class, () -> service.volunteerConfirmOrder(1L, 11L))
+                .getMessage().contains("请假冲突"));
+        assertNull(jdbc.queryForObject("SELECT volunteer_id FROM order_item WHERE id = 11", Long.class));
+    }
+
+    @Test
+    void pendingAndRejectedLeaveDoNotPreventClaim() {
+        order(10, 11, 0, null);
+        leave(1, LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(4), 0);
+        leave(2, LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(4), 2);
+        context.getBean(OrderService.class).volunteerConfirmOrder(1L, 11L);
+        assertEquals(1, number("SELECT volunteer_id FROM order_item WHERE id = 11"));
+    }
+
+    @Test
+    void currentLeaveAndRestPreventClaimButKeepExistingTodosReadable() {
+        order(10, 11, 0, null);
+        leave(1, LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(1), 1);
+        VolunteerService volunteers = context.getBean(VolunteerService.class);
+        OrderService orders = context.getBean(OrderService.class);
+        assertEquals(3, volunteers.getWorkStatus(volunteers.getById(1L)));
+        assertTrue(assertThrows(RuntimeException.class, () -> orders.volunteerConfirmOrder(1L, 11L))
+                .getMessage().contains("请假状态"));
+        order(20, 21, 1, 1L);
+        assertEquals(1, orders.getVolunteerOrderList(1L, null, null, new com.me.dto.PageResultDTO()).getTotal());
+        jdbc.update("DELETE FROM volunteer_leave");
+        jdbc.update("UPDATE volunteer SET service_days = NULL WHERE id = 1");
+        assertEquals(0, volunteers.getWorkStatus(volunteers.getById(1L)));
+        assertEquals(1, orders.getVolunteerOrderList(1L, null, null, new com.me.dto.PageResultDTO()).getTotal());
+        jdbc.update("UPDATE order_item SET item_status = 3 WHERE id = 21");
+        assertTrue(assertThrows(RuntimeException.class, () -> orders.volunteerConfirmOrder(1L, 11L))
+                .getMessage().contains("不是您的工作日"));
+    }
+
+    @Test
+    void leaveApprovalReopensOnlyConflictingServicesAndNotifiesWithoutPenalty() {
+        order(10, 11, 1, 1L);
+        order(20, 21, 2, 1L);
+        order(30, 31, 1, 1L);
+        jdbc.update("UPDATE order_item SET service_date = DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 2 DAY), '%Y-%m-%d') WHERE id = 31");
+        leave(1, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), 0);
+        approval(1, "leave", 1L, "请假");
+        ApprovalService service = context.getBean(ApprovalService.class);
+        assertTrue(service.approveApplication(1L, "同意"));
+        assertEquals(2, number("SELECT COUNT(*) FROM order_item WHERE id IN (11,21) AND volunteer_id IS NULL AND item_status = 0"));
+        assertEquals(2, number("SELECT COUNT(*) FROM `order` WHERE id IN (10,20) AND volunteer_ids IS NULL AND status = 0"));
+        assertEquals(1, number("SELECT volunteer_id FROM order_item WHERE id = 31"));
+        assertEquals(100, number("SELECT points FROM volunteer WHERE id = 1"));
+        assertEquals(0, number("SELECT COUNT(*) FROM volunteer_points_record"));
+        assertEquals(2, number("SELECT COUNT(*) FROM message WHERE receiver_id = 1 AND receiver_type = 1 AND title = '请假批准，冲突服务已释放'"));
+        assertFalse(service.approveApplication(1L, "重复"));
+        assertEquals(2, number("SELECT COUNT(*) FROM message WHERE title = '请假批准，冲突服务已释放'"));
+    }
+
+    @Test
+    void rejectedLeaveKeepsAssignedService() {
+        order(10, 11, 1, 1L);
+        leave(1, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), 0);
+        approval(1, "leave", 1L, "请假");
+        assertTrue(context.getBean(ApprovalService.class).rejectApplication(1L, "拒绝"));
+        assertEquals(1, number("SELECT volunteer_id FROM order_item WHERE id = 11"));
+        assertEquals(0, number("SELECT COUNT(*) FROM message WHERE title = '请假批准，冲突服务已释放'"));
+    }
+
+    @Test
+    void failedLeaveNotificationRollsBackReleaseAndApprovalTogether() {
+        order(10, 11, 1, 1L);
+        leave(1, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), 0);
+        approval(1, "leave", 1L, "请假");
+        jdbc.execute("RENAME TABLE mq_outbox TO mq_outbox_unavailable");
+        try {
+            assertThrows(RuntimeException.class,
+                    () -> context.getBean(ApprovalService.class).approveApplication(1L, "同意"));
+            assertEquals(1, number("SELECT volunteer_id FROM order_item WHERE id = 11"));
+            assertEquals(1, number("SELECT item_status FROM order_item WHERE id = 11"));
+            assertEquals("1", text("SELECT volunteer_ids FROM `order` WHERE id = 10"));
+            assertEquals(0, number("SELECT status FROM volunteer_leave WHERE id = 1"));
+            assertEquals("pending", text("SELECT status FROM approval WHERE id = 1"));
+            assertEquals(0, number("SELECT COUNT(*) FROM message"));
+        } finally {
+            jdbc.execute("RENAME TABLE mq_outbox_unavailable TO mq_outbox");
+        }
+    }
+
+    @RepeatedTest(10)
+    void concurrentClaimAndLeaveApprovalNeverRetainConflictingAssignment() throws Exception {
+        order(10, 11, 0, null);
+        leave(1, LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(3), 0);
+        approval(1, "leave", 1L, "请假");
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<?> claim = workers.submit(() -> {
+                start.await();
+                try {
+                    context.getBean(OrderService.class).volunteerConfirmOrder(1L, 11L);
+                } catch (com.me.exception.OrderBusinessException expected) {
+                    assertTrue(expected.getMessage().contains("请假冲突"));
+                }
+                return null;
+            });
+            Future<Boolean> approve = workers.submit(() -> {
+                start.await();
+                return context.getBean(ApprovalService.class).approveApplication(1L, "同意");
+            });
+            start.countDown();
+            claim.get(15, TimeUnit.SECONDS);
+            assertTrue(approve.get(15, TimeUnit.SECONDS));
+            assertNull(jdbc.queryForObject("SELECT volunteer_id FROM order_item WHERE id = 11", Long.class));
+            assertEquals(0, number("SELECT item_status FROM order_item WHERE id = 11"));
+            assertEquals(1, number("SELECT status FROM volunteer_leave WHERE id = 1"));
+        } finally {
+            workers.shutdownNow();
+        }
+    }
+
+    private static void leave(int id, LocalDateTime start, LocalDateTime end, int status) {
+        jdbc.update("INSERT INTO volunteer_leave (id, volunteer_id, type, start_time, end_time, reason, status) "
+                + "VALUES (?, 1, 0, ?, ?, '测试请假', ?)", id, start, end, status);
+    }
+
     @Test
     void unlinkedHistoricalLeaveIsNotGuessed() {
         approval(1, "leave", null, "历史申请");
@@ -670,13 +811,14 @@ class BugFixDatabaseTest {
 
     @Test
     void approvalAndBusinessChangesRollbackWhenEventCannotBeSaved() {
+        String originalDays = text("SELECT service_days FROM volunteer WHERE id = 1");
         approval(1, "service_days_change", 1L, "1,3");
         jdbc.execute("RENAME TABLE mq_outbox TO mq_outbox_unavailable");
         try {
             assertThrows(RuntimeException.class,
                     () -> context.getBean(ApprovalService.class).approveApplication(1L, null));
             assertEquals("pending", text("SELECT status FROM approval WHERE id = 1"));
-            assertEquals("0", text("SELECT service_days FROM volunteer WHERE id = 1"));
+            assertEquals(originalDays, text("SELECT service_days FROM volunteer WHERE id = 1"));
         } finally {
             jdbc.execute("RENAME TABLE mq_outbox_unavailable TO mq_outbox");
         }
@@ -772,6 +914,174 @@ class BugFixDatabaseTest {
         return message;
     }
 
+    // 评价回归覆盖服务项独立性、回显、接口参数及人工/默认评价之间的真实数据库竞争。
+    @Test
+    void itemEvaluationEndpointReturnsSavedReviewAndEachServiceCanBeEditedIndependently() throws Exception {
+        order(10, 11, 4, 1L);
+        order(20, 21, 4, 2L);
+        jdbc.update("UPDATE order_item SET order_id = 10, service_name = '助洁' WHERE id = 21");
+        jdbc.update("UPDATE order_item SET service_name = '助餐' WHERE id = 11");
+        jdbc.update("DELETE FROM `order` WHERE id = 20");
+        OrderService service = context.getBean(OrderService.class);
+        assertTrue(service.getOrderDetail(1L, 10L).getItems().stream().noneMatch(item -> item.getReviewed()));
+        com.me.utils.JwtUtil jwt = mock(com.me.utils.JwtUtil.class);
+        when(jwt.getUserIdFromAuthHeader("Bearer test-review")).thenReturn(1L);
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
+                new com.me.controller.user.OrderController(service, jwt)).build();
+        BaseContext.setLoginId(1L);
+        try {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .post("/api/user/order/evaluateItem").header("Authorization", "Bearer test-review").param("orderItemId", "11")
+                            .param("rating", "2").param("comment", "助餐评价原文"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value(200));
+        } finally {
+            BaseContext.clear();
+        }
+        var reviewed = service.getOrderDetail(1L, 10L).getItems().stream()
+                .filter(item -> item.getId() == 11L).findFirst().orElseThrow();
+        assertTrue(reviewed.getReviewed());
+        assertEquals(2, reviewed.getReview().getRating());
+        assertEquals("助餐评价原文", reviewed.getReview().getComment());
+        Long reviewId = reviewed.getReview().getId();
+        service.evaluateOrderItem(1L, 11L, 4, "修改后的助餐评价");
+        service.evaluateOrderItem(1L, 21L, 1, "独立的助洁评价");
+        var detail = service.getOrderDetail(1L, 10L);
+        assertEquals(2, number("SELECT COUNT(*) FROM review WHERE order_id = 10"));
+        assertEquals(reviewId, jdbc.queryForObject("SELECT id FROM review WHERE order_item_id = 11", Long.class));
+        assertEquals("修改后的助餐评价", text("SELECT comment FROM review WHERE order_item_id = 11"));
+        assertEquals(1, number("SELECT rating FROM review WHERE order_item_id = 21"));
+        assertTrue(detail.getItems().stream().allMatch(item -> item.getReviewed()));
+        assertTrue(service.getMyOrderList(1L, null, null, new com.me.dto.PageResultDTO())
+                .getRecords().get(0).getItems().stream().allMatch(item -> item.getReviewed()));
+    }
+
+    @Test
+    void cannotReviewAnotherUsersOrUnfinishedService() {
+        order(10, 11, 1, 1L);
+        OrderService service = context.getBean(OrderService.class);
+        assertThrows(com.me.exception.OrderBusinessException.class,
+                () -> service.evaluateOrderItem(2L, 11L, 5, "他人的订单"));
+        assertThrows(com.me.exception.OrderBusinessException.class,
+                () -> service.evaluateOrderItem(1L, 11L, 5, "尚未履约"));
+        assertEquals(0, number("SELECT COUNT(*) FROM review"));
+    }
+
+    @Test
+    void defaultReviewOnlyFillsEligibleMissingRecordAndCannotOverwriteManualReview() {
+        order(10, 11, 4, 1L);
+        OrderService service = context.getBean(OrderService.class);
+        jdbc.update("UPDATE `order` SET complete_time = NOW() WHERE id = 10");
+        assertFalse(service.autoEvaluateOrderItem(11L));
+        jdbc.update("UPDATE `order` SET complete_time = DATE_SUB(NOW(), INTERVAL 4 DAY) WHERE id = 10");
+        assertTrue(service.autoEvaluateOrderItem(11L));
+        assertFalse(service.autoEvaluateOrderItem(11L));
+        service.evaluateOrderItem(1L, 11L, 2, "人工评价优先");
+        context.getBean(com.me.task.AutoReviewTask.class).autoEvaluateCompletedOrders();
+        assertEquals(1, number("SELECT COUNT(*) FROM review WHERE order_item_id = 11"));
+        assertEquals(2, number("SELECT rating FROM review WHERE order_item_id = 11"));
+        assertEquals("人工评价优先", text("SELECT comment FROM review WHERE order_item_id = 11"));
+    }
+
+    @RepeatedTest(10)
+    void concurrentManualSubmissionsAlwaysShareOneReviewRecord() throws Exception {
+        order(10, 11, 4, 1L);
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<?> first = workers.submit(() -> {
+                start.await();
+                context.getBean(OrderService.class).evaluateOrderItem(1L, 11L, 2, "评价甲");
+                return null;
+            });
+            Future<?> second = workers.submit(() -> {
+                start.await();
+                context.getBean(OrderService.class).evaluateOrderItem(1L, 11L, 4, "评价乙");
+                return null;
+            });
+            start.countDown();
+            first.get(15, TimeUnit.SECONDS);
+            second.get(15, TimeUnit.SECONDS);
+            assertEquals(1, number("SELECT COUNT(*) FROM review WHERE order_item_id = 11"));
+            int rating = number("SELECT rating FROM review WHERE order_item_id = 11");
+            assertEquals(rating == 2 ? "评价甲" : "评价乙", text("SELECT comment FROM review WHERE order_item_id = 11"));
+            assertEquals(1, number("SELECT COUNT(*) FROM message WHERE title = '收到新评价'"));
+        } finally {
+            workers.shutdownNow();
+        }
+    }
+
+    @RepeatedTest(10)
+    void concurrentDefaultTasksAndManualReviewAlwaysKeepManualContent() throws Exception {
+        order(10, 11, 4, 1L);
+        jdbc.update("UPDATE `order` SET complete_time = DATE_SUB(NOW(), INTERVAL 4 DAY) WHERE id = 10");
+        ExecutorService workers = Executors.newFixedThreadPool(3);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<?> manual = workers.submit(() -> {
+                start.await();
+                context.getBean(OrderService.class).evaluateOrderItem(1L, 11L, 3, "用户手动提交的评价");
+                return null;
+            });
+            List<Future<?>> defaults = new java.util.ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                defaults.add(workers.submit(() -> {
+                    start.await();
+                    context.getBean(com.me.task.AutoReviewTask.class).autoEvaluateCompletedOrders();
+                    return null;
+                }));
+            }
+            start.countDown();
+            manual.get(15, TimeUnit.SECONDS);
+            for (Future<?> task : defaults) task.get(15, TimeUnit.SECONDS);
+            assertEquals(1, number("SELECT COUNT(*) FROM review WHERE order_item_id = 11"));
+            assertEquals(3, number("SELECT rating FROM review WHERE order_item_id = 11"));
+            assertEquals("用户手动提交的评价", text("SELECT comment FROM review WHERE order_item_id = 11"));
+        } finally {
+            workers.shutdownNow();
+        }
+    }
+
+    @Test
+    void uniqueConstraintRejectsDuplicateAndMigrationDoesNotDeleteHistory() throws Exception {
+        order(10, 11, 4, 1L);
+        context.getBean(OrderService.class).evaluateOrderItem(1L, 11L, 5, "第一条历史评价");
+        String insert = "INSERT INTO review (order_id, order_item_id, user_id, volunteer_id, rating, comment) "
+                + "VALUES (10, 11, 1, 1, 1, '第二条历史评价')";
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () -> jdbc.update(insert));
+        jdbc.execute("ALTER TABLE review DROP INDEX uk_review_order_item");
+        try {
+            jdbc.update(insert);
+            try (Connection connection = dataSource.getConnection()) {
+                assertThrows(org.springframework.jdbc.datasource.init.ScriptException.class,
+                        () -> ScriptUtils.executeSqlScript(connection, new EncodedResource(
+                                new FileSystemResource("../../docs/migrations/20261013_review_unique.sql"), "UTF-8")));
+            }
+            assertEquals(2, number("SELECT COUNT(*) FROM review WHERE order_item_id = 11"));
+        } finally {
+            // 仅恢复随机测试库结构；业务库的历史重复数据不会被本测试改动。
+            jdbc.update("DELETE FROM review");
+            try (Connection connection = dataSource.getConnection()) {
+                ScriptUtils.executeSqlScript(connection, new EncodedResource(
+                        new FileSystemResource("../../docs/migrations/20261013_review_unique.sql"), "UTF-8"));
+            }
+        }
+    }
+
+    @Test
+    void reviewAndNotificationRollbackTogetherWhenMessageSaveFails() {
+        order(10, 11, 4, 1L);
+        jdbc.execute("RENAME TABLE message TO message_unavailable");
+        try {
+            assertThrows(RuntimeException.class,
+                    () -> context.getBean(OrderService.class).evaluateOrderItem(1L, 11L, 4, "评价"));
+            assertEquals(0, number("SELECT COUNT(*) FROM review"));
+            assertEquals(0, number("SELECT COUNT(*) FROM message_unavailable"));
+        } finally {
+            jdbc.execute("RENAME TABLE message_unavailable TO message");
+        }
+    }
+
     private static void approval(int id, String type, Long businessId, String content) {
         jdbc.update("INSERT INTO approval (id, type, applicant_id, business_id, applicant_name, content) "
                 + "VALUES (?, ?, 1, ?, '测试志愿者', ?)", id, type, businessId, content);
@@ -802,8 +1112,8 @@ class BugFixDatabaseTest {
     @EnableTransactionManagement
     @EnableAspectJAutoProxy(proxyTargetClass = true)
     @MapperScan("com.me.mapper")
-    @Import({OrderServiceImpl.class, VolunteerServiceImpl.class, AdminServiceImpl.class,
-            ApprovalServiceImpl.class, VolunteerLeaveServiceImpl.class, MessageServiceImpl.class,
+    @Import({OrderServiceImpl.class, VolunteerServiceImpl.class, VolunteerAvailabilityService.class, AdminServiceImpl.class,
+            ApprovalServiceImpl.class, VolunteerLeaveServiceImpl.class, MessageServiceImpl.class, com.me.task.AutoReviewTask.class,
             OutboxService.class, OutboxDispatchTask.class, VolunteerController.class, RedisCacheAspect.class,
             AddressServiceImpl.class, CartServiceImpl.class, ServicePackageServiceImpl.class,
             AccountAccessService.class, AdminDashboardServiceImpl.class,

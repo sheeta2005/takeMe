@@ -63,11 +63,11 @@ mvn -pl server -am package -DskipTests
 
 应用日志沿用每日或 100MB 滚动、保留 7 天；5GB 上限分别作用于应用、错误、SQL 三个输出器，不是整个目录的共同上限。开发 GC 沿用 5 个轮转文件、每个 10MB；压测沿用 5 个轮转文件、每个 20MB。压测关闭 mapper 的 DEBUG 输出，SQL 文件可能为空。堆转储不参与日志滚动，需要按诊断需要手动清理。
 
-从 IDEA 打开仓库根目录或 `takeMe` 子目录均可选择共享配置 **TakeMeApplication-统一日志**。该配置使用 Windows PowerShell 和 IDEA 内置 Shell Script 支持，在启动前运行“准备日志目录”，再执行构建并启动应用；开发工作目录始终为仓库根目录。保留现有 IDEA 的 2GB 堆参数，命令行启动脚本沿用 1GB 堆参数。
+从 IDEA 打开仓库根目录或 `takeMe` 子目录均可选择共享配置 **TakeMeApplication-统一日志**。该配置直接构建并启动应用，开发工作目录始终为仓库根目录。`logs/dev/diagnostics/.gitkeep` 将开发日志和诊断目录骨架保留在仓库中，克隆后即可使用 GC 文件路径，无需 Shell Script 启动前任务。保留现有 IDEA 的 2GB 堆参数，命令行启动脚本沿用 1GB 堆参数。
 
-若 IDEA 已打开项目但尚未显示新配置，请重新打开项目以加载 `.run` 文件。已有本地 server 启动配置也已同步日志路径和启动前任务。不要只在 Java 启动类中创建 GC 目录，JVM 会在进入 main 方法之前打开 GC 日志。
+若 IDEA 已打开项目但尚未显示新配置，请重新打开项目以加载 `.run` 文件。已有本地 server 启动配置也已同步日志路径。若手动删除了整个日志目录，先运行 `tools/prepare-log-directory.ps1 -LogDir logs/dev` 恢复目录，或使用命令行启动脚本自动恢复。不要只在 Java 启动类中创建 GC 目录，JVM 会在进入 main 方法之前打开 GC 日志。
 
-需要修改 IDEA 日志目录时，同步调整“准备日志目录”的 `-LogDir` 参数，以及应用 VM options 中的 `logging.file.path`、GC 文件路径、`HeapDumpPath`；共享 IDEA 配置默认固定使用 `logs/dev`。脚本启动会自动为应用、GC 和转储同步目录，外部指定的相对路径也按仓库根目录解析。端口改为其他值时，应同步修改 GC 文件名中的端口标识。
+需要修改 IDEA 日志目录时，先用目录准备脚本创建目标目录，再同步调整应用 VM options 中的 `logging.file.path`、GC 文件路径、`HeapDumpPath`；共享 IDEA 配置默认固定使用 `logs/dev`。脚本启动会自动为应用、GC 和转储同步目录，外部指定的相对路径也按仓库根目录解析。端口改为其他值时，应同步修改 GC 文件名中的端口标识。
 
 旧日志保留原位，不自动移动或删除；新日志使用上述目录。日志及 `.hprof` 文件由 Git 忽略。
 

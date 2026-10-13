@@ -16,16 +16,16 @@
     />
 
     <el-alert
-      v-if="volunteerStore.status === 1 && volunteerStore.workStatus === 0"
-      title="请好好休息"
-      description="您当前处于休息状态，请休息后再接取服务。"
+      v-if="volunteerStore.status === 1 && [0, 3].includes(volunteerStore.workStatus)"
+      :title="volunteerStore.workStatus === 3 ? '请假中' : '请好好休息'"
+      :description="volunteerStore.workStatus === 3 ? '您当前处于已批准的请假时段，暂时不能接取服务。' : '您今天未排班，请在工作日接取服务。'"
       type="warning"
       :closable="false"
       show-icon
       style="margin-bottom: 24px"
     />
 
-    <template v-if="volunteerStore.status === 1 && volunteerStore.workStatus !== 0">
+    <template v-if="volunteerStore.status === 1 && ![0, 3].includes(volunteerStore.workStatus)">
       <el-card class="filter-card" shadow="hover" style="margin-bottom: 24px;">
         <el-form :inline="true" class="filter-form">
           <el-form-item label="服务类型">
@@ -187,7 +187,7 @@
       </template>
     </template>
 
-    <el-empty v-if="volunteerStore.status === 0 || (volunteerStore.status === 1 && volunteerStore.workStatus === 0)" description="暂不可用" :image-size="200" />
+    <el-empty v-if="volunteerStore.status === 0 || (volunteerStore.status === 1 && [0, 3].includes(volunteerStore.workStatus))" description="暂不可用" :image-size="200" />
   </div>
 </template>
 
@@ -362,7 +362,9 @@ const loadAvailableServices = async () => {
 }
 
 //刷新可接服务与进行中状态
-const refreshData = () => {
+// 刷新时同步后端状态，避免排班或请假审批后沿用旧状态。
+const refreshData = async () => {
+  if (!await volunteerStore.fetchVolunteerInfo()) return
   currentPage.value = 1
   loadAvailableServices()
   checkInProgressService()
@@ -383,12 +385,13 @@ const handlePageChange = (page: number) => {
 
 //校验接单条件并接取服务
 const acceptService = async (service: any) => {
+  if (!await volunteerStore.fetchVolunteerInfo()) return
   if (volunteerStore.status === 0) {
     ElMessage.error('账号异常，无法接取服务')
     return
   }
-  if (volunteerStore.workStatus === 0) {
-    ElMessage.warning('请好好休息，休息后再接取服务')
+  if ([0, 3].includes(volunteerStore.workStatus)) {
+    ElMessage.warning(volunteerStore.workStatus === 3 ? '请假期间无法接取服务' : '今天不是您的工作日，无法接取服务')
     return
   }
   if (hasInProgressService.value) {
@@ -414,6 +417,7 @@ const acceptService = async (service: any) => {
 
     await confirmOrder(service.id)
     ElMessage.success('接取成功')
+    await volunteerStore.fetchVolunteerInfo()
     await checkInProgressService()
     await loadAvailableServices()
   } catch (error: any) {
@@ -425,7 +429,7 @@ const acceptService = async (service: any) => {
 
 onMounted(async () => {
   await volunteerStore.fetchVolunteerInfo()
-  if (volunteerStore.status === 1 && volunteerStore.workStatus !== 0) {
+  if (volunteerStore.status === 1 && ![0, 3].includes(volunteerStore.workStatus)) {
     await checkInProgressService()
     await loadAvailableServices()
   } else {

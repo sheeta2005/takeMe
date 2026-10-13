@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <!-- 工作目录固定为仓库根目录，所有开发日志写入 logs/dev。 -->
+  <configuration default="false" name="TakeMeApplication-统一日志" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="server" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.me.TakeMeApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="VM_PARAMETERS" value="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=logs/dev/diagnostics -XX:+ExitOnOutOfMemoryError -Xmx2048m -Xms2048m -Dlogging.file.path=logs/dev -Xlog:gc*:file=logs/dev/takeMe-8080-gc.log:time,uptime,level,tags:filecount=5,filesize=10M" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

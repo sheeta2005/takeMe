@@ -1,6 +1,6 @@
 <template>
   <div class="review-page">
-    <h2 class="page-title">评价订单</h2>
+    <h2 class="page-title">{{ selectedItem?.reviewed ? '修改服务评价' : '评价服务' }}</h2>
 
     <div class="review-card" v-loading="loading">
       <div class="order-info">
@@ -12,9 +12,18 @@
           <span class="label">订单金额：</span>
           <span class="value price">¥{{ orderInfo.totalPrice }}</span>
         </div>
+        <div class="info-item">
+          <span class="label">评价服务：</span>
+          <span class="value">{{ selectedItem?.serviceName }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">预约时间：</span>
+          <span class="value">{{ selectedItem?.serviceDate }} {{ selectedItem?.serviceTime }}</span>
+        </div>
       </div>
 
       <el-form
+        v-if="selectedItem"
         ref="formRef"
         :model="form"
         :rules="rules"
@@ -56,8 +65,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getUserOrderDetail } from '@/api/order'
-import request from '@/utils/request'
+import { getUserOrderDetail, evaluateOrderItem } from '@/api/order'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -66,6 +74,7 @@ const route = useRoute()
 const loading = ref(false)
 const submitting = ref(false)
 const formRef = ref<any>(null)
+const selectedItem = ref<any>(null)
 
 const orderInfo = ref<any>({
   orderNo: '',
@@ -86,8 +95,9 @@ const rules = {
 //加载待评价订单详情
 const fetchOrderDetail = async () => {
   const orderId = Number(route.params.id)
-  if (!orderId || isNaN(orderId)) {
-    ElMessage.error('订单ID无效')
+  const orderItemId = Number(route.query.orderItemId)
+  if (!Number.isSafeInteger(orderId) || orderId <= 0 || !Number.isSafeInteger(orderItemId) || orderItemId <= 0) {
+    ElMessage.error('请选择需要评价的服务项')
     router.back()
     return
   }
@@ -97,6 +107,15 @@ const fetchOrderDetail = async () => {
     const res = await getUserOrderDetail(orderId)
     if (res.code === 200 && res.data) {
       orderInfo.value = res.data
+      // 只允许选择当前订单内的服务项，按已有评价回填评分和文字。
+      const item = res.data.items?.find((item: any) => item.id === orderItemId)
+      if (!item || ![3, 4].includes(item.itemStatus) || res.data.status !== 4) {
+        ElMessage.error('该服务项暂不可评价')
+        return
+      }
+      selectedItem.value = item
+      form.value.score = item.review?.rating ?? 5
+      form.value.content = item.review?.comment ?? ''
     }
   } catch (e) {
     console.error('获取订单详情失败:', e)
@@ -108,28 +127,16 @@ const fetchOrderDetail = async () => {
 
 //提交服务评分与评价
 const submitReview = async () => {
+  if (submitting.value || !selectedItem.value) return
   const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-
-  const orderId = Number(route.params.id)
-  if (!orderId || isNaN(orderId)) {
-    ElMessage.error('订单ID无效')
-    return
-  }
+  if (!valid || submitting.value) return
 
   submitting.value = true
   try {
-    await request({
-      url: '/api/user/order/evaluate',
-      method: 'post',
-      params: {
-        orderId,
-        rating: form.value.score,
-        comment: form.value.content || ''
-      }
-    })
+    await evaluateOrderItem(selectedItem.value.id, form.value.score, form.value.content || '')
     ElMessage.success('评价成功')
-    router.replace('/user/order')
+    // 返回详情重新读取各服务项评价状态，支持继续评价同一订单内的其他服务。
+    router.replace(`/user/order/detail/${orderInfo.value.id}`)
   } catch (e: any) {
     console.error('评价失败:', e)
     ElMessage.error(e.message || '评价失败')

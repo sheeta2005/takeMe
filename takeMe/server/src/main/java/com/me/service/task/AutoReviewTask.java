@@ -3,10 +3,9 @@ package com.me.task;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Order;
 import com.me.entity.OrderItem;
-import com.me.entity.Review;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
-import com.me.mapper.ReviewMapper;
+import com.me.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,7 +21,7 @@ public class AutoReviewTask {
 
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
-    private final ReviewMapper reviewMapper;
+    private final OrderService orderService;
 
     //为超时未评价订单补默认好评
     @Scheduled(cron = "0 0 2 * * ?")
@@ -49,21 +48,8 @@ public class AutoReviewTask {
                     continue;
                 }
 
-                LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
-                reviewWrapper.eq(Review::getOrderItemId, item.getId());
-                Long count = reviewMapper.selectCount(reviewWrapper);
-
-                if (count == 0) {
-                    Review review = new Review();
-                    review.setOrderId(item.getOrderId());
-                    review.setOrderItemId(item.getId());
-                    review.setUserId(order.getUserId());
-                    review.setVolunteerId(item.getVolunteerId());
-                    review.setRating(5);
-                    review.setComment("系统默认好评");
-                    review.setCreateTime(LocalDateTime.now());
-                    reviewMapper.insert(review);
-
+                // 每个候选项通过独立事务重新检查，与人工评价使用相同的加锁顺序。
+                if (orderService.autoEvaluateOrderItem(item.getId())) {
                     totalEvaluated++;
                     log.info("自动评价成功: orderItemId={}, volunteerId={}", item.getId(), item.getVolunteerId());
                 }

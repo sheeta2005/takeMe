@@ -23,7 +23,7 @@ export interface Volunteer {
   // 服务信息
   serviceDays: string                 // 服务日期  每周的周天：0 周一：1周二：2周三：3周四：4周五：5周六：6七选一分别对应
 
-  workStatus: 0 | 1 | 2              // 0=休息中 1=待命中 2=服务中
+  workStatus: 0 | 1 | 2 | 3          // 0=休息中 1=待命中 2=服务中 3=请假中
   totalServiceHours: number           // 累计服务时长
 
   // 紧急联系人

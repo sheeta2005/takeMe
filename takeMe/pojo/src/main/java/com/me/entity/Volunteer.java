@@ -34,7 +34,7 @@ public class Volunteer {
 
     private String serviceDays;//0 周天 1周一....6 周六
     
-    private Integer workStatus;
+    private Integer workStatus;//响应中实时计算：0休息 1待命 2服务中 3请假中
     private Integer totalServiceHours;
     private Integer points;//总积分
 

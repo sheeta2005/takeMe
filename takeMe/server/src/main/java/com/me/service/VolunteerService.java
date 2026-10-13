@@ -8,6 +8,9 @@ import com.me.entity.Volunteer;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 public interface VolunteerService extends IService<Volunteer> {
+    // 根据当前排班、请假和实际服务查询工作状态。
+    int getWorkStatus(Volunteer volunteer);
+
     /**
      * 志愿者登录
      * @param loginDTO 登录参数

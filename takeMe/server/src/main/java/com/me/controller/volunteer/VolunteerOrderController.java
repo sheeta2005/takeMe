@@ -50,7 +50,7 @@ public class VolunteerOrderController {
         pageResultDTO.setPageNum(pageNum);
         pageResultDTO.setPageSize(pageSize);
 
-        IPage<OrderVO> iPage = orderService.getAvailableOrderList(pageResultDTO);
+        IPage<OrderVO> iPage = orderService.getAvailableOrderList(BaseContext.getLoginId(), pageResultDTO);
         PageResultVO<OrderVO> result = PageResultVO.from(iPage);
         return Result.success(result);
     }
