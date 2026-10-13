@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <!-- 工作目录固定为仓库根目录，所有开发日志写入 logs/dev。 -->
-  <configuration default="false" name="TakeMeApplication-统一日志" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+  <configuration default="false" name="TakeMeApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="server" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.me.TakeMeApplication" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
