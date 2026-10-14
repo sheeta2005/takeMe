@@ -10,7 +10,7 @@
 
 `.runtime/` 保存本机凭据、签名测试 Token、启动进程信息；`results/` 保存测量产物。两个目录都被本目录的 `.gitignore` 忽略，不提交 Git。现有本地密钥文件不需要改动。
 
-运行日志统一位于仓库根目录：普通开发使用 `logs/dev`，隔离压测使用 `logs/loadtest`。压测仍分别保存 `takeMe-9081.log`、`takeMe-9081-error.log`、`takeMe-9081-sql.log`、`takeMe-9081-gc.log`，启动控制台输出为 `console-<模式>.log` 和 `console-<模式>-error.log`，OOM 堆转储位于 `diagnostics/`。日志目录和诊断文件由根目录 `.gitignore` 忽略。压测关闭 SQL DEBUG 输出；应用日志的既有分流、格式和滚动规则保持一致。
+运行日志统一位于仓库根目录：普通开发使用 `logs/dev`，隔离压测使用 `logs/loadtest`。开发环境的 `logs/dev/takeMe-8080-sql.log` 由 Logback 的 `SQL_FILE` appender 收集 `com.me.mapper` DEBUG 日志；压测 profile 将该 logger 设为 WARN，所以压测的 `takeMe-9081-sql.log` 可能为空。压测仍分别保存 `takeMe-9081.log`、`takeMe-9081-error.log`、`takeMe-9081-sql.log`、`takeMe-9081-gc.log`，启动控制台输出为 `console-<模式>.log` 和 `console-<模式>-error.log`，OOM 堆转储位于 `diagnostics/`。日志目录和诊断文件由根目录 `.gitignore` 忽略。压测关闭 SQL DEBUG 输出；应用日志的既有分流、格式和滚动规则保持一致。
 
 `start-app.ps1` 在 JVM 启动前创建目录，并统一应用日志、GC 和堆转储路径。外部环境变量 `TAKEME_TEST_LOG_DIR` 可覆盖压测目录，相对路径按仓库根目录解析；旧 `environment.json` 中保存的日志路径不再覆盖启动入口。新进程记录保存实际 GC 路径，快照仍导出到 `results/<名称>-gc.log`，兼容尚未重启的旧压测进程。旧运行日志不会自动移动或删除。
 

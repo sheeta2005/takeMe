@@ -63,6 +63,8 @@ mvn -pl server -am package -DskipTests
 
 应用日志沿用每日或 100MB 滚动、保留 7 天；5GB 上限分别作用于应用、错误、SQL 三个输出器，不是整个目录的共同上限。开发 GC 沿用 5 个轮转文件、每个 10MB；压测沿用 5 个轮转文件、每个 20MB。压测关闭 mapper 的 DEBUG 输出，SQL 文件可能为空。堆转储不参与日志滚动，需要按诊断需要手动清理。
 
+开发环境的 MyBatis SQL 调试日志由 `server/src/main/resources/logback-spring.xml` 中的 `SQL_FILE` appender 接收 `com.me.mapper` DEBUG 级别日志，独立写入 `logs/dev/takeMe-8080-sql.log`；`additivity="false"` 使它不重复输出到控制台和主日志。`application.yml` 未设置 `mybatis-plus.configuration.log-impl`，SQL 日志仍由 Logback 的 Mapper logger 配置启用。压测 profile 将 `com.me.mapper` 设为 WARN，因此 `logs/loadtest/takeMe-9081-sql.log` 可能为空。
+
 从 IDEA 打开仓库根目录或 `takeMe` 子目录均可选择共享配置 **TakeMeApplication**。该配置直接构建并启动应用，开发工作目录始终为仓库根目录。`logs/dev/diagnostics/.gitkeep` 将开发日志和诊断目录骨架保留在仓库中，克隆后即可使用 GC 文件路径，无需 Shell Script 启动前任务。保留现有 IDEA 的 2GB 堆参数，命令行启动脚本沿用 1GB 堆参数。
 
 若 IDEA 已打开项目但尚未显示新配置，请重新打开项目以加载 `.run` 文件。重复的本地应用启动配置已移除，统一使用共享配置。若手动删除了整个日志目录，先运行 `tools/prepare-log-directory.ps1 -LogDir logs/dev` 恢复目录，或使用命令行启动脚本自动恢复。不要只在 Java 启动类中创建 GC 目录，JVM 会在进入 main 方法之前打开 GC 日志。
