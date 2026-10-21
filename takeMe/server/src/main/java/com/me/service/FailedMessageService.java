@@ -88,7 +88,7 @@ public class FailedMessageService {
     // 列表只读取摘要，避免将全部原始消息体和异常堆栈传回管理端。
     public Page<FailedMessageSummary> page(long pageNum, long pageSize, Integer status) {
         if (pageNum < 1 || pageNum > Integer.MAX_VALUE || pageSize < 1 || pageSize > 100
-                || (status != null && status != 0 && status != 1)) {
+                || (status != null && status != 0 && status != 1 && status != 2)) {
             throw new IllegalArgumentException("分页参数无效");
         }
         long total = failedMessageMapper.count(status);
@@ -137,6 +137,28 @@ public class FailedMessageService {
     // 按来源和失败原因聚合，供告警任务与管理端查询。
     public List<Map<String, Object>> recentFailures() {
         return failedMessageMapper.recentFailures();
+    }
+
+    // Broker 的重投确认不能替代业务核查，管理员须提供明确的结案依据。
+    @Transactional(rollbackFor = Exception.class)
+    public boolean close(String id, Long adminId, String reason) {
+        if (reason == null || reason.isBlank() || reason.strip().length() > 1000) {
+            throw new IllegalArgumentException("结案原因不能为空且不能超过1000字");
+        }
+        FailedMessage failed = failedMessageMapper.selectForReplay(id);
+        if (failed == null || failed.getStatus() == 2) return false;
+        failed.setClosedBy(adminId);
+        failed.setClosedTime(LocalDateTime.now());
+        failed.setCloseReason(reason.strip());
+        if (failedMessageMapper.close(failed) != 1) {
+            throw new IllegalStateException("失败消息结案保存失败");
+        }
+        return true;
+    }
+
+    // 待核查和重投后未结案的消息都需要持续观察。
+    public List<Map<String, Object>> outstandingSummary(LocalDateTime cutoff) {
+        return failedMessageMapper.outstandingSummary(cutoff);
     }
 
     // 应用失败使用显式来源，Broker 溢出使用最近一次 x-death 中记录的来源。

@@ -21,4 +21,7 @@ public class FailedMessageSummary {
     private LocalDateTime createTime;
     private LocalDateTime lastFailureTime;
     private LocalDateTime lastReplayTime;
+    private Long closedBy;
+    private LocalDateTime closedTime;
+    private String closeReason;
 }

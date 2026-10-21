@@ -3,6 +3,7 @@ package com.me.controller.admin;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.context.BaseContext;
 import com.me.dto.FailedMessageSummary;
+import com.me.dto.FailedMessageCloseDTO;
 import com.me.result.Result;
 import com.me.service.FailedMessageService;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,15 @@ public class AdminFailedMessageController {
     public Result<Void> replay(@PathVariable String id) {
         if (!failedMessageService.replay(id, BaseContext.getLoginId())) {
             return Result.error("重放未完成，请检查失败原因或来源队列");
+        }
+        return Result.success();
+    }
+
+    // 结案复用管理员鉴权，保留操作者及原因供保留期内核查。
+    @PostMapping("/{id}/close")
+    public Result<Void> close(@PathVariable String id, @RequestBody FailedMessageCloseDTO request) {
+        if (!failedMessageService.close(id, BaseContext.getLoginId(), request.getReason())) {
+            return Result.error("记录不存在或已经结案");
         }
         return Result.success();
     }

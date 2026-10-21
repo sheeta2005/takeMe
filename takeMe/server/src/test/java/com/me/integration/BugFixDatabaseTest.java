@@ -20,6 +20,7 @@ import com.me.redis.utils.RedisUtil;
 import com.me.service.*;
 import com.me.service.Impl.*;
 import com.me.service.task.OutboxDispatchTask;
+import com.me.service.task.MqCleanupTask;
 import com.me.util.OssUtil;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.*;
@@ -101,6 +102,10 @@ class BugFixDatabaseTest {
                     new FileSystemResource("../../docs/migrations/20261020_mq_failed_message.sql"), "UTF-8");
             ScriptUtils.executeSqlScript(connection, failedMessageScript);
             ScriptUtils.executeSqlScript(connection, failedMessageScript);
+            var retentionScript = new EncodedResource(
+                    new FileSystemResource("../../docs/migrations/20261021_mq_retention.sql"), "UTF-8");
+            ScriptUtils.executeSqlScript(connection, retentionScript);
+            ScriptUtils.executeSqlScript(connection, retentionScript);
             // 增量迁移必须可重复执行。
             ScriptUtils.executeSqlScript(connection, script);
         }
@@ -163,6 +168,198 @@ class BugFixDatabaseTest {
         assertEquals(3, pending.getOccurrences());
         assertEquals(2, pending.getReplayCount());
         assertTrue(pending.getLastReplayError().contains("测试队列满"));
+    }
+
+    @Test
+    void mqRetentionMigrationPreservesExistingMessagesAndCreatesCleanupIndexes() throws Exception {
+        insertOutbox("保留迁移测试", 0, LocalDateTime.now().minusDays(100), LocalDateTime.now());
+        try (Connection connection = dataSource.getConnection()) {
+            ScriptUtils.executeSqlScript(connection, new EncodedResource(
+                    new FileSystemResource("../../docs/migrations/20261021_mq_retention.sql"), "UTF-8"));
+        }
+        assertEquals(1, number("SELECT COUNT(*) FROM mq_outbox"));
+        assertEquals(3, number("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() " +
+                "AND table_name = 'mq_failed_message' AND column_name IN ('closed_by','closed_time','close_reason')"));
+        assertEquals(2, number("SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics " +
+                "WHERE table_schema = DATABASE() AND index_name IN ('idx_outbox_cleanup','idx_failed_cleanup')"));
+    }
+
+    @Test
+    void outboxCleanupUsesConfirmationTimeAndKeepsPendingAndBoundaryRows() {
+        LocalDateTime cutoff = LocalDateTime.of(2026, 10, 1, 0, 0);
+        insertOutbox("过期已确认", 1, cutoff.minusDays(20), cutoff.minusSeconds(1));
+        insertOutbox("过期待发送", 0, cutoff.minusDays(20), cutoff.minusDays(20));
+        insertOutbox("刚刚补发成功", 1, cutoff.minusDays(20), cutoff.plusDays(1));
+        insertOutbox("保留期边界", 1, cutoff.minusDays(20), cutoff);
+        var mapper = context.getBean(com.me.mapper.OutboxMapper.class);
+
+        assertEquals(1, mapper.deleteConfirmedBefore(cutoff, 500));
+
+        assertEquals(3, number("SELECT COUNT(*) FROM mq_outbox"));
+        assertEquals(1, number("SELECT COUNT(*) FROM mq_outbox WHERE status = 0"));
+        var summary = mapper.pendingSummary(cutoff);
+        assertEquals(1L, ((Number) summary.get("messageCount")).longValue());
+        assertEquals(1L, ((Number) summary.get("overdueCount")).longValue());
+    }
+
+    @Test
+    void cleanupStopsAtBatchBudgetAndDeletesOnlyExpiredClosedFailures() {
+        LocalDateTime now = LocalDateTime.now();
+        for (int i = 0; i < 5; i++) {
+            insertOutbox("批次" + i, 1, now.minusDays(20), now.minusDays(8));
+        }
+        insertFailure("过期已结案", 2, now.minusDays(60), now.minusDays(31));
+        insertFailure("近期已结案", 2, now.minusDays(60), now.minusDays(1));
+        insertFailure("待核查", 0, now.minusDays(60), null);
+        insertFailure("仅确认重投", 1, now.minusDays(60), null);
+        MqCleanupTask task = new MqCleanupTask(context.getBean(com.me.mapper.OutboxMapper.class),
+                context.getBean(com.me.mapper.FailedMessageMapper.class),
+                context.getBean(PlatformTransactionManager.class), 7, 30, 2, 2);
+
+        assertEquals(4, task.cleanupOutbox());
+        assertEquals(1, number("SELECT COUNT(*) FROM mq_outbox"));
+        assertEquals(1, task.cleanupOutbox());
+        assertEquals(1, task.cleanupFailedMessages());
+        assertEquals(3, number("SELECT COUNT(*) FROM mq_failed_message"));
+        assertEquals(2, number("SELECT COUNT(*) FROM mq_failed_message WHERE status IN (0,1)"));
+        var outstanding = context.getBean(FailedMessageService.class).outstandingSummary(now.minusHours(24));
+        assertEquals(2, outstanding.size());
+        for (var row : outstanding) assertEquals(1L, ((Number) row.get("overdueCount")).longValue());
+    }
+
+    @Test
+    void cleanupCommitsEachBatchAndRollsBackOnlyTheFailingBatch() {
+        LocalDateTime old = LocalDateTime.now().minusDays(8);
+        for (int i = 0; i < 3; i++) insertOutbox("事务批次" + i, 1, old, old);
+        var realMapper = context.getBean(com.me.mapper.OutboxMapper.class);
+        var failingMapper = mock(com.me.mapper.OutboxMapper.class);
+        var batches = new java.util.concurrent.atomic.AtomicInteger();
+        when(failingMapper.deleteConfirmedBefore(any(), anyInt())).thenAnswer(call -> {
+            int deleted = realMapper.deleteConfirmedBefore(call.getArgument(0), call.getArgument(1));
+            if (batches.incrementAndGet() == 2) throw new IllegalStateException("模拟删除后事务失败");
+            return deleted;
+        });
+        var manager = context.getBean(PlatformTransactionManager.class);
+        MqCleanupTask task = new MqCleanupTask(failingMapper,
+                context.getBean(com.me.mapper.FailedMessageMapper.class), manager, 7, 30, 1, 10);
+        // 外层事务回滚不撤销首批提交，第二批删除则必须随自身事务回滚。
+        assertThrows(IllegalStateException.class, () -> new TransactionTemplate(manager).executeWithoutResult(status -> {
+            assertEquals(1, task.cleanupOutbox());
+            throw new IllegalStateException("模拟外层回滚");
+        }));
+        assertEquals(2, number("SELECT COUNT(*) FROM mq_outbox"));
+        assertEquals(2, batches.get());
+    }
+
+    @Test
+    void closedFailureCanBeFilteredAndReopensOnAnotherConsumerFailure() {
+        FailedMessageService service = context.getBean(FailedMessageService.class);
+        var properties = new org.springframework.amqp.core.MessageProperties();
+        properties.setMessageId("再次失败");
+        properties.getHeaders().put(com.me.mq.config.RabbitMQConfig.FAILED_SOURCE_QUEUE_HEADER,
+                "notification.user.queue");
+        var message = new org.springframework.amqp.core.Message(new byte[]{1}, properties);
+        service.archive(message);
+        String id = service.page(1, 20, 0).getRecords().getFirst().getId();
+        assertTrue(service.replay(id, 25L));
+        assertTrue(service.close(id, 25L, " 已核查业务恢复 "));
+        var closed = service.page(1, 20, 2).getRecords().getFirst();
+        assertEquals("已核查业务恢复", closed.getCloseReason());
+        assertEquals(25L, closed.getClosedBy());
+        assertNotNull(closed.getClosedTime());
+        assertFalse(service.replay(id, 25L));
+        assertFalse(service.close(id, 25L, "重复结案"));
+
+        service.archive(message);
+
+        var reopened = service.page(1, 20, 0).getRecords().getFirst();
+        assertEquals(2, reopened.getOccurrences());
+        assertNull(reopened.getClosedBy());
+        assertNull(reopened.getClosedTime());
+        assertNull(reopened.getCloseReason());
+        assertEquals(0, service.page(1, 20, 2).getTotal());
+    }
+
+    @Test
+    void cleanupRechecksStatusWhenConcurrentArchiveReopensLockedFailure() throws Exception {
+        FailedMessageService service = context.getBean(FailedMessageService.class);
+        var properties = new org.springframework.amqp.core.MessageProperties();
+        properties.setMessageId("并发归档");
+        properties.getHeaders().put(com.me.mq.config.RabbitMQConfig.FAILED_SOURCE_QUEUE_HEADER,
+                "notification.user.queue");
+        var message = new org.springframework.amqp.core.Message(new byte[]{1}, properties);
+        service.archive(message);
+        String id = service.page(1, 20, 0).getRecords().getFirst().getId();
+        service.close(id, 25L, "原故障已恢复");
+        jdbc.update("UPDATE mq_failed_message SET closed_time = ? WHERE id = ?", LocalDateTime.now().minusDays(40), id);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch started = new CountDownLatch(1);
+        var deletion = new java.util.concurrent.atomic.AtomicReference<Future<Integer>>();
+        try {
+            new TransactionTemplate(context.getBean(PlatformTransactionManager.class)).executeWithoutResult(status -> {
+                service.archive(message);
+                deletion.set(executor.submit(() -> {
+                    started.countDown();
+                    return context.getBean(com.me.mapper.FailedMessageMapper.class)
+                            .deleteClosedBefore(LocalDateTime.now().minusDays(30), 500);
+                }));
+                try {
+                    assertTrue(started.await(5, TimeUnit.SECONDS));
+                    assertThrows(TimeoutException.class, () -> deletion.get().get(200, TimeUnit.MILLISECONDS));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+            });
+            assertEquals(0, deletion.get().get(5, TimeUnit.SECONDS));
+            assertEquals(0, number("SELECT status FROM mq_failed_message"));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void replayAndCloseSerializeWithoutOverwritingTheFinalClosedState() throws Exception {
+        String id = insertFailure("并发重投结案", 0, LocalDateTime.now(), null);
+        FailedMessageService service = context.getBean(FailedMessageService.class);
+        CountDownLatch publishing = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        doAnswer(call -> {
+            publishing.countDown();
+            assertTrue(release.await(5, TimeUnit.SECONDS));
+            return null;
+        }).when(context.getBean(MessageProducer.class)).replayConfirmed(anyString(), any());
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Boolean> replay = executor.submit(() -> service.replay(id, 25L));
+            assertTrue(publishing.await(5, TimeUnit.SECONDS));
+            Future<Boolean> close = executor.submit(() -> service.close(id, 25L, "已核查恢复"));
+            assertThrows(TimeoutException.class, () -> close.get(200, TimeUnit.MILLISECONDS));
+            release.countDown();
+            assertTrue(replay.get(5, TimeUnit.SECONDS));
+            assertTrue(close.get(5, TimeUnit.SECONDS));
+            assertEquals(2, number("SELECT status FROM mq_failed_message"));
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    // 直接准备生命周期边界数据，不依赖外部 Broker。
+    private void insertOutbox(String id, int status, LocalDateTime created, LocalDateTime updated) {
+        jdbc.update("INSERT INTO mq_outbox (id, exchange_name, routing_key, payload_type, payload, status, " +
+                        "attempts, next_attempt_time, create_time, update_time) VALUES (?, '', '', '', '{}', ?, 0, ?, ?, ?)",
+                id, status, updated, created, updated);
+    }
+
+    private String insertFailure(String label, int status, LocalDateTime failureTime, LocalDateTime closedTime) {
+        // 归档主键为 ASCII 摘要，中文标签仅用于生成稳定的测试标识。
+        String id = UUID.nameUUIDFromBytes(label.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+        jdbc.update("INSERT INTO mq_failed_message (id, message_id, source_queue, exchange_name, routing_key, body, " +
+                        "headers_json, reason, status, create_time, last_failure_time, closed_time) " +
+                        "VALUES (?, ?, 'notification.user.queue', '', '', ?, '{}', 'consumer-failure', ?, ?, ?, ?)",
+                id, label, new byte[]{1}, status, failureTime, failureTime, closedTime);
+        return id;
     }
 
     @BeforeEach

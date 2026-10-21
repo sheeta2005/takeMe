@@ -24,11 +24,14 @@ public class FailedMessage {
     private String reason;
     private String lastError;
     private Integer occurrences;
-    private Integer status; // 0=已归档待核查，1=Broker 已确认重投，不代表业务成功。
+    private Integer status; // 0=待核查，1=Broker 已确认重投，2=人工结案；重投不代表业务成功。
     private Integer replayCount;
     private String lastReplayError;
     private Long replayedBy;
     private LocalDateTime lastReplayTime;
     private LocalDateTime createTime;
     private LocalDateTime lastFailureTime;
+    private Long closedBy;
+    private LocalDateTime closedTime;
+    private String closeReason;
 }

@@ -46,6 +46,8 @@ spring:
         acknowledge-mode: auto
         concurrency: ${me.rabbitmq.listener.simple.concurrency}
         max-concurrency: ${me.rabbitmq.listener.simple.max-concurrency}
+        # 配合最大消费者数约束已投递未确认的消息数量；小区部署可沿用覆盖值。
+        prefetch: 20
         # 重试由 reliableRabbitListenerContainerFactory 统一配置，不重复叠加。
     publisher-confirm-type: ${me.rabbitmq.publisher-confirm-type}
     publisher-returns: ${me.rabbitmq.publisher-returns}
@@ -61,6 +63,16 @@ jwt:
   expiration: ${me.jwt.expiration}
 
 mq:
+  cleanup:
+    outbox-retention-days: 7
+    failed-retention-days: 30
+    batch-size: 500
+    max-batches: 10
+  alert:
+    outbox-count: 10000
+    outbox-age-minutes: 10
+    failed-count: 1000
+    failed-age-hours: 24
   order:
     timeout-minutes: 30
 

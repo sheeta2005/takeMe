@@ -7,6 +7,7 @@ import com.me.dto.FailedMessageSummary;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 @Mapper
 public interface FailedMessageMapper extends BaseMapper<FailedMessage> {
@@ -19,7 +20,8 @@ public interface FailedMessageMapper extends BaseMapper<FailedMessage> {
                 #{body}, #{headersJson}, #{contentType}, #{contentEncoding}, #{correlationId}, #{reason},
                 #{lastError}, 1, 0, 0, #{createTime}, #{lastFailureTime})
             ON DUPLICATE KEY UPDATE occurrences = occurrences + 1, status = 0,
-                last_error = VALUES(last_error), reason = VALUES(reason), last_failure_time = VALUES(last_failure_time)
+                last_error = VALUES(last_error), reason = VALUES(reason), last_failure_time = VALUES(last_failure_time),
+                closed_by = NULL, closed_time = NULL, close_reason = NULL
             """)
     int archive(FailedMessage message);
 
@@ -29,7 +31,8 @@ public interface FailedMessageMapper extends BaseMapper<FailedMessage> {
                 exchange_name AS exchangeName, routing_key AS routingKey, reason, last_error AS lastError,
                 occurrences, status, replay_count AS replayCount, last_replay_error AS lastReplayError,
                 replayed_by AS replayedBy, create_time AS createTime,
-                last_failure_time AS lastFailureTime, last_replay_time AS lastReplayTime
+                last_failure_time AS lastFailureTime, last_replay_time AS lastReplayTime,
+                closed_by AS closedBy, closed_time AS closedTime, close_reason AS closeReason
             FROM mq_failed_message
             WHERE (#{status} IS NULL OR status = #{status})
             ORDER BY last_failure_time DESC LIMIT #{offset}, #{limit}
@@ -42,7 +45,7 @@ public interface FailedMessageMapper extends BaseMapper<FailedMessage> {
     @Select("SELECT COUNT(*) FROM mq_failed_message WHERE (#{status} IS NULL OR status = #{status})")
     long count(@Param("status") Integer status);
 
-    // 行锁覆盖重放和结果保存，防止两个管理员同时重复投递同一条记录。
+    // 重放和结案共用行锁，避免两个管理员同时投递或覆盖处置状态。
     @Select("SELECT * FROM mq_failed_message WHERE id = #{id} FOR UPDATE")
     @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     FailedMessage selectForReplay(@Param("id") String id);
@@ -54,6 +57,28 @@ public interface FailedMessageMapper extends BaseMapper<FailedMessage> {
                 last_replay_time = #{lastReplayTime} WHERE id = #{id}
             """)
     int recordReplay(FailedMessage message);
+
+    // 只有人工核查后的结案记录可以进入保留期清理。
+    @Update("""
+            UPDATE mq_failed_message SET status = 2, closed_by = #{closedBy},
+                closed_time = #{closedTime}, close_reason = #{closeReason}
+            WHERE id = #{id} AND status IN (0, 1)
+            """)
+    int close(FailedMessage message);
+
+    // 条件随删除语句一起执行；再次归档恢复为待核查后，不再符合清理条件。
+    @Delete("DELETE FROM mq_failed_message WHERE status = 2 AND closed_time < #{cutoff} " +
+            "ORDER BY closed_time, id LIMIT #{limit}")
+    int deleteClosedBefore(@Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
+
+    // 已重投记录从最后一次重投计时，其余记录从最近一次失败计时。
+    @Select("""
+            SELECT status, COUNT(*) AS messageCount,
+                COUNT(CASE WHEN (CASE WHEN status = 1 THEN COALESCE(last_replay_time, last_failure_time)
+                    ELSE last_failure_time END) < #{cutoff} THEN 1 END) AS overdueCount
+            FROM mq_failed_message WHERE status IN (0, 1) GROUP BY status
+            """)
+    List<Map<String, Object>> outstandingSummary(@Param("cutoff") LocalDateTime cutoff);
 
     // 每分钟按来源和失败类型聚合，避免异常风暴逐条刷屏。
     @Select("""

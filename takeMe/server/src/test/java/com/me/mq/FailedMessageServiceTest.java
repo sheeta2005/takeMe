@@ -16,6 +16,16 @@ import static org.mockito.Mockito.*;
 
 class FailedMessageServiceTest {
     @Test
+    void closingRequiresAnExplicitReasonBeforeAccessingTheRecord() {
+        FailedMessageMapper mapper = mock(FailedMessageMapper.class);
+        FailedMessageService service = new FailedMessageService(mapper, new ObjectMapper(), mock(MessageProducer.class));
+        for (String reason : new String[]{null, " ", "字".repeat(1001)}) {
+            assertThrows(IllegalArgumentException.class, () -> service.close("记录", 25L, reason));
+        }
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
     void archivesRawPoisonMessageWithItsOriginalConsumerQueue() {
         FailedMessageMapper mapper = mock(FailedMessageMapper.class);
         when(mapper.archive(any(FailedMessage.class))).thenReturn(1);
