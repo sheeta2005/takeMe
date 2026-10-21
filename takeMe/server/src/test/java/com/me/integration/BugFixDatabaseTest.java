@@ -97,6 +97,10 @@ class BugFixDatabaseTest {
                     new FileSystemResource("../../docs/migrations/20261013_review_unique.sql"), "UTF-8");
             ScriptUtils.executeSqlScript(connection, reviewScript);
             ScriptUtils.executeSqlScript(connection, reviewScript);
+            var failedMessageScript = new EncodedResource(
+                    new FileSystemResource("../../docs/migrations/20261020_mq_failed_message.sql"), "UTF-8");
+            ScriptUtils.executeSqlScript(connection, failedMessageScript);
+            ScriptUtils.executeSqlScript(connection, failedMessageScript);
             // 增量迁移必须可重复执行。
             ScriptUtils.executeSqlScript(connection, script);
         }
@@ -109,10 +113,63 @@ class BugFixDatabaseTest {
         context.refresh();
     }
 
+    @Test
+    void failedMessageArchiveMigrationCreatesReplayTable() {
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables " +
+                "WHERE table_schema = DATABASE() AND table_name = 'mq_failed_message'", Integer.class));
+        assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.statistics " +
+                "WHERE table_schema = DATABASE() AND table_name = 'mq_failed_message' " +
+                "AND index_name = 'idx_failed_status_time'", Integer.class) >= 1);
+    }
+
+    @Test
+    void failedMessageArchivesDeduplicatesAndReplaysOnlyToOriginalQueue() {
+        FailedMessageService service = context.getBean(FailedMessageService.class);
+        var properties = new org.springframework.amqp.core.MessageProperties();
+        properties.setMessageId("failed-event-1");
+        properties.getHeaders().put(com.me.mq.config.RabbitMQConfig.FAILED_SOURCE_QUEUE_HEADER,
+                "notification.user.queue");
+        properties.getHeaders().put("x-exception-message", "测试消费失败");
+        properties.getHeaders().put("__TypeId__", "com.me.dto.OrderStatusChangeMessage");
+        var original = new org.springframework.amqp.core.Message(new byte[]{0, (byte) 0xff, 1}, properties);
+
+        service.archive(original);
+        service.archive(original);
+        var page = service.page(1, 20, 0);
+        assertEquals(1, page.getTotal());
+        var summary = page.getRecords().getFirst();
+        assertEquals(2, summary.getOccurrences());
+        assertEquals("notification.user.queue", summary.getSourceQueue());
+        assertEquals(1, service.recentFailures().size());
+
+        assertTrue(service.replay(summary.getId(), 25L));
+        var replay = org.mockito.ArgumentCaptor.forClass(org.springframework.amqp.core.Message.class);
+        verify(context.getBean(MessageProducer.class)).replayConfirmed(eq("notification.user.queue"), replay.capture());
+        assertArrayEquals(original.getBody(), replay.getValue().getBody());
+        assertEquals("failed-event-1", replay.getValue().getMessageProperties().getMessageId());
+        assertEquals("com.me.dto.OrderStatusChangeMessage", replay.getValue().getMessageProperties().getHeader("__TypeId__"));
+        assertNull(replay.getValue().getMessageProperties().getHeader("x-exception-message"));
+        var replayed = service.page(1, 20, 1).getRecords().getFirst();
+        assertEquals(1, replayed.getReplayCount());
+        assertEquals(25L, replayed.getReplayedBy());
+        assertFalse(service.replay(summary.getId(), 25L));
+
+        // 重放后再次失败会重新开放处理，失败发送只保存尝试，不标记成功。
+        service.archive(original);
+        doThrow(new IllegalStateException("测试队列满"))
+                .when(context.getBean(MessageProducer.class)).replayConfirmed(anyString(), any());
+        assertFalse(service.replay(summary.getId(), 25L));
+        var pending = service.page(1, 20, 0).getRecords().getFirst();
+        assertEquals(3, pending.getOccurrences());
+        assertEquals(2, pending.getReplayCount());
+        assertTrue(pending.getLastReplayError().contains("测试队列满"));
+    }
+
     @BeforeEach
     void fixtures() {
         for (String table : TABLES) jdbc.update("DELETE FROM `" + table + "`");
         jdbc.update("DELETE FROM mq_outbox");
+        jdbc.update("DELETE FROM mq_failed_message");
         cache.clear();
         RedisUtil redis = context.getBean(RedisUtil.class);
         reset(redis, context.getBean(MessageProducer.class));
@@ -1114,7 +1171,7 @@ class BugFixDatabaseTest {
     @MapperScan("com.me.mapper")
     @Import({OrderServiceImpl.class, VolunteerServiceImpl.class, VolunteerAvailabilityService.class, AdminServiceImpl.class,
             ApprovalServiceImpl.class, VolunteerLeaveServiceImpl.class, MessageServiceImpl.class, com.me.task.AutoReviewTask.class,
-            OutboxService.class, OutboxDispatchTask.class, VolunteerController.class, RedisCacheAspect.class,
+            OutboxService.class, OutboxDispatchTask.class, FailedMessageService.class, VolunteerController.class, RedisCacheAspect.class,
             AddressServiceImpl.class, CartServiceImpl.class, ServicePackageServiceImpl.class,
             AccountAccessService.class, AdminDashboardServiceImpl.class,
             com.me.mq.consumer.BroadcastNotificationConsumer.class})

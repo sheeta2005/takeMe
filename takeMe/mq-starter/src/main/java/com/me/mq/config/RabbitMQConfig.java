@@ -23,7 +23,7 @@ import java.util.Map;
 @Configuration
 @ConditionalOnExpression("${middleware.enabled:true} && ${middleware.rabbitmq.enabled:true}")
 public class RabbitMQConfig {
-
+    // 队列容量和溢出行为由 tools/rabbitmq/apply-queue-policies.ps1 在线设置，避免重建已有队列。
 
     public static final String ORDER_EXCHANGE = "order.exchange";
     public static final String ORDER_CREATE_ROUTING_KEY = "order.create";
@@ -47,6 +47,7 @@ public class RabbitMQConfig {
     public static final String CONSUMER_FAILED_EXCHANGE = "takeme.consumer.failed.exchange";
     public static final String CONSUMER_FAILED_QUEUE = "takeme.consumer.failed.queue";
     public static final String CONSUMER_FAILED_ROUTING_KEY = "failed";
+    public static final String FAILED_SOURCE_QUEUE_HEADER = "x-takeme-source-queue";
     public static final String BROADCAST_EXCHANGE = "notification.broadcast.exchange";
     public static final String BROADCAST_QUEUE = "notification.broadcast.queue";
 
@@ -103,12 +104,39 @@ public class RabbitMQConfig {
         factory.setMessageConverter(messageConverter());
         RepublishMessageRecovererWithConfirms recoverer = new RepublishMessageRecovererWithConfirms(
                 rabbitTemplate, CONSUMER_FAILED_EXCHANGE, CONSUMER_FAILED_ROUTING_KEY,
-                CachingConnectionFactory.ConfirmType.CORRELATED);
+                CachingConnectionFactory.ConfirmType.CORRELATED) {
+            @Override
+            protected Map<? extends String, ?> additionalHeaders(Message message, Throwable cause) {
+                // Fanout 的多个消费分支共享事件 ID，必须记录本次真正失败的队列。
+                String sourceQueue = message.getMessageProperties().getConsumerQueue();
+                return Map.of(FAILED_SOURCE_QUEUE_HEADER, sourceQueue == null ? "" : sourceQueue);
+            }
+        };
         recoverer.setConfirmTimeout(5000);
         factory.setAdviceChain(RetryInterceptorBuilder.stateless().maxAttempts(3)
                 .backOffOptions(1000, 2, 3000).recoverer(recoverer).build());
         // 错误队列不可用属于基础设施故障，保留原消息等待恢复。
         factory.setDefaultRequeueRejected(true);
+        return factory;
+    }
+
+    // 归档只接收原始消息；数据库不可用时退避后重新入队，不再转发至失败队列自身。
+    @Bean
+    public SimpleRabbitListenerContainerFactory failedMessageListenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer,
+            CachingConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        configurer.configure(factory, connectionFactory);
+        factory.setAcknowledgeMode(AcknowledgeMode.AUTO);
+        factory.setConcurrentConsumers(1);
+        factory.setMaxConcurrentConsumers(1);
+        factory.setPrefetchCount(1);
+        factory.setDefaultRequeueRejected(true);
+        factory.setAdviceChain(RetryInterceptorBuilder.stateless().maxAttempts(3)
+                .backOffOptions(5000, 2, 10000)
+                .recoverer((message, cause) -> {
+                    throw new org.springframework.amqp.ImmediateRequeueAmqpException("失败消息归档未完成，保留原消息", cause);
+                }).build());
         return factory;
     }
 

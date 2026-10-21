@@ -39,6 +39,20 @@ public class MessageProducer {
             msg.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
             return msg;
         }, correlation);
+        awaitConfirm(correlation);
+    }
+
+    // 定向重放保留原始字节和类型头，只向原失败队列投递，避免再次广播。
+    public void replayConfirmed(String queue, org.springframework.amqp.core.Message message) {
+        if (!rabbitmqEnabled) throw new IllegalStateException("RabbitMQ 已禁用");
+        CorrelationData correlation = new CorrelationData(UUID.randomUUID().toString());
+        message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+        rabbitTemplate.send("", queue, message, correlation);
+        awaitConfirm(correlation);
+    }
+
+    // 生产和重放使用相同的确认边界，交换机 ACK 不能掩盖无法路由或队列满。
+    private void awaitConfirm(CorrelationData correlation) {
         try {
             CorrelationData.Confirm confirm = correlation.getFuture().get(5, TimeUnit.SECONDS);
             if (!confirm.isAck() || correlation.getReturned() != null) {

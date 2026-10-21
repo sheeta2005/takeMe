@@ -122,6 +122,8 @@ class RabbitReliabilityIntegrationTest {
             assertEquals(3, attempts.get());
             assertEquals("poison-event", failed.getMessageProperties().getMessageId());
             assertTrue(failed.getMessageProperties().getHeaders().containsKey("x-exception-stacktrace"));
+            assertEquals(queue, failed.getMessageProperties().getHeaders()
+                    .get(RabbitMQConfig.FAILED_SOURCE_QUEUE_HEADER));
         } finally {
             container.stop();
         }

@@ -68,6 +68,26 @@ class MessageReliabilityTest {
     }
 
     @Test
+    void replayUsesDefaultExchangeAndPreservesOriginalMessageId() {
+        RabbitTemplate template = mock(RabbitTemplate.class);
+        MessageProducer producer = new MessageProducer(template);
+        ReflectionTestUtils.setField(producer, "rabbitmqEnabled", true);
+        doAnswer(call -> {
+            assertEquals("", call.getArgument(0));
+            assertEquals("notification.user.queue", call.getArgument(1));
+            Message message = call.getArgument(2);
+            assertEquals("event-1", message.getMessageProperties().getMessageId());
+            assertEquals(MessageDeliveryMode.PERSISTENT, message.getMessageProperties().getDeliveryMode());
+            call.<CorrelationData>getArgument(3).getFuture().complete(new CorrelationData.Confirm(true, null));
+            return null;
+        }).when(template).send(anyString(), anyString(), any(Message.class), any(CorrelationData.class));
+
+        Message replay = new Message("原始消息".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        replay.getMessageProperties().setMessageId("event-1");
+        producer.replayConfirmed("notification.user.queue", replay);
+    }
+
+    @Test
     void approvalBindingAndMandatoryAreConfigured() {
         RabbitMQConfig config = new RabbitMQConfig();
         assertEquals(RabbitMQConfig.APPROVAL_RESULT_ROUTING_KEY,
