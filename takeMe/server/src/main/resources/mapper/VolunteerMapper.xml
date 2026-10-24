@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.VolunteerMapper">
+
+    <select id="selectForUpdate" resultType="com.me.entity.Volunteer" useCache="false" flushCache="true">
+        SELECT * FROM volunteer WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- 头像允许显式清空，避免非空更新策略保留旧值。 -->
+    <update id="updateAvatar">
+        UPDATE volunteer SET avatar = #{avatar} WHERE id = #{id}
+    </update>
+
+    <!-- 编号分页保持固定投影，避免读取账号完整资料。 -->
+    <select id="selectEnabledIdPage" resultType="com.me.entity.Volunteer">
+        SELECT id FROM volunteer WHERE status = 1 ORDER BY id
+    </select>
+
+    <!-- 群发按主键续页，避免账号停用导致偏移分页漏人。 -->
+    <select id="selectEnabledIdsAfter" resultType="java.lang.Long">
+        SELECT id FROM volunteer WHERE status = 1 AND id &gt; #{lastId} ORDER BY id LIMIT 500
+    </select>
+
+    <!-- 统计启用账号数量。 -->
+    <select id="countEnabled" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM volunteer WHERE status = 1
+    </select>
+
+    <!-- 验证账号仍处于启用状态。 -->
+    <select id="countActiveAccount" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM volunteer WHERE id = #{id} AND status = 1
+    </select>
+
+    <!-- 清空志愿者敏感资料，不覆盖积分及服务累计值。 -->
+    <update id="anonymize">
+        UPDATE volunteer SET status = 0, real_name = #{realName}, username = #{username}, phone = #{phone},
+            password = 'DELETED', avatar = NULL, gender = NULL, age = NULL, address = NULL,
+            emergency_name = NULL, emergency_phone = NULL, service_days = NULL, work_status = 0
+        WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -1,7 +1,5 @@
 package com.me.controller.user;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.me.entity.Order;
 import com.me.entity.Review;
 import com.me.entity.User;
 import com.me.mapper.OrderMapper;
@@ -72,27 +70,17 @@ public class UserController {
         Long userId = jwtUtil.getUserIdFromAuthHeader(authHeader);
 
         // 总订单数
-        LambdaQueryWrapper<Order> allOrderWrapper = new LambdaQueryWrapper<>();
-        allOrderWrapper.eq(Order::getUserId, userId);
-        allOrderWrapper.ne(Order::getStatus, 5); // 排除已取消
-        Long totalCount = orderMapper.selectCount(allOrderWrapper);
+        // 排除已取消
+        Long totalCount = orderMapper.countUncancelledForUser(userId);
 
         // 已完成订单数
-        LambdaQueryWrapper<Order> completedWrapper = new LambdaQueryWrapper<>();
-        completedWrapper.eq(Order::getUserId, userId);
-        completedWrapper.eq(Order::getStatus, 4);
-        Long completedCount = orderMapper.selectCount(completedWrapper);
+        Long completedCount = orderMapper.countCompletedForUser(userId);
 
         // 进行中订单数（已接单1 + 服务中2 + 待确认3）
-        LambdaQueryWrapper<Order> pendingWrapper = new LambdaQueryWrapper<>();
-        pendingWrapper.eq(Order::getUserId, userId);
-        pendingWrapper.in(Order::getStatus, 1, 2, 3);
-        Long pendingCount = orderMapper.selectCount(pendingWrapper);
+        Long pendingCount = orderMapper.countPendingForUser(userId);
 
         // 平均评分
-        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
-        reviewWrapper.eq(Review::getUserId, userId);
-        List<Review> reviews = reviewMapper.selectList(reviewWrapper);
+        List<Review> reviews = reviewMapper.selectByUserId(userId);
 
         double averageRating = 0.0;
         if (!reviews.isEmpty()) {

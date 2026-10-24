@@ -1,9 +1,7 @@
 package com.me.controller.admin;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.PageResultDTO;
-import com.me.entity.OrderItem;
 import com.me.entity.Review;
 import com.me.entity.Volunteer;
 import com.me.mapper.OrderItemMapper;
@@ -85,15 +83,9 @@ public class AdminVolunteerController {
         volunteer.setPassword(null);
         volunteer.setWorkStatus(volunteerService.getWorkStatus(volunteer));
 
-        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(OrderItem::getVolunteerId, id);
-        wrapper.eq(OrderItem::getItemStatus, 3);
-        Long completedCount = orderItemMapper.selectCount(wrapper);
+        Long completedCount = orderItemMapper.countForVolunteerStatus(id, 3);
 
-        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
-        reviewWrapper.eq(Review::getVolunteerId, id);
-        reviewWrapper.orderByDesc(Review::getCreateTime);
-        List<Review> reviews = reviewMapper.selectList(reviewWrapper);
+        List<Review> reviews = reviewMapper.selectRecentByVolunteerId(id);
 
         double averageRating = 0.0;
         if (!reviews.isEmpty()) {

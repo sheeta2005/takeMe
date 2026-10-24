@@ -1,6 +1,5 @@
 package com.me.service.task;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Order;
 import com.me.entity.OrderItem;
 import com.me.mapper.OrderItemMapper;
@@ -27,9 +26,7 @@ public class OrderTimeoutCancelTask {
     @Scheduled(fixedDelay = 300000)
     public void cancelTimeoutOrders() {
         // 每项在独立事务中复核预约时间，避免首项超时取消整单。
-        List<Order> unpaid = orderMapper.selectList(new LambdaQueryWrapper<Order>()
-                .eq(Order::getStatus, 6)
-                .le(Order::getCreateTime, LocalDateTime.now().minusMinutes(15)));
+        List<Order> unpaid = orderMapper.selectUnpaidBefore(LocalDateTime.now().minusMinutes(15));
         for (Order order : unpaid) {
             try {
                 orderService.expireUnpaidOrder(order.getId());
@@ -38,8 +35,7 @@ public class OrderTimeoutCancelTask {
             }
         }
 
-        List<OrderItem> pending = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
-                .eq(OrderItem::getItemStatus, 0));
+        List<OrderItem> pending = orderItemMapper.selectByStatus(0);
         for (OrderItem item : pending) {
             try {
                 orderService.expirePendingItem(item.getId());
@@ -48,8 +44,7 @@ public class OrderTimeoutCancelTask {
             }
         }
 
-        List<OrderItem> accepted = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
-                .eq(OrderItem::getItemStatus, 1));
+        List<OrderItem> accepted = orderItemMapper.selectByStatus(1);
         for (OrderItem item : accepted) {
             try {
                 orderService.expireAcceptedItem(item.getId(), null);

@@ -87,15 +87,7 @@ public class OutboxDispatchTask {
             }
             message.setUpdateTime(LocalDateTime.now());
             // 成功必须明确清空上一次错误，不能受非空字段更新策略影响。
-            com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<OutboxMessage> update =
-                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
-            update.eq(OutboxMessage::getId, id)
-                    .set(OutboxMessage::getStatus, message.getStatus())
-                    .set(OutboxMessage::getAttempts, message.getAttempts())
-                    .set(OutboxMessage::getNextAttemptTime, message.getNextAttemptTime())
-                    .set(OutboxMessage::getLastError, message.getLastError())
-                    .set(OutboxMessage::getUpdateTime, message.getUpdateTime());
-            if (outboxMapper.update(null, update) != 1) {
+            if (outboxMapper.recordDispatch(message) != 1) {
                 throw new IllegalStateException("消息发送结果保存失败");
             }
         });

@@ -1,7 +1,5 @@
 package com.me.controller.user;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.me.entity.OrderItem;
 import com.me.entity.Review;
 import com.me.entity.Volunteer;
 import com.me.mapper.OrderItemMapper;
@@ -38,14 +36,9 @@ public class UserVolunteerController {
             return Result.error("志愿者不存在");
         }
 
-        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(OrderItem::getVolunteerId, volunteerId);
-        wrapper.eq(OrderItem::getItemStatus, 3);
-        Long completedCount = orderItemMapper.selectCount(wrapper);
+        Long completedCount = orderItemMapper.countForVolunteerStatus(volunteerId, 3);
 
-        LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
-        reviewWrapper.eq(Review::getVolunteerId, volunteerId);
-        List<Review> reviews = reviewMapper.selectList(reviewWrapper);
+        List<Review> reviews = reviewMapper.selectByVolunteerId(volunteerId);
 
         double averageRating = 0.0;
         if (!reviews.isEmpty()) {

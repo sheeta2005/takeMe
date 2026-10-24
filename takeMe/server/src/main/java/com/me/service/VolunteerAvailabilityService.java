@@ -1,9 +1,7 @@
 package com.me.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.OrderItem;
 import com.me.entity.Volunteer;
-import com.me.entity.VolunteerLeave;
 import com.me.exception.OrderBusinessException;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.VolunteerLeaveMapper;
@@ -31,8 +29,7 @@ public class VolunteerAvailabilityService {
     int workStatusAt(Volunteer volunteer, LocalDateTime now) {
         if (!Integer.valueOf(1).equals(volunteer.getStatus())) return 0;
         if (hasApprovedLeave(volunteer.getId(), now)) return 3;
-        if (orderItemMapper.selectCount(new LambdaQueryWrapper<OrderItem>()
-                .eq(OrderItem::getVolunteerId, volunteer.getId()).eq(OrderItem::getItemStatus, 2)) > 0) return 2;
+        if (orderItemMapper.countForVolunteerStatus(volunteer.getId(), 2) > 0) return 2;
         String today = String.valueOf(now.getDayOfWeek().getValue() % 7);
         return volunteer.getServiceDays() != null && Arrays.stream(volunteer.getServiceDays().split(","))
                 .map(String::trim).anyMatch(today::equals) ? 1 : 0;
@@ -40,9 +37,7 @@ public class VolunteerAvailabilityService {
 
     // 只有批准的请假生效，起止时刻均计入请假范围。
     public boolean hasApprovedLeave(Long volunteerId, LocalDateTime time) {
-        return volunteerLeaveMapper.selectCount(new LambdaQueryWrapper<VolunteerLeave>()
-                .eq(VolunteerLeave::getVolunteerId, volunteerId).eq(VolunteerLeave::getStatus, 1)
-                .le(VolunteerLeave::getStartTime, time).ge(VolunteerLeave::getEndTime, time)) > 0;
+        return volunteerLeaveMapper.countApprovedAt(volunteerId, time) > 0;
     }
 
     // 调用方持有志愿者行锁，与请假批准串行，防止审批和接单同时通过。

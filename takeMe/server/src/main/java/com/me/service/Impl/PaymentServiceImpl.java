@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.dto.PaymentDTO;
 import com.me.entity.Order;
 import com.me.entity.PaymentTransaction;
@@ -44,10 +43,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new OrderBusinessException("订单状态不允许支付，仅未支付订单可支付");
         }
 
-        LambdaQueryWrapper<PaymentTransaction> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PaymentTransaction::getOrderId, orderId);
-        wrapper.eq(PaymentTransaction::getPaymentStatus, 0);
-        PaymentTransaction existingTransaction = paymentTransactionMapper.selectOne(wrapper);
+        PaymentTransaction existingTransaction = paymentTransactionMapper.selectPendingByOrderId(orderId);
 
         if (existingTransaction != null) {
             throw new OrderBusinessException("订单已有待支付流水，请勿重复支付");

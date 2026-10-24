@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -89,29 +88,13 @@ public class ServicePackageServiceImpl extends ServiceImpl<ServicePackageMapper,
     ) {
         Page<ServicePackage> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
 
-        LambdaQueryWrapper<ServicePackage> wrapper = new LambdaQueryWrapper<>();
-        if (type != null) {
-            wrapper.eq(ServicePackage::getType, type);
-        }
-        if (status != null) {
-            wrapper.eq(ServicePackage::getStatus, status);
-        }
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            wrapper.like(ServicePackage::getName, keyword);
-        }
-
-        wrapper.orderByDesc(ServicePackage::getCreateTime);
-        return this.page(page, wrapper);
+        return baseMapper.selectSearchPage(page, type, status, keyword);
     }
 
     //按类型查询上架服务
     @Override
     @RedisCache(prefix = "service:available", keyArgs = {0}, expire = 2, nullExpire = 2)
     public List<ServicePackage> getAvailableServiceByType(Integer type) {
-        LambdaQueryWrapper<ServicePackage> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(type != null, ServicePackage::getType, type);
-        wrapper.eq(ServicePackage::getStatus, 1);
-        wrapper.orderByAsc(ServicePackage::getCreateTime);
-        return this.list(wrapper);
+        return baseMapper.selectAvailableByType(type);
     }
 }

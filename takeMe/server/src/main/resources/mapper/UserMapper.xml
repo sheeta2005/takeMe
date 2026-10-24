@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.UserMapper">
+
+    <select id="selectForUpdate" resultType="com.me.entity.User" useCache="false" flushCache="true">
+        SELECT * FROM `user` WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- 头像允许显式清空，避免非空更新策略保留旧值。 -->
+    <update id="updateAvatar">
+        UPDATE `user` SET avatar = #{avatar} WHERE id = #{id}
+    </update>
+
+    <!-- 编号分页保持固定投影，避免读取账号完整资料。 -->
+    <select id="selectEnabledIdPage" resultType="com.me.entity.User">
+        SELECT id FROM `user` WHERE status = 1 ORDER BY id
+    </select>
+
+    <!-- 群发按主键续页，避免账号停用导致偏移分页漏人。 -->
+    <select id="selectEnabledIdsAfter" resultType="java.lang.Long">
+        SELECT id FROM `user` WHERE status = 1 AND id &gt; #{lastId} ORDER BY id LIMIT 500
+    </select>
+
+    <!-- 统计启用账号数量。 -->
+    <select id="countEnabled" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `user` WHERE status = 1
+    </select>
+
+    <!-- 验证账号仍处于启用状态。 -->
+    <select id="countActiveAccount" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `user` WHERE id = #{id} AND status = 1
+    </select>
+
+    <!-- 注册前统计同名账号。 -->
+    <select id="countByUsername" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `user` WHERE username = #{username}
+    </select>
+
+    <!-- 账号脱敏保留原字段更新范围，并显式清空头像。 -->
+    <update id="anonymize">
+        UPDATE `user` SET status = #{status}, real_name = #{realName}, username = #{username},
+            phone = #{phone}, password = #{password}, avatar = NULL, gender = #{gender}, age = #{age},
+            emergency_name = #{emergencyName}, emergency_phone = #{emergencyPhone}
+        <if test="createTime != null">, create_time = #{createTime}</if>
+        <if test="lastLoginTime != null">, last_login_time = #{lastLoginTime}</if>
+        WHERE id = #{id}
+    </update>
+
+</mapper>

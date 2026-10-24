@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.VolunteerPointsRecordMapper">
+
+    <select id="sumIssuedPoints" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(points),0) FROM volunteer_points_record WHERE points &gt; 0
+    </select>
+
+</mapper>

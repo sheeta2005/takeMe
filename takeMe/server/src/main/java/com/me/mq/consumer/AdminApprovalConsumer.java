@@ -1,6 +1,5 @@
 package com.me.mq.consumer;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.dto.ApprovalSubmitMessage;
 import com.me.entity.Admin;
 import com.me.entity.Message;
@@ -46,8 +45,7 @@ public class AdminApprovalConsumer {
                 return;
             }
 
-            LambdaQueryWrapper<Admin> adminWrapper = new LambdaQueryWrapper<>();
-            List<Admin> admins = adminMapper.selectList(adminWrapper);
+            List<Admin> admins = adminMapper.selectAllAdmins();
 
             if (admins.isEmpty()) {
                 log.warn("未找到任何管理员，跳过通知发送");

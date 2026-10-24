@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.MessageMapper">
+
+    <insert id="insertEventNotification">
+        INSERT INTO message (event_id, receiver_id, receiver_type, type, title, content,
+            is_read, related_order_id, related_user_id, related_volunteer_id, related_url, create_time)
+        VALUES (#{eventId}, #{receiverId}, #{receiverType}, #{type}, #{title}, #{content},
+            #{isRead}, #{relatedOrderId}, #{relatedUserId}, #{relatedVolunteerId}, #{relatedUrl}, #{createTime})
+        ON DUPLICATE KEY UPDATE id = id
+    </insert>
+
+    <!-- 批量已读只更新当前账号仍未读的消息。 -->
+    <update id="markAllUnread">
+        UPDATE message SET is_read = 1 WHERE receiver_type = #{receiverType} AND receiver_id = #{receiverId} AND is_read = 0
+    </update>
+
+    <!-- 未读统计同时限定接收角色与账号。 -->
+    <select id="countUnreadForReceiver" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM message WHERE receiver_type = #{receiverType} AND receiver_id = #{receiverId} AND is_read = 0
+    </select>
+
+    <!-- 保留消息总量、已读状态和类型统计口径。 -->
+    <select id="countByReadAndType" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM message
+        <where>
+            <if test="isRead != null">AND is_read = #{isRead}</if>
+            <if test="type != null">AND type = #{type}</if>
+        </where>
+    </select>
+
+</mapper>

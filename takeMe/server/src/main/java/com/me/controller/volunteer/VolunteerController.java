@@ -1,9 +1,7 @@
 package com.me.controller.volunteer;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.context.BaseContext;
 import com.me.entity.Approval;
-import com.me.entity.OrderItem;
 import com.me.entity.Volunteer;
 import com.me.mapper.ApprovalMapper;
 import com.me.mapper.OrderItemMapper;
@@ -44,10 +42,7 @@ public class VolunteerController {
             return Result.error("志愿者不存在");
         }
 
-        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(OrderItem::getVolunteerId, volunteerId);
-        wrapper.eq(OrderItem::getItemStatus, 3);
-        Long completedServices = orderItemMapper.selectCount(wrapper);
+        Long completedServices = orderItemMapper.countForVolunteerStatus(volunteerId, 3);
 
         volunteer.setTotalServiceHours(completedServices.intValue());
 

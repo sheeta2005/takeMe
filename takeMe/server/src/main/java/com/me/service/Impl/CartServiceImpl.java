@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.dto.CartItemDTO;
 import com.me.dto.OrderDTO;
@@ -42,10 +41,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<CartItemVO> getCartItemList(Long userId) {
         Cart cart = getOrCreateCart(userId);
-        LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId());
-
-        List<CartItem> itemList = cartItemMapper.selectList(wrapper);
+        List<CartItem> itemList = cartItemMapper.selectByCartId(cart.getId());
 
         return itemList.stream().map(this::convertToVO).collect(Collectors.toList());
     }
@@ -66,17 +62,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         CartItem item = convertToEntity(dto);
         item.setCartId(cart.getId());
 
-        LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId()).eq(CartItem::getServiceId, item.getServiceId());
-
-        if (item.getServiceDate() != null && !item.getServiceDate().isEmpty()) {
-            wrapper.eq(CartItem::getServiceDate, item.getServiceDate());
-        }
-        if (item.getServiceTime() != null && !item.getServiceTime().isEmpty()) {
-            wrapper.eq(CartItem::getServiceTime, item.getServiceTime());
-        }
-
-        CartItem existingItem = cartItemMapper.selectOne(wrapper);
+        CartItem existingItem = cartItemMapper.selectExisting(item);
 
         if (existingItem != null) {
             if (existingItem.getServiceType() == SERVICE_TYPE_MEAL) {
@@ -104,9 +90,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     public void updateItemQuantity(Long userId, Long productId, Integer quantity) {
         Cart cart = getOrCreateCart(userId);
 
-        LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId()).eq(CartItem::getId, productId);
-        CartItem item = cartItemMapper.selectOne(wrapper);
+        CartItem item = cartItemMapper.selectOwned(cart.getId(), productId);
 
         if (item == null) {
             throw new ShoppingCartBusinessException("购物车商品不存在");
@@ -133,9 +117,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     public void deleteItem(Long userId, Long productId) {
         Cart cart = getOrCreateCart(userId);
 
-        LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId()).eq(CartItem::getId, productId);
-        cartItemMapper.delete(wrapper);
+        cartItemMapper.deleteOwned(cart.getId(), productId);
 
         cart.setUpdateTime(LocalDateTime.now());
         this.updateById(cart);
@@ -147,9 +129,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     public void clearCart(Long userId) {
         Cart cart = getOrCreateCart(userId);
 
-        LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId());
-        cartItemMapper.delete(wrapper);
+        cartItemMapper.deleteByCartId(cart.getId());
 
         cart.setUpdateTime(LocalDateTime.now());
         this.updateById(cart);
@@ -168,9 +148,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         if (existing != null) return orderService.getOrderDetail(userId, existing.getId());
         Cart cart = getOrCreateCart(userId);
 
-        LambdaQueryWrapper<CartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CartItem::getCartId, cart.getId());
-        List<CartItem> cartItems = cartItemMapper.selectList(wrapper);
+        List<CartItem> cartItems = cartItemMapper.selectByCartId(cart.getId());
 
         if (cartItems == null || cartItems.isEmpty()) {
             throw new ShoppingCartBusinessException("购物车为空");
@@ -207,9 +185,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     private Cart getOrCreateCart(Long userId) {
         // 与结算共用账号行锁，防止两个标签页重复建购物车或覆盖结算中的内容。
         if (userMapper.selectForUpdate(userId) == null) throw new IllegalArgumentException("账号不存在");
-        LambdaQueryWrapper<Cart> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Cart::getUserId, userId);
-        Cart cart = this.getOne(wrapper);
+        Cart cart = baseMapper.selectByUserId(userId);
 
         if (cart == null) {
             cart = new Cart();

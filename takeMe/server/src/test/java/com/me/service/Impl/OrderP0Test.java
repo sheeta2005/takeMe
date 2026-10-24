@@ -63,14 +63,14 @@ class OrderP0Test {
         second.setId(20L);
         Page<Order> page = new Page<>(1, 10, 2);
         page.setRecords(List.of(first, second));
-        when(orderMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(orderMapper.selectUserPage(any(Page.class), eq(1L), isNull(), isNull())).thenReturn(page);
         OrderItem item = new OrderItem();
         item.setOrderId(20L);
-        when(orderItemMapper.selectList(any())).thenReturn(List.of(item));
+        when(orderItemMapper.selectByOrderIds(anyCollection())).thenReturn(List.of(item));
         var result = orderService.getMyOrderList(1L, null, null, new PageResultDTO());
         assertTrue(result.getRecords().get(0).getItems().isEmpty());
         assertEquals(1, result.getRecords().get(1).getItems().size());
-        verify(orderItemMapper, times(1)).selectList(any());
+        verify(orderItemMapper, times(1)).selectByOrderIds(anyCollection());
     }
 
     @Test
@@ -83,7 +83,7 @@ class OrderP0Test {
         second.setOrderId(10L);
         Page<OrderItem> page = new Page<>(1, 10, 2);
         page.setRecords(List.of(first, second));
-        when(orderItemMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(orderItemMapper.selectAvailablePage(any(Page.class), nullable(Long.class), anyString(), anyString(), anyString(), anyString())).thenReturn(page);
         Order order = new Order();
         order.setId(10L);
         order.setUserId(1L);
@@ -105,7 +105,7 @@ class OrderP0Test {
 
     @Test
     void emptyPageDoesNotQueryUnboundedBatch() {
-        when(orderItemMapper.selectPage(any(Page.class), any())).thenReturn(new Page<OrderItem>());
+        when(orderItemMapper.selectAvailablePage(any(Page.class), nullable(Long.class), anyString(), anyString(), anyString(), anyString())).thenReturn(new Page<OrderItem>());
         assertTrue(orderService.getAvailableOrderList(new PageResultDTO()).getRecords().isEmpty());
         verifyNoInteractions(orderMapper, userMapper);
     }
@@ -135,7 +135,7 @@ class OrderP0Test {
             invocation.<Order>getArgument(0).setId(10L);
             return 1;
         });
-        when(orderItemMapper.selectList(any())).thenReturn(List.of());
+        when(orderItemMapper.selectByOrderId(anyLong())).thenReturn(List.of());
 
         OrderItemDTO item = new OrderItemDTO();
         item.setServiceId(4L);
@@ -174,11 +174,11 @@ class OrderP0Test {
         paid.setPaymentStatus(1);
         paid.setPaymentMethod("mock");
         when(orderMapper.selectForUpdate(10L)).thenReturn(order);
-        when(paymentTransactionMapper.selectList(any())).thenReturn(List.of(paid));
-        when(paymentTransactionMapper.selectCount(any())).thenReturn(0L);
+        when(paymentTransactionMapper.selectMockPayments(anyLong())).thenReturn(List.of(paid));
+        when(paymentTransactionMapper.countByTransactionNo(anyString())).thenReturn(0L);
         when(orderItemMapper.selectByOrderForUpdate(10L)).thenReturn(List.of(pending, assigned));
         when(orderItemMapper.clearVolunteer(anyLong(), anyInt(), anyInt(), nullable(Long.class))).thenReturn(1);
-        when(orderMapper.update(isNull(), any())).thenReturn(1);
+        when(orderMapper.cancelFromStatus(anyLong(), anyInt())).thenReturn(1);
 
         orderService.cancelOrder(1L, 10L);
 
@@ -219,9 +219,9 @@ class OrderP0Test {
         when(orderMapper.selectById(10L)).thenReturn(order);
         when(orderItemMapper.selectByOrderForUpdate(10L)).thenReturn(List.of(due, future));
         when(orderItemMapper.clearVolunteer(11L, 0, 5, null)).thenReturn(1);
-        when(orderMapper.update(isNull(), any())).thenReturn(1);
-        when(paymentTransactionMapper.selectList(any())).thenReturn(List.of(paid));
-        when(paymentTransactionMapper.selectCount(any())).thenReturn(0L);
+        when(orderMapper.updateVolunteerIds(anyLong(), nullable(String.class))).thenReturn(1);
+        when(paymentTransactionMapper.selectMockPayments(anyLong())).thenReturn(List.of(paid));
+        when(paymentTransactionMapper.countByTransactionNo(anyString())).thenReturn(0L);
 
         orderService.expirePendingItem(11L);
         orderService.expirePendingItem(11L);
@@ -253,7 +253,7 @@ class OrderP0Test {
         when(orderMapper.selectByItemForUpdate(11L)).thenReturn(order);
 
         assertThrows(RuntimeException.class, () -> orderService.volunteerConfirmOrder(2L, 11L));
-        verify(orderItemMapper, never()).update(any(), any());
+        verify(orderItemMapper, never()).claimPending(anyLong(), anyLong());
     }
 
     @Test
@@ -261,9 +261,9 @@ class OrderP0Test {
         Order order = new Order();
         order.setId(10L);
         when(orderMapper.selectById(10L)).thenReturn(order);
-        when(orderItemMapper.selectCount(any())).thenReturn(0L);
+        when(orderItemMapper.countForOrderVolunteer(anyLong(), anyLong())).thenReturn(0L);
         assertThrows(RuntimeException.class, () -> orderService.getVolunteerOrderDetail(2L, 10L));
-        verify(orderItemMapper, never()).selectList(any());
+        verify(orderItemMapper, never()).selectForOrderVolunteer(anyLong(), anyLong());
     }
 
     @Test

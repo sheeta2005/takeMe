@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Volunteer;
 import com.me.entity.VolunteerPointsRecord;
 import com.me.exception.AccountNotFoundException;
@@ -28,11 +27,7 @@ public class VolunteerPointsServiceImpl implements VolunteerPointsService {
     //查询志愿者积分记录
     @Override
     public List<VolunteerPointsRecordVO> getListByVolunteerId(Long volunteerId) {
-        LambdaQueryWrapper<VolunteerPointsRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(VolunteerPointsRecord::getVolunteerId, volunteerId);
-        wrapper.orderByDesc(VolunteerPointsRecord::getCreateTime);
-
-        List<VolunteerPointsRecord> records = volunteerPointsRecordMapper.selectList(wrapper);
+        List<VolunteerPointsRecord> records = volunteerPointsRecordMapper.selectHistory(volunteerId);
         return records.stream().map(record -> {
             VolunteerPointsRecordVO vo = new VolunteerPointsRecordVO();
             BeanUtils.copyProperties(record, vo);
@@ -48,10 +43,7 @@ public class VolunteerPointsServiceImpl implements VolunteerPointsService {
             throw new AccountNotFoundException("志愿者不存在");
         }
 
-        LambdaQueryWrapper<VolunteerPointsRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(VolunteerPointsRecord::getVolunteerId, volunteerId);
-
-        List<VolunteerPointsRecord> records = volunteerPointsRecordMapper.selectList(wrapper);
+        List<VolunteerPointsRecord> records = volunteerPointsRecordMapper.selectByVolunteerId(volunteerId);
         int totalPoints = records.stream().mapToInt(VolunteerPointsRecord::getPoints).sum();
 
         VolunteerPointsRecordVO summary = new VolunteerPointsRecordVO();

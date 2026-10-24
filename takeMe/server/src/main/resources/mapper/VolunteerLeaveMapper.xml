@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.VolunteerLeaveMapper">
+
+    <select id="selectForUpdate" resultType="com.me.entity.VolunteerLeave" useCache="false" flushCache="true">
+        SELECT * FROM volunteer_leave WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- 请假审批保留原状态条件，避免重复状态迁移。 -->
+    <update id="decidePending">
+        UPDATE volunteer_leave SET status = #{status} WHERE id = #{id} AND status = 0
+    </update>
+
+    <!-- 批准请假的起止时刻均包含在生效范围内。 -->
+    <select id="countApprovedAt" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM volunteer_leave WHERE volunteer_id = #{volunteerId} AND status = 1
+          AND start_time &lt;= #{time} AND end_time &gt;= #{time}
+    </select>
+
+</mapper>

@@ -1,6 +1,5 @@
 package com.me.service.task;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Order;
 import com.me.entity.OrderItem;
 import com.me.mapper.OrderItemMapper;
@@ -32,14 +31,7 @@ public class OrderAutoCompleteTask {
 
             LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
 
-            LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Order::getStatus, 3);
-            wrapper.and(w -> w.le(Order::getCompleteTime, yesterday)
-                    .or()
-                    .isNull(Order::getCompleteTime)
-                    .le(Order::getCreateTime, yesterday));
-
-            List<Order> pendingOrders = orderMapper.selectList(wrapper);
+            List<Order> pendingOrders = orderMapper.selectAutoCompleteCandidates(yesterday);
 
             for (Order order : pendingOrders) {
                 // 与用户确认/取消共用订单行锁，防止调度基于旧状态写回。

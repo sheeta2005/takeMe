@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.PaymentTransactionMapper">
+
+    <select id="selectNetMockAmount" resultType="java.lang.Long">
+        SELECT COALESCE((
+            SELECT SUM(amount) FROM payment_transaction
+            WHERE payment_method = 'mock' AND payment_status IN (1,2)
+              AND payment_time &gt;= #{start} AND payment_time &lt; #{end}
+        ), 0) - COALESCE((
+            SELECT SUM(amount) FROM payment_transaction
+            WHERE payment_method = 'mock_refund' AND payment_status = 2
+              AND refund_time &gt;= #{start} AND refund_time &lt; #{end}
+        ), 0)
+    </select>
+
+    <!-- 按退款流水号检查是否已经登记。 -->
+    <select id="countByTransactionNo" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM payment_transaction WHERE transaction_no = #{transactionNo}
+    </select>
+
+</mapper>

@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.annotation.BizLog;
@@ -55,26 +54,15 @@ public class OrderServiceImpl implements OrderService {
     //分页查询用户订单
     @Override
     public IPage<OrderVO> getMyOrderList(Long userId, Integer status, String orderNo, PageResultDTO pageResultDTO) {
-        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Order::getUserId, userId);
-        if (status != null) {
-            wrapper.eq(Order::getStatus, status);
-        }
-        if (orderNo != null && !orderNo.trim().isEmpty()) {
-            wrapper.like(Order::getOrderNo, orderNo);
-        }
-        wrapper.orderByDesc(Order::getCreateTime, Order::getId);
-
-        Page<Order> orderPage = orderMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), wrapper);
+        Page<Order> orderPage = orderMapper.selectUserPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), userId, status, orderNo);
         List<Long> orderIds = orderPage.getRecords().stream().map(Order::getId).toList();
         Map<Long, List<OrderItem>> itemsByOrder = orderIds.isEmpty() ? Map.of()
-                : orderItemMapper.selectList(new LambdaQueryWrapper<OrderItem>()
-                        .in(OrderItem::getOrderId, orderIds).orderByAsc(OrderItem::getId))
+                : orderItemMapper.selectByOrderIds(orderIds)
                 .stream().collect(Collectors.groupingBy(OrderItem::getOrderId));
 
         // 按本页订单批量读取评价，避免每个服务项单独查询。
         Map<Long, Review> reviewsByItem = orderIds.isEmpty() ? Map.of()
-                : reviewMapper.selectList(new LambdaQueryWrapper<Review>().in(Review::getOrderId, orderIds))
+                : reviewMapper.selectByOrderIds(orderIds)
                 .stream().collect(Collectors.toMap(Review::getOrderItemId, review -> review));
 
         List<OrderVO> records = orderPage.getRecords().stream().map(order -> {
@@ -107,14 +95,7 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderBusinessException("志愿者ID不能为空");
         }
 
-        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
-        itemWrapper.eq(OrderItem::getVolunteerId, volunteerId);
-        if (status != null) {
-            itemWrapper.eq(OrderItem::getItemStatus, status);
-        }
-        itemWrapper.orderByDesc(OrderItem::getCreateTime, OrderItem::getId);
-
-        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), itemWrapper);
+        Page<OrderItem> itemPage = orderItemMapper.selectVolunteerPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), volunteerId, status);
 
         List<OrderVO> records = buildVolunteerRecords(itemPage.getRecords(), false);
 
@@ -131,9 +112,6 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public IPage<OrderVO> getAvailableOrderList(Long volunteerId, PageResultDTO pageResultDTO) {
-        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.isNull(OrderItem::getVolunteerId);
-        wrapper.eq(OrderItem::getItemStatus, 0);
         // 日期范围先缩小索引扫描；上下界分开比较，同样支持跨午夜，且不对列做 CONCAT。
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = now.plusHours(1);
@@ -141,21 +119,9 @@ public class OrderServiceImpl implements OrderService {
         DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
         String startDate = start.toLocalDate().toString();
         String endDate = end.toLocalDate().toString();
-        wrapper.between(OrderItem::getServiceDate, startDate, endDate)
-                .and(w -> w.gt(OrderItem::getServiceDate, startDate)
-                        .or().ge(OrderItem::getServiceTime, start.format(timeFormat)))
-                .and(w -> w.lt(OrderItem::getServiceDate, endDate)
-                        .or().le(OrderItem::getServiceTime, end.format(timeFormat)));
-        wrapper.inSql(OrderItem::getOrderId, "SELECT id FROM `order` WHERE status IN (0, 1, 2)");
-        // 在分页前排除请假冲突，确保列表总数与实际可接服务一致。
-        if (volunteerId != null) {
-            wrapper.apply("NOT EXISTS (SELECT 1 FROM volunteer_leave vl WHERE vl.volunteer_id = {0} "
-                    + "AND vl.status = 1 AND TIMESTAMP(order_item.service_date, order_item.service_time) "
-                    + "BETWEEN vl.start_time AND vl.end_time)", volunteerId);
-        }
-        wrapper.orderByDesc(OrderItem::getCreateTime, OrderItem::getId);
-
-        Page<OrderItem> itemPage = orderItemMapper.selectPage(new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), wrapper);
+        Page<OrderItem> itemPage = orderItemMapper.selectAvailablePage(
+                new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize()), volunteerId,
+                startDate, endDate, start.format(timeFormat), end.format(timeFormat));
 
         List<OrderVO> records = buildVolunteerRecords(itemPage.getRecords(), true);
 
@@ -221,12 +187,9 @@ public class OrderServiceImpl implements OrderService {
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
 
-        LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
-        orderItemWrapper.eq(OrderItem::getOrderId, orderId);
-        List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
+        List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
         // List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
-        Map<Long, Review> reviewsByItem = reviewMapper.selectList(
-                new LambdaQueryWrapper<Review>().eq(Review::getOrderId, orderId))
+        Map<Long, Review> reviewsByItem = reviewMapper.selectByOrderId(orderId)
                 .stream().collect(Collectors.toMap(Review::getOrderItemId, review -> review));
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
@@ -247,9 +210,7 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new OrderBusinessException("订单不存在");
         }
-        LambdaQueryWrapper<OrderItem> assigned = new LambdaQueryWrapper<>();
-        assigned.eq(OrderItem::getOrderId, orderId).eq(OrderItem::getVolunteerId, volunteerId);
-        if (orderItemMapper.selectCount(assigned) == 0) {
+        if (orderItemMapper.countForOrderVolunteer(orderId, volunteerId) == 0) {
             throw new OrderBusinessException("无权查看此订单");
         }
 
@@ -260,10 +221,7 @@ public class OrderServiceImpl implements OrderService {
         orderVO.setAddress(null);
         orderVO.setRemark(null);
 
-        LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
-        orderItemWrapper.eq(OrderItem::getOrderId, orderId);
-        orderItemWrapper.eq(OrderItem::getVolunteerId, volunteerId);
-        List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
+        List<OrderItem> items = orderItemMapper.selectForOrderVolunteer(orderId, volunteerId);
         //List<OrderItem> items = orderItemMapper.selectByOrderId(orderId);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
@@ -363,9 +321,7 @@ public class OrderServiceImpl implements OrderService {
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
 
-        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
-        itemWrapper.eq(OrderItem::getOrderId, order.getId());
-        List<OrderItem> orderItems = orderItemMapper.selectList(itemWrapper);
+        List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
 
         List<OrderItemVO> itemVOList = orderItems.stream().map(item -> {
             OrderItemVO itemVO = new OrderItemVO();
@@ -434,13 +390,7 @@ public class OrderServiceImpl implements OrderService {
 
         availabilityService.validateCanAccept(volunteer, item);
 
-        OrderItem claimed = new OrderItem();
-        claimed.setVolunteerId(volunteerId);
-        claimed.setItemStatus(1);
-        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<OrderItem> claim = new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
-        claim.eq(OrderItem::getId, orderItemId).eq(OrderItem::getItemStatus, 0)
-                .isNull(OrderItem::getVolunteerId);
-        if (orderItemMapper.update(claimed, claim) != 1) {
+        if (orderItemMapper.claimPending(orderItemId, volunteerId) != 1) {
             throw new OrderBusinessException("该服务项目已被接取");
         }
 
@@ -756,11 +706,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setVolunteerIds(null);
         order.setStatus(5);
-        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Order> cancel =
-                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
-        cancel.eq(Order::getId, order.getId()).eq(Order::getStatus, oldStatus)
-                .set(Order::getVolunteerIds, null).set(Order::getStatus, 5);
-        if (orderMapper.update(null, cancel) != 1) {
+        if (orderMapper.cancelFromStatus(order.getId(), oldStatus) != 1) {
             throw new IllegalStateException("订单状态已变化，请重试");
         }
         recordMockRefunds(order, cancelled, reason);
@@ -783,19 +729,13 @@ public class OrderServiceImpl implements OrderService {
     //登记取消服务的模拟退款
     private void recordMockRefunds(Order order, List<OrderItem> cancelled, String reason) {
         if (cancelled.isEmpty()) return;
-        LambdaQueryWrapper<PaymentTransaction> paymentQuery = new LambdaQueryWrapper<>();
-        paymentQuery.eq(PaymentTransaction::getOrderId, order.getId())
-                .eq(PaymentTransaction::getPaymentMethod, "mock")
-                .in(PaymentTransaction::getPaymentStatus, 1, 2);
-        List<PaymentTransaction> payments = paymentTransactionMapper.selectList(paymentQuery);
+        List<PaymentTransaction> payments = paymentTransactionMapper.selectMockPayments(order.getId());
         if (payments.isEmpty()) return;
         PaymentTransaction payment = payments.get(0);
         for (OrderItem item : cancelled) {
             // 使用服务项 ID 标识模拟退款，保留原始支付金额供核对。
             String refundNo = "REF" + item.getId();
-            LambdaQueryWrapper<PaymentTransaction> existing = new LambdaQueryWrapper<>();
-            existing.eq(PaymentTransaction::getTransactionNo, refundNo);
-            if (paymentTransactionMapper.selectCount(existing) > 0) continue;
+            if (paymentTransactionMapper.countByTransactionNo(refundNo) > 0) continue;
             PaymentTransaction refund = new PaymentTransaction();
             refund.setTransactionNo(refundNo);
             refund.setOrderId(order.getId());
@@ -831,10 +771,7 @@ public class OrderServiceImpl implements OrderService {
 
         String ids = volunteerIdSet.isEmpty() ? null : volunteerIdSet.stream()
                 .sorted().map(String::valueOf).collect(Collectors.joining(","));
-        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Order> update =
-                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
-        update.eq(Order::getId, orderId).set(Order::getVolunteerIds, ids);
-        if (orderMapper.update(null, update) != 1) {
+        if (orderMapper.updateVolunteerIds(orderId, ids) != 1) {
             throw new IllegalStateException("订单不存在");
         }
     }
@@ -1040,10 +977,7 @@ public class OrderServiceImpl implements OrderService {
 
     //为未评价服务补默认好评
     private void autoEvaluateUnreviewedItems(Long orderId) {
-        LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
-        itemWrapper.eq(OrderItem::getOrderId, orderId);
-        itemWrapper.in(OrderItem::getItemStatus, 3, 4);
-        List<OrderItem> items = orderItemMapper.selectList(itemWrapper);
+        List<OrderItem> items = orderItemMapper.selectCompletedByOrderId(orderId);
 
         Order order = orderMapper.selectById(orderId);
         if (order == null) {
@@ -1055,9 +989,7 @@ public class OrderServiceImpl implements OrderService {
                 continue;
             }
 
-            LambdaQueryWrapper<Review> reviewWrapper = new LambdaQueryWrapper<>();
-            reviewWrapper.eq(Review::getOrderItemId, item.getId());
-            Long count = reviewMapper.selectCount(reviewWrapper);
+            Long count = reviewMapper.countByItemId(item.getId());
 
             if (count == 0) {
                 Review review = new Review();
@@ -1082,14 +1014,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public IPage<Order> getAdminOrderPage(Integer status, PageResultDTO pageResultDTO) {
         Page<Order> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
-        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-
-        if (status != null) {
-            wrapper.eq(Order::getStatus, status);
-        }
-
-        wrapper.orderByDesc(Order::getCreateTime);
-        return orderMapper.selectPage(pageParam, wrapper);
+        return orderMapper.selectStatusPage(pageParam, status);
     }
 
     //按条件查询管理端订单
@@ -1100,29 +1025,7 @@ public class OrderServiceImpl implements OrderService {
             String startDate, String endDate, PageResultDTO pageResultDTO
     ) {
         Page<Order> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
-        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-
-        if (status != null) {
-            wrapper.eq(Order::getStatus, status);
-        }
-        if (orderNo != null && !orderNo.trim().isEmpty()) {
-            wrapper.like(Order::getOrderNo, orderNo);
-        }
-        if (userId != null) {
-            wrapper.eq(Order::getUserId, userId);
-        }
-        if (volunteerId != null) {
-            wrapper.apply("FIND_IN_SET({0}, volunteer_ids)", volunteerId);
-        }
-        if (startDate != null && !startDate.trim().isEmpty()) {
-            wrapper.ge(Order::getCreateTime, startDate + " 00:00:00");
-        }
-        if (endDate != null && !endDate.trim().isEmpty()) {
-            wrapper.le(Order::getCreateTime, endDate + " 23:59:59");
-        }
-
-        wrapper.orderByDesc(Order::getCreateTime);
-        return orderMapper.selectPage(pageParam, wrapper);
+        return orderMapper.selectAdminSearchPage(pageParam, status, orderNo, userId, volunteerId, startDate, endDate);
     }
 
     //查询管理端订单记录
@@ -1142,9 +1045,7 @@ public class OrderServiceImpl implements OrderService {
         OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(order, orderVO);
 
-        LambdaQueryWrapper<OrderItem> orderItemWrapper = new LambdaQueryWrapper<>();
-        orderItemWrapper.eq(OrderItem::getOrderId, id);
-        List<OrderItem> items = orderItemMapper.selectList(orderItemWrapper);
+        List<OrderItem> items = orderItemMapper.selectByOrderId(id);
         //List<OrderItem> items = orderItemMapper.selectByOrderId(id);
         List<OrderItemVO> itemVOList = items.stream().map(item -> {
             OrderItemVO vo = new OrderItemVO();
@@ -1219,8 +1120,8 @@ public class OrderServiceImpl implements OrderService {
 
     //按条件统计订单数量
     @Override
-    public Long countOrders(LambdaQueryWrapper<Order> wrapper) {
-        return orderMapper.selectCount(wrapper);
+    public Long countOrders(Integer status) {
+        return orderMapper.countByStatus(status);
     }
 
     //生成订单编号

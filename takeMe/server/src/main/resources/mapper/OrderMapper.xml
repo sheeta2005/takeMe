@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.OrderMapper">
+
+    <select id="selectDashboardOrderCounts" resultType="java.util.Map">
+        SELECT COUNT(*) AS totalOrders,
+          COALESCE(SUM(status IN (1,2)),0) AS activeOrders,
+          COALESCE(SUM(status = 0),0) AS pendingOrders,
+          COALESCE(SUM(status = 4),0) AS completedOrders,
+          COALESCE(SUM(create_time &gt;= #{start} AND create_time &lt; #{end}),0) AS todayOrders
+        FROM `order`
+    </select>
+
+    <select id="selectByRequestForUpdate" resultType="com.me.entity.Order" useCache="false" flushCache="true">
+        SELECT * FROM `order` WHERE user_id = #{userId} AND request_id = #{requestId} FOR UPDATE
+    </select>
+
+    <select id="selectForUpdate" resultType="com.me.entity.Order" useCache="false" flushCache="true">
+        SELECT * FROM `order` WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="selectByItemForUpdate" resultType="com.me.entity.Order" useCache="false" flushCache="true">
+        SELECT * FROM `order` WHERE id = (SELECT order_id FROM order_item WHERE id = #{itemId}) FOR UPDATE
+    </select>
+
+    <!-- 取消订单保留原状态条件并显式清空志愿者。 -->
+    <update id="cancelFromStatus">
+        UPDATE `order` SET volunteer_ids = NULL, status = 5 WHERE id = #{id} AND status = #{oldStatus}
+    </update>
+
+    <!-- 汇总志愿者为空时必须明确写入 NULL。 -->
+    <update id="updateVolunteerIds">
+        UPDATE `order` SET volunteer_ids = #{volunteerIds} WHERE id = #{id}
+    </update>
+
+    <!-- 管理端含数据库表达式的组合筛选统一由 XML 承担。 -->
+    <select id="selectAdminSearchPage" resultType="com.me.entity.Order">
+        SELECT * FROM `order`
+        <where>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="orderNo != null and orderNo.trim() != ''">AND order_no LIKE CONCAT('%', #{orderNo}, '%')</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="volunteerId != null">AND FIND_IN_SET(#{volunteerId}, volunteer_ids)</if>
+            <if test="startDate != null and startDate.trim() != ''">AND create_time &gt;= CONCAT(#{startDate}, ' 00:00:00')</if>
+            <if test="endDate != null and endDate.trim() != ''">AND create_time &lt;= CONCAT(#{endDate}, ' 23:59:59')</if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 统计全部订单或指定状态数量。 -->
+    <select id="countByStatus" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `order`
+        <where><if test="status != null">status = #{status}</if></where>
+    </select>
+
+    <!-- 按左闭右开时间范围统计订单。 -->
+    <select id="countCreatedBetween" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `order` WHERE create_time &gt;= #{start} AND create_time &lt; #{end}
+    </select>
+
+    <!-- 保留用户首页原订单状态统计口径。 -->
+    <select id="countUncancelledForUser" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `order` WHERE user_id = #{userId} AND status != 5
+    </select>
+
+    <!-- 保留用户首页原订单状态统计口径。 -->
+    <select id="countCompletedForUser" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `order` WHERE user_id = #{userId} AND status = 4
+    </select>
+
+    <!-- 保留用户首页原订单状态统计口径。 -->
+    <select id="countPendingForUser" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `order` WHERE user_id = #{userId} AND status IN (1, 2, 3)
+    </select>
+
+</mapper>

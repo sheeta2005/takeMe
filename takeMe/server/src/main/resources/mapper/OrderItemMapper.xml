@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.OrderItemMapper">
+
+    <select id="selectForUpdate" resultType="com.me.entity.OrderItem" useCache="false" flushCache="true">
+        SELECT * FROM order_item WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="selectByOrderForUpdate" resultType="com.me.entity.OrderItem" useCache="false" flushCache="true">
+        SELECT * FROM order_item WHERE order_id = #{orderId} ORDER BY id FOR UPDATE
+    </select>
+
+    <select id="selectActiveForVolunteer" resultType="com.me.entity.OrderItem" useCache="false" flushCache="true">
+        SELECT * FROM order_item WHERE volunteer_id = #{volunteerId} AND item_status IN (1, 2) ORDER BY id
+    </select>
+
+    <update id="clearVolunteer">
+        UPDATE order_item SET volunteer_id = NULL, item_status = #{status} WHERE id = #{id} AND item_status = #{oldStatus} AND volunteer_id &lt;=&gt; #{volunteerId}
+    </update>
+
+    <update id="changeStatus">
+        UPDATE order_item SET item_status = #{status} WHERE id = #{id} AND item_status = #{oldStatus}
+    </update>
+
+    <!-- 可接服务跨表筛选保留日期索引范围和跨午夜边界。 -->
+    <select id="selectAvailablePage" resultType="com.me.entity.OrderItem">
+        SELECT * FROM order_item
+        WHERE volunteer_id IS NULL AND item_status = 0
+          AND service_date BETWEEN #{startDate} AND #{endDate}
+          AND (service_date &gt; #{startDate} OR service_time &gt;= #{startTime})
+          AND (service_date &lt; #{endDate} OR service_time &lt;= #{endTime})
+          AND order_id IN (SELECT id FROM `order` WHERE status IN (0, 1, 2))
+        <!-- 分页前排除请假冲突，使列表与总数使用同一筛选条件。 -->
+        <if test="volunteerId != null">
+          AND NOT EXISTS (SELECT 1 FROM volunteer_leave vl WHERE vl.volunteer_id = #{volunteerId}
+            AND vl.status = 1 AND TIMESTAMP(order_item.service_date, order_item.service_time)
+            BETWEEN vl.start_time AND vl.end_time)
+        </if>
+        ORDER BY create_time DESC, id DESC
+    </select>
+
+    <!-- 接单 CAS 必须同时匹配待接状态和空志愿者。 -->
+    <update id="claimPending">
+        UPDATE order_item SET volunteer_id = #{volunteerId}, item_status = 1
+        WHERE id = #{id} AND item_status = 0 AND volunteer_id IS NULL
+    </update>
+
+    <!-- 验证志愿者是否参与该订单。 -->
+    <select id="countForOrderVolunteer" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM order_item WHERE order_id = #{orderId} AND volunteer_id = #{volunteerId}
+    </select>
+
+    <!-- 按志愿者和原服务状态统计数量。 -->
+    <select id="countForVolunteerStatus" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM order_item WHERE volunteer_id = #{volunteerId} AND item_status = #{status}
+    </select>
+
+    <!-- 统计服务类型分布。 -->
+    <select id="countByServiceType" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM order_item WHERE service_type = #{type}
+    </select>
+
+</mapper>

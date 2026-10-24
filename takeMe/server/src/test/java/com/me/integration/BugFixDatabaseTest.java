@@ -443,6 +443,46 @@ class BugFixDatabaseTest {
     }
 
     @Test
+    void xmlSearchPreservesOptionalFiltersAndPaginationTotals() {
+        // 同时验证 XML 动态条件、FIND_IN_SET 以及分页插件生成的总数。
+        order(10, 11, 1, 1L);
+        order(20, 21, 5, 2L);
+        var mapper = context.getBean(com.me.mapper.OrderMapper.class);
+        String today = LocalDateTime.now().toLocalDate().toString();
+        var filtered = mapper.selectAdminSearchPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 1),
+                1, "TEST", 1L, 1L, today, today);
+        assertEquals(1, filtered.getTotal());
+        assertEquals(10L, filtered.getRecords().getFirst().getId());
+        var unfiltered = mapper.selectAdminSearchPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 1),
+                null, " ", null, null, " ", null);
+        assertEquals(2, unfiltered.getTotal());
+        assertEquals(1, unfiltered.getRecords().size());
+        assertEquals(2, mapper.countByStatus(null));
+        assertEquals(1, mapper.countByStatus(5));
+    }
+
+    @Test
+    void xmlCasRejectsStaleStateAndIdQueriesKeepTheirProjection() {
+        // 过期状态不能覆盖已接单服务，固定投影查询不得回传账号资料。
+        order(10, 11, 0, null);
+        var items = context.getBean(OrderItemMapper.class);
+        assertEquals(1, items.claimPending(11L, 1L));
+        assertEquals(0, items.claimPending(11L, 2L));
+        assertEquals(0, items.clearVolunteer(11L, 0, 5, 1L));
+        assertEquals(1, items.clearVolunteer(11L, 1, 5, 1L));
+        assertNull(jdbc.queryForObject("SELECT volunteer_id FROM order_item WHERE id = 11", Long.class));
+        var users = context.getBean(com.me.mapper.UserMapper.class);
+        var page = users.selectEnabledIdPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 1));
+        assertEquals(2, page.getTotal());
+        assertEquals(1L, page.getRecords().getFirst().getId());
+        assertNull(page.getRecords().getFirst().getUsername());
+        assertEquals(List.of(2L), users.selectEnabledIdsAfter(1L));
+        assertEquals(1, users.updateAvatar(1L, "测试头像"));
+        assertEquals(1, users.updateAvatar(1L, null));
+        assertNull(text("SELECT avatar FROM `user` WHERE id = 1"));
+    }
+
+    @Test
     void releaseVolunteerServicesReallyClearsAssignment() {
         order(10, 11, 1, 1L);
         assertEquals(1, context.getBean(VolunteerService.class).releaseVolunteerServices(1L));
@@ -1380,6 +1420,9 @@ class BugFixDatabaseTest {
         @Bean SqlSessionFactory sqlSessionFactory(DataSource source) throws Exception {
             MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
             factory.setDataSource(source);
+            // 自定义 SQL 统一从 XML 加载，测试与生产使用相同映射资源。
+            factory.setMapperLocations(new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
+                    .getResources("classpath:mapper/*.xml"));
             MybatisConfiguration config = new MybatisConfiguration();
             config.setMapUnderscoreToCamelCase(true);
             factory.setConfiguration(config);

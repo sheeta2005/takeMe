@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.me.mapper.ReviewMapper">
+
+    <select id="selectByItemForUpdate" resultType="com.me.entity.Review" useCache="false" flushCache="true">
+        SELECT * FROM review WHERE order_item_id = #{itemId} FOR UPDATE
+    </select>
+
+    <!-- 统计全部评价或指定评分数量。 -->
+    <select id="countByRating" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM review
+        <where><if test="rating != null">rating = #{rating}</if></where>
+    </select>
+
+    <!-- 默认评价前统计该服务项已有评价。 -->
+    <select id="countByItemId" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM review WHERE order_item_id = #{itemId}
+    </select>
+
+</mapper>

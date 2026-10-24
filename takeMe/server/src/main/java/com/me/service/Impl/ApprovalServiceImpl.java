@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -20,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 import java.time.LocalDateTime;
 
@@ -46,28 +44,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
     ) {
         Page<Approval> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
 
-        LambdaQueryWrapper<Approval> wrapper = new LambdaQueryWrapper<>();
-
-        if (type != null && !type.trim().isEmpty()) {
-            wrapper.eq(Approval::getType, type);
-        }
-        if (status != null && !status.trim().isEmpty()) {
-            wrapper.eq(Approval::getStatus, status);
-        }
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            wrapper.and(w -> w.like(Approval::getApplicantName, keyword)
-                    .or()
-                    .like(Approval::getApplicantId, keyword));
-        }
-        if (startDate != null && !startDate.trim().isEmpty()) {
-            wrapper.ge(Approval::getCreateTime, startDate + " 00:00:00");
-        }
-        if (endDate != null && !endDate.trim().isEmpty()) {
-            wrapper.le(Approval::getCreateTime, endDate + " 23:59:59");
-        }
-
-        wrapper.orderByDesc(Approval::getCreateTime);
-        return this.page(page, wrapper);
+        return baseMapper.selectSearchPage(page, type, status, keyword, startDate, endDate);
     }
 
     //查询审批详情
@@ -105,7 +82,6 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
                         || leave.getStatus() == null || leave.getStatus() != 0) {
                     throw new IllegalStateException("请假记录不存在或已审批");
                 }
-                LambdaUpdateWrapper<VolunteerLeave> update = new LambdaUpdateWrapper<>();
                 if (approved) {
                     // 与接单共用志愿者行锁；释放、通知及审批结果必须一起提交或回滚。
                     if (volunteerMapper.selectForUpdate(leave.getVolunteerId()) == null) {
@@ -113,9 +89,7 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
                     }
                     orderService.releaseForLeave(leave.getVolunteerId(), leave.getStartTime(), leave.getEndTime());
                 }
-                update.eq(VolunteerLeave::getId, leave.getId()).eq(VolunteerLeave::getStatus, 0)
-                        .set(VolunteerLeave::getStatus, approved ? 1 : 2);
-                if (volunteerLeaveMapper.update(null, update) != 1) {
+                if (volunteerLeaveMapper.decidePending(leave.getId(), approved ? 1 : 2) != 1) {
                     throw new IllegalStateException("请假状态更新失败");
                 }
             }
@@ -123,28 +97,24 @@ public class ApprovalServiceImpl extends ServiceImpl<ApprovalMapper, Approval> i
                 if (approved) {
                     Volunteer volunteer = volunteerMapper.selectForUpdate(approval.getApplicantId());
                     if (volunteer == null) throw new IllegalStateException("志愿者不存在");
-                    LambdaUpdateWrapper<Volunteer> update = new LambdaUpdateWrapper<>();
-                    update.eq(Volunteer::getId, volunteer.getId());
+                    Volunteer update = new Volunteer();
+                    update.setId(volunteer.getId());
                     if ("register".equals(approval.getType())) {
-                        update.set(Volunteer::getStatus, 1);
+                        update.setStatus(1);
                     } else {
                         if (approval.getContent() == null || !approval.getContent().matches("[0-6](,[0-6]){0,2}")) {
                             throw new IllegalArgumentException("工作日期格式无效");
                         }
-                        update.set(Volunteer::getServiceDays, approval.getContent());
+                        update.setServiceDays(approval.getContent());
                     }
-                    if (volunteerMapper.update(null, update) != 1) {
+                    if (volunteerMapper.updateById(update) != 1) {
                         throw new IllegalStateException("审批业务更新失败");
                     }
                 }
             }
             default -> throw new IllegalArgumentException("尚未支持该审批类型");
         }
-        LambdaUpdateWrapper<Approval> update = new LambdaUpdateWrapper<>();
-        update.eq(Approval::getId, id).eq(Approval::getStatus, "pending")
-                .set(Approval::getStatus, result).set(Approval::getRemark, remark)
-                .set(Approval::getUpdateTime, LocalDateTime.now());
-        if (baseMapper.update(null, update) != 1) throw new IllegalStateException("审批状态更新失败");
+        if (baseMapper.decidePending(id, result, remark, LocalDateTime.now()) != 1) throw new IllegalStateException("审批状态更新失败");
         sendApprovalResultMessage(approval, result, remark);
         return true;
     }

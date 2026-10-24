@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.dto.ApprovalSubmitMessage;
 import com.me.entity.Approval;
 import com.me.entity.Message;
@@ -38,11 +37,7 @@ public class VolunteerLeaveServiceImpl implements VolunteerLeaveService {
     //查询志愿者请假记录
     @Override
     public List<VolunteerLeaveVO> getListByVolunteerId(Long volunteerId) {
-        LambdaQueryWrapper<VolunteerLeave> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(VolunteerLeave::getVolunteerId, volunteerId);
-        wrapper.orderByDesc(VolunteerLeave::getCreateTime);
-
-        List<VolunteerLeave> leaves = volunteerLeaveMapper.selectList(wrapper);
+        List<VolunteerLeave> leaves = volunteerLeaveMapper.selectByVolunteerId(volunteerId);
         return leaves.stream().map(leave -> {
             VolunteerLeaveVO vo = new VolunteerLeaveVO();
             BeanUtils.copyProperties(leave, vo);

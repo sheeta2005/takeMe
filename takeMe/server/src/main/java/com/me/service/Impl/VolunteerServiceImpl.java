@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.LoginDTO;
@@ -15,7 +14,6 @@ import com.me.mapper.VolunteerMapper;
 import com.me.service.VolunteerService;
 import com.me.service.OrderService;
 import com.me.service.VolunteerAvailabilityService;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.me.util.OssUtil;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,9 +48,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     @Override
     public Volunteer login(LoginDTO loginDTO) {
         // 1. 根据账号查询志愿者
-        LambdaQueryWrapper<Volunteer> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Volunteer::getUsername, loginDTO.getUsername());
-        Volunteer volunteer = this.getOne(queryWrapper);
+        Volunteer volunteer = baseMapper.selectByUsername(loginDTO.getUsername());
 
         // 2. 账号不存在、密码错误或账号禁用，返回null
         if (volunteer == null
@@ -69,9 +64,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     //根据用户名查询志愿者
     @Override
     public Volunteer getByUsername(String username) {
-        return lambdaQuery()
-                .eq(Volunteer::getUsername, username)
-                .one();
+        return baseMapper.selectByUsername(username);
     }
 
     //分页查询志愿者
@@ -85,36 +78,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
             String sortOrder
     ) {
         Page<Volunteer> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
-        LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
-
-//        if (username != null && !username.trim().isEmpty()) {
-//            wrapper.like(Volunteer::getUsername, username);
-//        }
-        if (id != null) {
-            wrapper.eq(Volunteer::getId, id);
-        }
-        
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            wrapper.and(w -> w.like(Volunteer::getUsername, keyword)
-                    .or()
-                    .like(Volunteer::getRealName, keyword)
-                    .or()
-                    .like(Volunteer::getPhone, keyword));
-        } else if (username != null && !username.trim().isEmpty()) {
-            wrapper.like(Volunteer::getUsername, username);
-        }
-
-        if ("lastLoginTime".equals(sortBy)) {
-            if ("asc".equalsIgnoreCase(sortOrder)) {
-                wrapper.orderByAsc(Volunteer::getLastLoginTime);
-            } else {
-                wrapper.orderByDesc(Volunteer::getLastLoginTime);
-            }
-        } else {
-            wrapper.orderByDesc(Volunteer::getCreateTime);
-        }
-        
-        IPage<Volunteer> result = this.page(pageParam, wrapper);
+        IPage<Volunteer> result = baseMapper.selectSearchPage(pageParam, username, id, keyword, sortBy, sortOrder);
         // 仅在响应中计算，不回写工作状态，避免跨日期后再次失效。
         result.getRecords().forEach(v -> v.setWorkStatus(getWorkStatus(v)));
         return result;
@@ -182,11 +146,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         if (baseMapper.selectForUpdate(volunteerId) == null) return 0;
         
         // 查询该志愿者所有 itemStatus=1（已接单）或 2（服务中）的订单项
-        LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(OrderItem::getVolunteerId, volunteerId)
-               .in(OrderItem::getItemStatus, Arrays.asList(1, 2));
-        
-        List<OrderItem> items = orderItemMapper.selectList(wrapper);
+        List<OrderItem> items = orderItemMapper.selectAssignedToVolunteer(volunteerId);
         
         if (items == null || items.isEmpty()) {
             return 0;
@@ -217,8 +177,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         }
 
         // 头像编辑不回写此前读取的积分、状态等并发字段。
-        this.update(new LambdaUpdateWrapper<Volunteer>()
-                .eq(Volunteer::getId, volunteerId).set(Volunteer::getAvatar, avatarUrl));
+        baseMapper.updateAvatar(volunteerId, avatarUrl);
         
         log.info("Volunteer {} avatar updated: {}", volunteerId, avatarUrl);
     }
@@ -236,8 +195,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
             ossUtil.deleteFile(oldAvatar);
         }
 
-        this.update(new LambdaUpdateWrapper<Volunteer>()
-                .eq(Volunteer::getId, volunteerId).set(Volunteer::getAvatar, null));
+        baseMapper.updateAvatar(volunteerId, null);
         
         log.info("Volunteer {} avatar deleted", volunteerId);
     }
@@ -246,12 +204,7 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
     @Override
     public java.util.List<Long> getAllVolunteerIds(int pageNum, int pageSize) {
         Page<Volunteer> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Volunteer> wrapper = new LambdaQueryWrapper<>();
-        wrapper.select(Volunteer::getId)
-               .eq(Volunteer::getStatus, 1)
-               .orderByAsc(Volunteer::getId);
-        
-        Page<Volunteer> resultPage = this.page(page, wrapper);
+        Page<Volunteer> resultPage = baseMapper.selectEnabledIdPage(page);
         return resultPage.getRecords().stream()
                 .map(Volunteer::getId)
                 .collect(java.util.stream.Collectors.toList());
@@ -269,16 +222,8 @@ public class VolunteerServiceImpl extends ServiceImpl<VolunteerMapper, Volunteer
         String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         
         // 脱敏手机号按主键唯一，显式清空敏感字段且不覆盖服务积分。
-        this.update(new LambdaUpdateWrapper<Volunteer>().eq(Volunteer::getId, volunteerId)
-                .set(Volunteer::getStatus, 0)
-                .set(Volunteer::getRealName, "已删除志愿者" + randomSuffix)
-                .set(Volunteer::getUsername, "deleted_" + volunteerId + "_" + randomSuffix)
-                .set(Volunteer::getPhone, "D" + volunteerId)
-                .set(Volunteer::getPassword, "DELETED")
-                .set(Volunteer::getAvatar, null).set(Volunteer::getGender, null)
-                .set(Volunteer::getAge, null).set(Volunteer::getAddress, null)
-                .set(Volunteer::getEmergencyName, null).set(Volunteer::getEmergencyPhone, null)
-                .set(Volunteer::getServiceDays, null).set(Volunteer::getWorkStatus, 0));
+        baseMapper.anonymize(volunteerId, "已删除志愿者" + randomSuffix,
+                "deleted_" + volunteerId + "_" + randomSuffix, "D" + volunteerId);
         
         int releasedCount = this.releaseVolunteerServices(volunteerId);
         

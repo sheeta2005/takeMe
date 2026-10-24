@@ -6,8 +6,6 @@ import com.me.mapper.AddressMapper;
 import com.me.mapper.UserMapper;
 import com.me.service.AddressService;
 import com.me.vo.AddressVO;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -28,9 +26,7 @@ public class AddressServiceImpl implements AddressService {
     //查询用户地址列表
     @Override
     public List<AddressVO> getListByUserId(Long userId) {
-        LambdaQueryWrapper<Address> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Address::getUserId, userId).orderByDesc(Address::getIsDefault);
-        List<Address> list = addressMapper.selectList(wrapper);
+        List<Address> list = addressMapper.selectByUserId(userId);
         return list.stream().map(this::toVO).collect(Collectors.toList());
     }
 
@@ -98,8 +94,7 @@ public class AddressServiceImpl implements AddressService {
 
     //查询并校验地址归属
     private Address ownedAddress(Long id, Long userId) {
-        Address address = addressMapper.selectOne(new LambdaQueryWrapper<Address>()
-                .eq(Address::getId, id).eq(Address::getUserId, userId));
+        Address address = addressMapper.selectOwned(id, userId);
         if (address == null) throw new AccessDeniedException("无权操作此地址");
         return address;
     }
@@ -113,9 +108,7 @@ public class AddressServiceImpl implements AddressService {
 
     // 清空默认地址
     private void clearDefault(Long userId) {
-        LambdaUpdateWrapper<Address> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(Address::getUserId, userId).set(Address::getIsDefault, 0);
-        addressMapper.update(null, wrapper);
+        addressMapper.clearDefaults(userId);
     }
 
     //转换地址展示信息

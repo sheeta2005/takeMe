@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -11,7 +10,6 @@ import com.me.mapper.MessageMapper;
 import com.me.service.MessageService;
 import com.me.service.OutboxService;
 import com.me.mq.config.RabbitMQConfig;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.me.vo.MessageVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,15 +37,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     public IPage<MessageVO> list(Long receiverId, Integer receiverType, Integer type, Integer isRead, PageResultDTO pageResultDTO) {
         Page<Message> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
 
-        LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Message::getReceiverId, receiverId)
-                .eq(Message::getReceiverType, receiverType);
-
-        if (type != null) wrapper.eq(Message::getType, type);
-        if (isRead != null) wrapper.eq(Message::getIsRead, isRead);
-        wrapper.orderByDesc(Message::getCreateTime);
-
-        Page<Message> resultPage = messageMapper.selectPage(page, wrapper);
+        Page<Message> resultPage = messageMapper.selectReceiverPage(page, receiverId, receiverType, type, isRead);
         
         List<MessageVO> voRecords = resultPage.getRecords().stream()
                 .map(this::convertToVO)
@@ -76,34 +66,19 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     @Override
     public boolean markAsRead(Long messageId, Integer receiverType, Long receiverId) {
         // 不同角色的数字 ID 可能相同，必须同时校验角色与账号。
-        return this.update(new LambdaUpdateWrapper<Message>()
-                .eq(Message::getId, messageId).eq(Message::getReceiverType, receiverType)
-                .eq(Message::getReceiverId, receiverId).set(Message::getIsRead, 1));
+        return messageMapper.markRead(messageId, receiverType, receiverId) > 0;
     }
 
     //标记全部消息已读
     @Override
     public boolean markAllAsRead(Integer receiverType, Long receiverId) {
-        LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Message::getReceiverType, receiverType)
-               .eq(Message::getReceiverId, receiverId)
-               .eq(Message::getIsRead, 0);
-        
-        Message updateMessage = new Message();
-        updateMessage.setIsRead(1);
-        
-        return this.update(updateMessage, wrapper);
+        return messageMapper.markAllUnread(receiverType, receiverId) > 0;
     }
 
     //统计未读消息
     @Override
     public int getUnreadCount(Integer receiverType, Long receiverId) {
-        LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Message::getReceiverType, receiverType)
-               .eq(Message::getReceiverId, receiverId)
-               .eq(Message::getIsRead, 0);
-        
-        return Math.toIntExact(this.count(wrapper));
+        return Math.toIntExact(messageMapper.countUnreadForReceiver(receiverType, receiverId));
     }
 
     //发送单条或群发消息
@@ -149,16 +124,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     public IPage<Message> getAdminMessagePage(Integer receiverType, Integer type, PageResultDTO pageResultDTO) {
         Page<Message> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
 
-        LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
-        if (receiverType != null) {
-            wrapper.eq(Message::getReceiverType, receiverType);
-        }
-        if (type != null) {
-            wrapper.eq(Message::getType, type);
-        }
-        wrapper.orderByDesc(Message::getCreateTime);
-
-        return messageMapper.selectPage(page, wrapper);
+        return messageMapper.selectAdminPage(page, receiverType, type);
     }
 
     //分页查询发送记录
@@ -166,17 +132,8 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     public IPage<Message> getSentMessagePage(Integer receiverType, Integer type, PageResultDTO pageResultDTO) {
         Page<Message> page = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
 
-        LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
         // 管理员发送的消息：receiverType=0 表示接收者是管理员
-        if (receiverType != null) {
-            wrapper.eq(Message::getReceiverType, receiverType);
-        }
-        if (type != null) {
-            wrapper.eq(Message::getType, type);
-        }
-        wrapper.orderByDesc(Message::getCreateTime);
-
-        return messageMapper.selectPage(page, wrapper);
+        return messageMapper.selectAdminPage(page, receiverType, type);
     }
 
     //批量发送消息
@@ -218,23 +175,17 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         Map<String, Object> stats = new HashMap<>();
         
         // 总消息数
-        stats.put("totalCount", this.count());
+        stats.put("totalCount", messageMapper.countByReadAndType(null, null));
         
         // 未读消息数
-        LambdaQueryWrapper<Message> unreadWrapper = new LambdaQueryWrapper<>();
-        unreadWrapper.eq(Message::getIsRead, 0);
-        stats.put("unreadCount", this.count(unreadWrapper));
+        stats.put("unreadCount", messageMapper.countByReadAndType(0, null));
         
         // 已读消息数
-        LambdaQueryWrapper<Message> readWrapper = new LambdaQueryWrapper<>();
-        readWrapper.eq(Message::getIsRead, 1);
-        stats.put("readCount", this.count(readWrapper));
+        stats.put("readCount", messageMapper.countByReadAndType(1, null));
         
         // 按类型统计
         for (int i = 0; i <= 2; i++) {
-            LambdaQueryWrapper<Message> typeWrapper = new LambdaQueryWrapper<>();
-            typeWrapper.eq(Message::getType, i);
-            stats.put("type" + i + "Count", this.count(typeWrapper));
+            stats.put("type" + i + "Count", messageMapper.countByReadAndType(null, i));
         }
         
         return stats;

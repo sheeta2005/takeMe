@@ -1,6 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.me.dto.LoginDTO;
@@ -15,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -31,9 +29,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     //校验用户登录
     @Override
     public User login(LoginDTO loginDTO) {
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getUsername, loginDTO.getUsername());
-        User user = this.getOne(queryWrapper);
+        User user = baseMapper.selectByUsername(loginDTO.getUsername());
 
         if (user == null
                 || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())
@@ -47,9 +43,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     //注册用户账号
     @Override
     public boolean register(UserRegisterDTO registerDTO) {
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getUsername, registerDTO.getUsername());
-        Long count = this.count(wrapper);
+        Long count = baseMapper.countByUsername(registerDTO.getUsername());
         if (count > 0) {
             return false;
         }
@@ -77,8 +71,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         }
 
         // 修改密码只写密码，不把旧资料中的启用状态回写。
-        return this.update(new LambdaUpdateWrapper<User>()
-                .eq(User::getId, userId).set(User::getPassword, passwordEncoder.encode(newPassword)));
+        return baseMapper.updatePassword(userId, passwordEncoder.encode(newPassword)) > 0;
     }
 
     //分页查询用户
@@ -94,39 +87,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             String sortOrder
     ) {
         Page<User> pageParam = new Page<>(pageResultDTO.getPageNum(), pageResultDTO.getPageSize());
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-
-        if (id != null) {
-            wrapper.eq(User::getId, id);
-        }
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            wrapper.and(w -> w.like(User::getUsername, keyword)
-                    .or()
-                    .like(User::getRealName, keyword)
-                    .or()
-                    .like(User::getPhone, keyword));
-        }
-        if (gender != null) {
-            wrapper.eq(User::getGender, gender);
-        }
-        if (startDate != null && !startDate.trim().isEmpty()) {
-            wrapper.ge(User::getCreateTime, startDate + " 00:00:00");
-        }
-        if (endDate != null && !endDate.trim().isEmpty()) {
-            wrapper.le(User::getCreateTime, endDate + " 23:59:59");
-        }
-
-        if ("lastLoginTime".equals(sortBy)) {
-            if ("asc".equalsIgnoreCase(sortOrder)) {
-                wrapper.orderByAsc(User::getLastLoginTime);
-            } else {
-                wrapper.orderByDesc(User::getLastLoginTime);
-            }
-        } else {
-            wrapper.orderByDesc(User::getCreateTime);
-        }
-        
-        return this.page(pageParam, wrapper);
+        return baseMapper.selectSearchPage(pageParam, keyword, gender, id, startDate, endDate, sortBy, sortOrder);
     }
 
     //更新用户头像
@@ -142,8 +103,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             ossUtil.deleteFile(oldAvatar);
         }
 
-        this.update(new LambdaUpdateWrapper<User>()
-                .eq(User::getId, userId).set(User::getAvatar, avatarUrl));
+        baseMapper.updateAvatar(userId, avatarUrl);
         
         log.info("User {} avatar updated: {}", userId, avatarUrl);
     }
@@ -161,8 +121,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
             ossUtil.deleteFile(oldAvatar);
         }
 
-        this.update(new LambdaUpdateWrapper<User>()
-                .eq(User::getId, userId).set(User::getAvatar, null));
+        baseMapper.updateAvatar(userId, null);
         
         log.info("User {} avatar deleted", userId);
     }
@@ -171,12 +130,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
     @Override
     public java.util.List<Long> getAllUserIds(int pageNum, int pageSize) {
         Page<User> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.select(User::getId)
-               .eq(User::getStatus, 1)
-               .orderByAsc(User::getId);
-        
-        Page<User> resultPage = this.page(page, wrapper);
+        Page<User> resultPage = baseMapper.selectEnabledIdPage(page);
         return resultPage.getRecords().stream()
                 .map(User::getId)
                 .collect(java.util.stream.Collectors.toList());
@@ -205,8 +159,7 @@ public class  UserServiceImpl extends ServiceImpl<UserMapper, User> implements U
         user.setEmergencyPhone("00000000000");
         
         // 显式清空头像，避免 MyBatis 非空更新策略保留旧值。
-        boolean success = this.update(user, new LambdaUpdateWrapper<User>()
-                .eq(User::getId, userId).set(User::getAvatar, null));
+        boolean success = baseMapper.anonymize(user) > 0;
         
         if (success) {
             log.info("用户 {} 已被逻辑删除，敏感字段已脱敏", userId);

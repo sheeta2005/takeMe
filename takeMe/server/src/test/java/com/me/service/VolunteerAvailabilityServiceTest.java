@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class VolunteerAvailabilityServiceTest {
@@ -40,10 +40,10 @@ class VolunteerAvailabilityServiceTest {
 
     @Test
     void approvedLeaveOverridesScheduleAndRealServiceDeterminesBusyStatus() {
-        when(leaves.selectCount(any())).thenReturn(1L);
+        when(leaves.countApprovedAt(anyLong(), any(LocalDateTime.class))).thenReturn(1L);
         assertEquals(3, service.workStatusAt(volunteer("2,3,4"), LocalDateTime.of(2026, 10, 13, 12, 0)));
-        when(leaves.selectCount(any())).thenReturn(0L);
-        when(items.selectCount(any())).thenReturn(1L);
+        when(leaves.countApprovedAt(anyLong(), any(LocalDateTime.class))).thenReturn(0L);
+        when(items.countForVolunteerStatus(anyLong(), eq(2))).thenReturn(1L);
         assertEquals(2, service.workStatusAt(volunteer("2,3,4"), LocalDateTime.of(2026, 10, 13, 12, 0)));
     }
 }

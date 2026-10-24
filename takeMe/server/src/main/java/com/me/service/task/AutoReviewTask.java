@@ -1,6 +1,5 @@
 package com.me.task;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Order;
 import com.me.entity.OrderItem;
 import com.me.mapper.OrderItemMapper;
@@ -30,18 +29,12 @@ public class AutoReviewTask {
 
         LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
 
-        LambdaQueryWrapper<Order> orderWrapper = new LambdaQueryWrapper<>();
-        orderWrapper.eq(Order::getStatus, 4);
-        orderWrapper.le(Order::getCompleteTime, threeDaysAgo);
-        List<Order> orders = orderMapper.selectList(orderWrapper);
+        List<Order> orders = orderMapper.selectReviewCandidates(threeDaysAgo);
 
         int totalEvaluated = 0;
 
         for (Order order : orders) {
-            LambdaQueryWrapper<OrderItem> itemWrapper = new LambdaQueryWrapper<>();
-            itemWrapper.eq(OrderItem::getOrderId, order.getId());
-            itemWrapper.in(OrderItem::getItemStatus, 3, 4);
-            List<OrderItem> items = orderItemMapper.selectList(itemWrapper);
+            List<OrderItem> items = orderItemMapper.selectCompletedByOrderId(order.getId());
 
             for (OrderItem item : items) {
                 if (item.getVolunteerId() == null) {

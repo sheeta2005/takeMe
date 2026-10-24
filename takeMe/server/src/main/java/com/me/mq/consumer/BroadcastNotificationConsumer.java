@@ -1,9 +1,6 @@
 package com.me.mq.consumer;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.me.entity.Message;
-import com.me.entity.User;
-import com.me.entity.Volunteer;
 import com.me.mapper.UserMapper;
 import com.me.mapper.VolunteerMapper;
 import com.me.mq.config.RabbitMQConfig;
@@ -34,12 +31,8 @@ public class BroadcastNotificationConsumer {
         while (true) {
             // 按主键续页，不因前面账号停用而漏掉后面的接收者。
             List<Long> ids = template.getReceiverType() == 2
-                    ? userMapper.selectList(new LambdaQueryWrapper<User>().select(User::getId)
-                        .eq(User::getStatus, 1).gt(User::getId, lastId).orderByAsc(User::getId)
-                        .last("LIMIT 500")).stream().map(User::getId).toList()
-                    : volunteerMapper.selectList(new LambdaQueryWrapper<Volunteer>().select(Volunteer::getId)
-                        .eq(Volunteer::getStatus, 1).gt(Volunteer::getId, lastId).orderByAsc(Volunteer::getId)
-                        .last("LIMIT 500")).stream().map(Volunteer::getId).toList();
+                    ? userMapper.selectEnabledIdsAfter(lastId)
+                    : volunteerMapper.selectEnabledIdsAfter(lastId);
             if (ids.isEmpty()) return;
             for (Long id : ids) {
                 Message notification = new Message();

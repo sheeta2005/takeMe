@@ -1,11 +1,5 @@
 package com.me.service.Impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.me.entity.Approval;
-import com.me.entity.Order;
-import com.me.entity.OrderItem;
-import com.me.entity.User;
-import com.me.entity.Volunteer;
 import com.me.mapper.ApprovalMapper;
 import com.me.mapper.OrderItemMapper;
 import com.me.mapper.OrderMapper;
@@ -47,9 +41,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         counts.forEach((key, value) -> data.put(key, ((Number) value).longValue()));
         Long activeOrders = (Long) data.get("activeOrders");
 
-        LambdaQueryWrapper<Approval> pendingApprovalWrapper = new LambdaQueryWrapper<>();
-        pendingApprovalWrapper.eq(Approval::getStatus, "pending");
-        Long pendingApprovalCount = approvalMapper.selectCount(pendingApprovalWrapper);
+        Long pendingApprovalCount = approvalMapper.countPending();
         
         Long pendingCount = activeOrders + pendingApprovalCount;
         data.put("pendingCount", pendingCount);
@@ -61,14 +53,10 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         Long monthRevenue = paymentTransactionMapper.selectNetMockAmount(monthStart, monthStart.plusMonths(1));
         data.put("monthRevenue", monthRevenue);
 
-        LambdaQueryWrapper<Volunteer> volunteerWrapper = new LambdaQueryWrapper<>();
-        volunteerWrapper.eq(Volunteer::getStatus, 1);
-        Long volunteerCount = volunteerMapper.selectCount(volunteerWrapper);
+        Long volunteerCount = volunteerMapper.countEnabled();
         data.put("volunteerCount", volunteerCount);
 
-        LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
-        userWrapper.eq(User::getStatus, 1);
-        Long elderCount = userMapper.selectCount(userWrapper);
+        Long elderCount = userMapper.countEnabled();
         data.put("elderCount", elderCount);
 
         data.put("pointsIssued", pointsRecordMapper.sumIssuedPoints());
@@ -85,9 +73,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
             LocalDateTime dayStart = LocalDate.now().minusDays(i).atStartOfDay();
             LocalDateTime dayEnd = dayStart.plusDays(1);
 
-            LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-            wrapper.ge(Order::getCreateTime, dayStart).lt(Order::getCreateTime, dayEnd);
-            Long count = orderMapper.selectCount(wrapper);
+            Long count = orderMapper.countCreatedBetween(dayStart, dayEnd);
             trend.add(count.intValue());
         }
         return trend;
@@ -117,9 +103,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         String[] serviceTypes = {"代购服务", "助洁服务", "助餐服务", "助医服务", "陪伴服务"};
 
         for (int i = 0; i < 5; i++) {
-            LambdaQueryWrapper<OrderItem> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(OrderItem::getServiceType, i);
-            Long count = orderItemMapper.selectCount(wrapper);
+            Long count = orderItemMapper.countByServiceType(i);
             
             Map<String, Object> item = new HashMap<>();
             item.put("name", serviceTypes[i]);

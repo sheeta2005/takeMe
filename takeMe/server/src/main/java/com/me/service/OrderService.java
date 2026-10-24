@@ -1,6 +1,5 @@
 package com.me.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.OrderDTO;
 import com.me.dto.OrderItemDTO;
@@ -103,5 +102,5 @@ public interface OrderService {
     boolean adminCancelOrderItem(Long orderItemId);
 
     //按条件统计订单数量
-    Long countOrders(LambdaQueryWrapper<Order> wrapper);
+    Long countOrders(Integer status);
 }

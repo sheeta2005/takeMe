@@ -3,10 +3,8 @@ package com.me.service.Impl;
 import com.me.dto.LoginDTO;
 import com.me.entity.Admin;
 import com.me.mapper.AdminMapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.me.service.AdminService;
 import com.me.util.OssUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +22,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     //校验管理员登录
     @Override
     public Admin login(LoginDTO loginDTO) {
-        LambdaQueryWrapper<Admin> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Admin::getUsername, loginDTO.getUsername());
-        Admin admin = this.getOne(queryWrapper);
+        Admin admin = baseMapper.selectByUsername(loginDTO.getUsername());
 
         if (admin == null || !passwordEncoder.matches(loginDTO.getPassword(), admin.getPassword())) {
             return null;
@@ -68,8 +64,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
             ossUtil.deleteFile(oldAvatar);
         }
 
-        this.update(new LambdaUpdateWrapper<Admin>()
-                .eq(Admin::getId, adminId).set(Admin::getAvatar, avatarUrl));
+        baseMapper.updateAvatar(adminId, avatarUrl);
         
         log.info("Admin {} avatar updated: {}", adminId, avatarUrl);
     }
@@ -87,8 +82,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
             ossUtil.deleteFile(oldAvatar);
         }
 
-        this.update(new LambdaUpdateWrapper<Admin>()
-                .eq(Admin::getId, adminId).set(Admin::getAvatar, null));
+        baseMapper.updateAvatar(adminId, null);
         
         log.info("Admin {} avatar deleted", adminId);
     }

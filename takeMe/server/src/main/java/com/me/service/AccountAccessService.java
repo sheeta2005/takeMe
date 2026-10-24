@@ -1,8 +1,5 @@
 package com.me.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.me.entity.User;
-import com.me.entity.Volunteer;
 import com.me.mapper.AdminMapper;
 import com.me.mapper.UserMapper;
 import com.me.mapper.VolunteerMapper;
@@ -21,10 +18,8 @@ public class AccountAccessService {
         if (id == null || role == null) return false;
         return switch (role) {
             case 0 -> adminMapper.selectById(id) != null;
-            case 1 -> volunteerMapper.selectCount(new LambdaQueryWrapper<Volunteer>()
-                    .eq(Volunteer::getId, id).eq(Volunteer::getStatus, 1)) == 1;
-            case 2 -> userMapper.selectCount(new LambdaQueryWrapper<User>()
-                    .eq(User::getId, id).eq(User::getStatus, 1)) == 1;
+            case 1 -> volunteerMapper.countActiveAccount(id) == 1;
+            case 2 -> userMapper.countActiveAccount(id) == 1;
             default -> false;
         };
     }

@@ -1,6 +1,5 @@
 package com.me.controller.admin;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Address;
@@ -53,11 +52,7 @@ public class AdminUserController {
             record.put("status", user.getStatus());
             record.put("createTime", user.getCreateTime());
             
-            LambdaQueryWrapper<Address> addrWrapper = new LambdaQueryWrapper<>();
-            addrWrapper.eq(Address::getUserId, user.getId())
-                       .eq(Address::getIsDefault, 1)
-                       .last("LIMIT 1");
-            Address defaultAddress = addressMapper.selectOne(addrWrapper);
+            Address defaultAddress = addressMapper.selectDefaultByUserId(user.getId());
             record.put("address", defaultAddress != null ? defaultAddress.getAddress() : "");
             
             return record;
@@ -102,11 +97,7 @@ public class AdminUserController {
             record.put("createTime", user.getCreateTime());
             record.put("lastLoginTime", user.getLastLoginTime());
             
-            LambdaQueryWrapper<Address> addrWrapper = new LambdaQueryWrapper<>();
-            addrWrapper.eq(Address::getUserId, user.getId())
-                       .eq(Address::getIsDefault, 1)
-                       .last("LIMIT 1");
-            Address defaultAddress = addressMapper.selectOne(addrWrapper);
+            Address defaultAddress = addressMapper.selectDefaultByUserId(user.getId());
             record.put("address", defaultAddress != null ? defaultAddress.getAddress() : "");
             
             return record;
@@ -141,11 +132,7 @@ public class AdminUserController {
         result.put("emergencyName", user.getEmergencyName());
         result.put("emergencyPhone", user.getEmergencyPhone());
         
-        LambdaQueryWrapper<Address> addrWrapper = new LambdaQueryWrapper<>();
-        addrWrapper.eq(Address::getUserId, user.getId())
-                   .eq(Address::getIsDefault, 1)
-                   .last("LIMIT 1");
-        Address defaultAddress = addressMapper.selectOne(addrWrapper);
+        Address defaultAddress = addressMapper.selectDefaultByUserId(user.getId());
         result.put("address", defaultAddress != null ? defaultAddress.getAddress() : "");
         
         return Result.success(result);

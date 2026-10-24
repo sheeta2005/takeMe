@@ -1,6 +1,5 @@
 package com.me.controller.admin;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.me.dto.PageResultDTO;
 import com.me.entity.Order;
@@ -120,14 +119,11 @@ public class AdminOrderController {
     public Result<Map<String, Object>> getOrderStatistics() {
         Map<String, Object> stats = new HashMap<>();
         
-        LambdaQueryWrapper<Order> allWrapper = new LambdaQueryWrapper<>();
-        Long totalCount = orderService.countOrders(allWrapper);
+        Long totalCount = orderService.countOrders(null);
         stats.put("totalCount", totalCount);
         
         for (int i = 0; i <= 5; i++) {
-            LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Order::getStatus, i);
-            Long count = orderService.countOrders(wrapper);
+            Long count = orderService.countOrders(i);
             stats.put("status" + i + "Count", count);
         }
         
